@@ -1,0 +1,46 @@
+{
+ "linear_test_accuracy": 0.624,
+ "results": [
+  {
+   "arm": "ste_jev",
+   "seed": 0,
+   "test_accuracy": 0.842,
+   "test_accuracy_exact_step": 0.804
+  },
+  {
+   "arm": "ste_jev",
+   "seed": 1,
+   "test_accuracy": 0.862,
+   "test_accuracy_exact_step": 0.772
+  },
+  {
+   "arm": "ste_jev",
+   "seed": 2,
+   "test_accuracy": 0.884,
+   "test_accuracy_exact_step": 0.868
+  },
+  {
+   "arm": "swap",
+   "seed": 0,
+   "test_accuracy": 0.472,
+   "test_accuracy_exact_step": 0.932
+  },
+  {
+   "arm": "swap",
+   "seed": 1,
+   "test_accuracy": 0.472,
+   "test_accuracy_exact_step": 0.9
+  },
+  {
+   "arm": "swap",
+   "seed": 2,
+   "test_accuracy": 0.702,
+   "test_accuracy_exact_step": 0.812
+  }
+ ],
+ "spend": {
+  "calls": 83748,
+  "tokens": 27682947,
+  "usd": 1.1627
+ }
+}
