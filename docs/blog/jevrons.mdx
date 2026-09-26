@@ -1,0 +1,242 @@
+---
+title: "Jevrons: Training a Network Made of Jev Calls"
+description: "I trained a neural network where every neuron is a live call to Jev, a frozen evaluation model, to see if learned weights can make up for an imperfect neuron."
+pubDate: 2026-09-26
+updatedDate: 2026-09-26
+---
+
+## Where this started
+
+Before this, I built a 4-bit ALU out of NAND gates where every gate was a call to Jev, TypeSafe AI's evaluation model. It computed 7 + 5 = 12 using 116 gates in 7.6 seconds for $0.0018, with a compound probability of 84% that the answer was right (a computed figure, which I never re-measured end to end).
+
+That experiment had no learning in it. Every gate had fixed wiring, and if a gate misfired, the answer was wrong. So the obvious next question was: what if the wiring could learn? If a model acting as a neuron is imperfect, can the weights around it learn to compensate?
+
+Jevrons is that experiment. It's a small neural network where every neuron is a live Jev call, trained with ordinary backprop on MNIST. Over one day and about 532,000 calls it went from a single neuron to a network that separates handwritten 3s from 8s at 94.2%. The more interesting result is what happens when you take a network trained with perfect arithmetic and drop Jev in: it falls apart, and the one trained through Jev doesn't.
+
+## What a Jev neuron is
+
+Jev takes a JSON `state` and a set of yes/no questions about it, and for each question returns a Noul: the probability that the "true" criterion holds. There's no logit, no gradient and no way to fine-tune it. It's frozen, and the API only gives you answers[^1].
+
+[^1]: The [API reference](https://docs.typesafe.ai/api) documents answers and token usage, with no gradient or logit output. [Noul](https://docs.typesafe.ai/primitives/noul) is TypeSafe's name for the probability-valued answer.
+
+A normal neuron computes `z = w·x + b` and passes `z` through an activation. A Jev neuron hands Jev the pieces and asks it whether the total is positive. After a round of probing (more on that below), the state settled on a flat list of the products `x_i * w_i` for every nonzero input, with the bias appended as one more number. Here's the first hidden neuron of the first training step in stage 5, trimmed:
+
+```json
+{
+  "state": {"products": [0.02, -0.11, -0.02, -0.32, 0.36, -0.15, "...", -0.05, 0.0, 0.0]},
+  "questions": {
+    "fires": {
+      "type": "noul",
+      "instructions": "Add all the numbers in products together.",
+      "criteria": {
+        "true": "The final total is greater than zero.",
+        "false": "The final total is zero or less."
+      }
+    }
+  }
+}
+```
+
+That list has 179 numbers in it. The true total was -5.96, and Jev answered `fires: 0.22`, so this neuron correctly didn't fire. The call billed 1,282 input tokens and took 0.135 seconds.
+
+The probability becomes the neuron's activation and feeds the next layer. Multiplication happens in my code; the adding up and the sign decision happen inside Jev. Zero pixels are dropped from the state since they contribute nothing to the sum, which matters on MNIST where an average image has about 150 nonzero pixels out of 784.
+
+## The plan, and what the audit got wrong
+
+I wrote a long proposal first, then had it audited before spending anything. The audit was useful. It checked every cost cell, pointed out that 784 dense pixel pairs would cost five times the tokens I'd assumed, and argued that a derivative-free optimizer (SPSA) had no chance on 25,450 parameters in a few hundred updates. It also ran local NumPy baselines: a 784-32-10 network trained on 1,000 images tops out around 84% on validation even with perfect neurons, so that's the ceiling to judge against, not the ~98% you see in tutorials.
+
+Its strongest prediction was about the "easy" variant. If my code computes `z` and only asks Jev "is this one number positive?", Jev is probably a near-perfect step function, and the experiment would show nothing. The real test is when Jev has to do the adding itself. That prediction held.
+
+Three of its assumptions were wrong, and all three were about Jev behavior nobody had measured yet.
+
+It assumed Jev was deterministic, based on TypeSafe's docs showing most repeated answers identical across 5 runs. So the plan was to tabulate the scalar neuron once and train against the table. It also proposed packing 8 neurons into one request under separate keys, to get from 42 requests per image down to about 5 and cut wall-clock by 8x. And it treated the exact question wording as a detail to freeze, not a variable to test. Stage 1 broke all three.
+
+## Stage 1: it adds, imperfectly
+
+The first stage was pure probing: 16,299 calls, $0.48, no training. I built random neuron states from real MNIST pixel values and N(0, 1) weights at 10, 30, 75, 150 and 250 terms, and compared three formats: paired `{x, w}` records, parallel `x` and `w` arrays, and precomputed products.
+
+With the bias fixed at zero, Jev gets the sign right far more often than chance, and it gets worse as the list grows:
+
+| Format | 10 terms | 30 | 75 | 150 | 250 |
+| --- | --- | --- | --- | --- | --- |
+| paired `{x, w}` records | 82% | 87% | 90% | 80% | 77% |
+| parallel `x`, `w` arrays | 82% | 85% | 82% | 68% | 65% |
+| precomputed products | 93% | 88% | 92% | 82% | 78% |
+
+The errors cluster near zero. When the true total is more than one term-spread away from zero, accuracy is 100% up to 75 terms in every format. So Jev really is adding, roughly, and it gets fuzzy exactly where a sign decision is hard. Products also won on cost: 1,673 tokens at 250 terms versus 5,395 for paired records.
+
+That 80-90% range at 150 terms was the number I was hoping for. The audit's local mock (a neuron with injected noise) suggested the effect I was after needs a neuron that's wrong 5-20% of the time. A neuron that was always right would make the experiment pointless, and one at 50% would make it hopeless.
+
+### The bias problem
+
+The first probe set the bias so the total landed at a chosen margin. That made the bias nearly a copy of the answer, and in the 300 neurons where the bias sign disagreed with the true total, Jev sided with the bias 64% of the time. With the bias drawn independently, it still followed the bias sign 72-97% of the time.
+
+A standalone `"bias": 0.15` field reads like the headline number, and Jev over-trusts it. So I stopped giving it a standalone field. Folding the bias into the products list as one more number fixed most of it:
+
+| Format | 10 terms | 30 | 75 | 150 |
+| --- | --- | --- | --- | --- |
+| products + separate bias | 90% | 85% | 83% | 75% |
+| products with bias folded in | 95% | 85% | 85% | 90% |
+
+This looked like a minor formatting choice at the time. It turned out to decide whether XOR could be learned at all.
+
+### It isn't deterministic, and packing changes answers
+
+Only 1% of full-state neurons returned the same probability across 5 identical calls (mean range 0.04, max 0.15). Scalar calls repeated exactly 46% of the time. So there's no lookup table: every forward pass in this project is live, and every neuron is a little stochastic.
+
+Packing was worse. Eight neurons in one request, versus the same eight sent alone, flipped 11-18% of answers and cost 1-8 points of accuracy. Eight 250-term neurons also blew through the 32k-token state limit. Neurons go one per request, which at the 1,200 requests/min limit made the audit's stage 6 estimate about 36 hours of calls.
+
+### Wording decides the scalar neuron
+
+For the scalar variant I swept 2,181 values of `z` from -100 to 100, 5 repeats each. With the first wording ("z is a number." as instructions, "z is greater than zero." / "z is zero or less." as criteria) Jev returned 0.66-0.74 for every negative `z`. A clean step, but with the "no" side sitting above 0.5, so a thresholded neuron said yes to everything. Rewording it as a question, "Is the number z positive?", gave 0.01-0.05 for `z <= 0` and 0.99 for `z >= 0.1`, correct on every value within ±10.
+
+The same rewording made no measurable difference for the full-state neuron, so that one kept the first wording.
+
+## Training through a neuron with no gradient
+
+Backprop needs the derivative of each neuron's output with respect to its input, and Jev doesn't have one I can get at. The trick is the straight-through estimator[^2], the same one used to train quantized and binarized networks: run the forward pass through the real neuron, and in the backward pass pretend the neuron was a smooth sigmoid of the intended sum.
+
+[^2]: [Bengio et al. 2013](https://arxiv.org/abs/1308.3432) describe straight-through estimators for stochastic and hard-threshold neurons.
+
+```python
+acts, zs = forward(params, X, jev_neuron)   # a = Jev's p, z = w·x + b computed in code
+
+for layer in reversed(range(len(params))):
+    s = sigmoid(zs[layer] / tau)
+    dz = da * s * (1 - s) / tau              # slope of sigmoid(z / tau), not of Jev
+    dW, db = acts[layer].T @ dz, dz.sum(0)
+    da = dz @ params[layer][0].T             # flows to the earlier layer through w
+```
+
+That's the core of `ste_grads` in `net.py`. The loss is computed on Jev's real output, so if Jev misfires, the loss sees it. The direction to move each weight comes from the arithmetic Jev was supposed to do. `tau` sets how wide the pretend slope is: 0.3 on the circle and 3 on digits, where sums are larger. It costs zero extra calls, which matters when every forward pass is already 42 calls per image.
+
+Weights are clipped to ±9.99 after every Adam step so they always go on the wire as two-decimal numbers, and the state doesn't grow as training goes on.
+
+## XOR: one format change, 0 of 3 to 3 of 3
+
+AND and OR need one neuron. XOR needs a hidden layer, so stage 2 used 2 inputs, 4 hidden Jev neurons and 1 output Jev neuron, which is 20 calls to run the four rows of the truth table once. Three arms got the same call budget: straight-through with a separate bias field, straight-through with the bias folded in, and SPSA. Each trained net was then run 5 more times through live Jev.
+
+| XOR arm | Seed 0 | Seed 1 | Seed 2 | Fully correct passes |
+| --- | --- | --- | --- | --- |
+| straight-through, separate bias | 75% | 50% | 70% | 0/15 |
+| straight-through, folded bias | 95% | 100% | 100% | 14/15 |
+| SPSA | 75% | 65% | 80% | 3/15 |
+
+Same network, same training rule, same budget. Moving the bias from its own field into the list took XOR from zero solved seeds to three. Straight-through also matched or beat SPSA on every task, which settled that question before digits.
+
+Two runs in this stage were more interesting than the table. Seed 0 with the folded bias works on live Jev (4 of 5 passes perfect), but its weights fail XOR when I run them through an exact step neuron. It learned a solution for how Jev actually behaves, one that's wrong under ideal arithmetic. Seed 2 with the separate bias is the reverse: its weights solve XOR with an exact neuron, and Jev running them gets 70%. A correct design, broken by how the neuron reads the bias. These were single runs, but they were the first hint of what the later stages showed at scale.
+
+## The circle: swapping collapses
+
+Stage 3 is the classic toy: points in a square, labeled by whether they're inside a circle of radius 0.8. The network is 2 inputs, 6 hidden Jev neurons and 1 output Jev neuron, 250 training and 250 held-out points, 150 steps. This stage cost $1.16 over 83,748 calls.
+
+The comparison that matters here is the swap control. Take the same architecture and initialization, train it with an exact step neuron locally for free, and then run those weights on Jev.
+
+| Seed | Trained through Jev, run on Jev | Trained exact, run exact | Trained exact, run on Jev |
+| --- | --- | --- | --- |
+| 0 | 84.2% | 93.2% | 47.2% |
+| 1 | 86.2% | 90.0% | 47.2% |
+| 2 | 88.4% | 81.2% | 70.2% |
+
+A linear classifier gets 62.4% on the same split. The exact-trained networks are fine with an exact neuron and fall to or below linear once Jev runs them. The Jev-trained ones hold 84-88%.
+
+![Two heatmaps of Jev's output probability over the square from -1 to 1, with the true circle dashed. Left, trained through Jev: a red region fills most of the circle, held-out accuracy 84%. Right, trained with an exact neuron and run on Jev: blue everywhere, held-out accuracy 47%.](../figures/stage3-boundary.png)
+
+The right panel is the failure in one picture. The exact-trained network run on Jev never pushes its output neuron above 0.5 anywhere, so it calls every point outside. The left panel has a blocky, lopsided boundary, but it's a boundary.
+
+One more detail: the Jev-trained weights scored 77-87% when I ran them through an exact neuron, lower than on Jev itself. They didn't learn the ideal function and put up with the noise. They learned something fitted to Jev.
+
+## Digits, with the sum done in code
+
+Stage 4 was the control the audit asked for. A 784-32-10 network trained locally with an exact step neuron, then evaluated with every neuron replaced by a scalar Jev call ("Is the number z positive?"). 84,000 calls, $1.10.
+
+| Split | Exact step | Jev activation | Hidden fires as intended | Output fires as intended |
+| --- | --- | --- | --- | --- |
+| Validation (1,000) | 77.5% | 77.0% | 99.95% | 99.89% |
+| Test (1,000) | 78.5% | 79.1% | 99.96% | 99.92% |
+
+With the right wording, the scalar Jev neuron is a step function. It fired exactly as intended on 99.96% of hidden evaluations. That's why the scalar variant is the control and not the experiment: there's nothing for training to compensate for.
+
+This stage also caught a mistake of mine. The stage 0 baselines had reported ~83-84% for a hard-step 784-32-10 net. With near-binary outputs, 11-22% of images have no output neuron firing at all, and my baseline had been breaking those ties using the exact output sums. That leaks perfect arithmetic into the prediction. With random tie-breaking the honest ceiling is about 77-79%, and everything from stage 4 on uses random tie-breaking.
+
+## Digits, with Jev doing the sum
+
+Stage 5 is the real thing on a smaller problem: a 784-32-1 network where every neuron, hidden and output, is a full-state Jev call. Hidden neurons add about 150 products each and the output neuron adds 33 (32 hidden activations times their weights, plus the bias). Two pairs, 0 vs 1 and 3 vs 8, one seed each, 500 training and 500 validation images, 5 epochs. That's 297,000 calls and $13.88, most of the project's spend.
+
+Before any calls I tuned the settings against a local mock neuron fitted to stage 1's error curve. It predicted 3 vs 8 at 93.6% trained through the neuron and 76.5% swapped.
+
+| Pair | Arm | Exact neuron | Live Jev | Hidden fires as intended | Output fires as intended |
+| --- | --- | --- | --- | --- | --- |
+| 0 vs 1 | trained through Jev | 99.2% | 99.4% | 99.4% | 99.6% |
+| 0 vs 1 | trained exact, swapped | 99.4% | 91.5% | 96.4% | 84.5% |
+| 3 vs 8 | trained through Jev | 94.4% | 94.2% | 93.0% | 97.5% |
+| 3 vs 8 | trained exact, swapped | 92.8% | 67.8% | 86.9% | 91.6% |
+
+![Bar chart of validation accuracy on 500 images. For 0 vs 1, the Jev-trained net gets 99% on both the exact neuron and live Jev, and the exact-trained net gets 99% exact but 92% on live Jev. For 3 vs 8, the Jev-trained net gets 94% on both, and the exact-trained net gets 93% exact but 68% on live Jev.](../figures/stage5-swap.png)
+
+Both arms learn the task about equally well on paper; with an exact neuron they're within 1.6 points of each other. On live Jev, training through it is worth 8 points on 0 vs 1 and 26 points on 3 vs 8. The mock got the trained number close on 3 vs 8 (93.6% predicted) but put the swapped net at 76.5%, almost nine points too high.
+
+## Two ways training adapts
+
+The "fires as intended" columns explain the gap. The stage 1 probe says a random 150-term Jev neuron agrees with the true sign about 80-90% of the time. The Jev-trained hidden neurons agree 93-99% of the time. Same model, same term count, same wording. Training changed which sums Jev gets asked about.
+
+Jev's errors cluster near zero. A network trained with an exact step neuron doesn't care how close to zero its sums are, since 0.01 and 40 fire the same way. A network trained through Jev pays in the loss every time a near-zero sum misfires, so the gradient keeps pushing sums outward, into the range where Jev adds reliably. The swap networks, with identical architecture and inputs, sit at 87-96%.
+
+The second thing training does is tolerate the misfires that remain. Even at 93% agreement on 3 vs 8, Jev is wrong on 7% of hidden evaluations, and the network still gets 94.2%. It learned weights whose downstream use absorbs those errors. That's the only effect the audit's noisy mock showed: there, training left the neuron slightly less accurate and recovered accuracy anyway. The stage 5 mock, fitted to stage 1's random states, didn't capture how far real training moves the sums, which is why it underestimated the swap gap on 0 vs 1.
+
+This is the answer to the question from the NAND experiment, at least for two digits. The weights can compensate, and they do it both by avoiding the inputs the neuron is bad at and by absorbing the errors it still makes.
+
+## Ten digits
+
+{/* TODO stage 6 results */}
+
+Stage 6 is running now. It's the full 784-32-10 network, with all 42 neurons as full-state Jev calls, on 1,000 training images for 10 epochs, with the same straight-through settings as stage 5. There are three seeds, and each seed gets a swap control trained from the same initialization with an exact neuron and then run on Jev. Validation runs on 500 images after epochs 5 and 10, and each finished run gets one pass over 1,000 stratified test images. The claim holds if the Jev-trained net beats its swap control on validation on all three seeds and the gap survives on the test set.
+
+| Seed | Trained through Jev, val (epoch 10) | Swap control, val | Trained through Jev, test | Swap control, test |
+| --- | --- | --- | --- | --- |
+| 0 | {/* TODO stage 6 results */} | {/* TODO stage 6 results */} | {/* TODO stage 6 results */} | {/* TODO stage 6 results */} |
+| 1 | {/* TODO stage 6 results */} | {/* TODO stage 6 results */} | {/* TODO stage 6 results */} | {/* TODO stage 6 results */} |
+| 2 | {/* TODO stage 6 results */} | {/* TODO stage 6 results */} | {/* TODO stage 6 results */} | {/* TODO stage 6 results */} |
+
+{/* TODO stage 6 results: fires-as-intended (hidden/output) per arm, no-output-fires rate, per-digit accuracy, calls and spend */}
+
+## What this cost and how it ran
+
+Stages 1 through 5 plus a backend check came to $17.40 over about 532,000 calls. Jev bills $0.042 per million input tokens, so even stage 5, at 330.5 million input tokens, was $13.88. Money was never the constraint. Requests per minute were.
+
+TypeSafe's direct API allows 1,200 requests a minute, and I paced it at 1,100. Starting with stage 4, calls also went through Vercel's AI Gateway, pinned to the `typesafe-ai` upstream and paced at 3,000 a minute. The gateway only exposes the unversioned `typesafe-ai/jev` alias, not `jev-1.13.0`, so before trusting it I ran the same 100 neurons 3 times on each backend. Sign accuracy was 88.0% direct and 87.3% through the gateway, and the average per-state difference between backends (0.018) was smaller than the difference between repeats on the same backend (0.022). Same neuron. Every response is checked for the model and upstream that served it, and every call is journaled with its backend.
+
+The first stage 4 attempt paced the gateway at 5,000 a minute. About 20% of gateway calls needed retries, p99 latency hit 16 seconds, and one call ran out of retries and crashed the run. The fix was small: a backend that keeps failing gets cooled off for 60 seconds while its calls go to the other one, failures go to their own log, and the gateway runs at 3,000. The rerun held about 4,100 calls a minute with about 1% retries, 73% of them through the gateway.
+
+The client in `jev.py` has no dependencies beyond the standard library. It's a `urllib` POST with backoff on 429s and 5xx, a per-backend pacing slot, and a JSONL journal line per call that records the full state, the answers, tokens, latency and who served it. Every Jev number in this post can be rebuilt from those journals.
+
+## What I haven't shown yet
+
+Stage 5 is one seed per arm. The 8- and 26-point gaps are single runs on 500 validation images, and I've only reported validation, not test. Stage 6 is where that gets repeated across seeds.
+
+Stage 3 wasn't converged (150 steps of batch 16), and exact-trained networks varied a lot by seed with those settings when I ran them locally (47-86% across 10 seeds). The direction of the swap gap was the same on all three seeds, but the size per seed is noisy.
+
+The stage 0 ceiling I quoted in the proposal was wrong, as described above, because of how ties were broken. It's corrected from stage 4 on, but anything comparing against the old ~84% number should use 77-79% instead.
+
+Some things I haven't measured at all. I don't know how correlated Jev's errors are across neurons in the same image, which the mock assumed away. I haven't run the dense 784-pixel variant or compared soft versus sampled activations. And the 84% compound figure from the NAND ALU is still an estimate, not a measured end-to-end accuracy.
+
+## What's next
+
+The claim I want to be able to make is simple: training through Jev recovers accuracy that swapping Jev in loses. Stage 5 shows it on two pairs of digits. Stage 6 either shows it on all ten across three seeds or it doesn't.
+
+After that, stage 7 scales the best stage 6 configuration to 10,000 training images for one seed with a final test pass. And I'm building a live draw-a-digit page where each drawing runs through the network on real Jev calls, showing each neuron's intended sum, Jev's answer, and where the two disagree. Those disagreements are the whole point. Without them it would look like any small MLP.
+
+{/* TODO: link the demo page and stage 7 results once they exist */}
+
+{/*
+TODO figures (proposed, not yet generated):
+
+1. Stage 1 sign accuracy vs margin: accuracy of each format (paired, parallel, products, folded) against the true total's distance from zero in units of term spread. Data: runs/probe/journal-full*.jsonl.gz and runs/probe/full2_rows.json, via src/jevrons/analyze_probe.py.
+2. Scalar neuron step, both wordings: p vs z over [-10, 10] for the v1 wording (negatives at 0.66-0.74) and "Is the number z positive?" (0.01-0.05 / 0.99). Data: runs/probe/scalar_curve.json, runs/probe/wording_rows.json.
+3. Bias over-trust: fraction of neurons following the bias sign when it disagrees with the total, separate vs folded. Data: runs/probe/journal-wording.jsonl.gz and runs/probe/summary-wording.json.
+4. Stage 2 XOR truth table per arm: mean p on each of the four rows for folded vs separate bias. Data: runs/stage2/result-XOR-*.json (mean_p, pass_accuracy).
+5. Stage 5 histogram of hidden pre-activations z for the Jev-trained vs swap nets on 3 vs 8, shaded by whether Jev fired as intended. This is the "pushes sums away from zero" figure. Data: runs/stage5/journal.jsonl.gz (tag.z and answers.fires, filtered to split=val, pair=3v8, layer=0).
+6. Stage 5 training curves: loss and batch accuracy per step for all four runs. Data: runs/stage5/curve-*.json.
+7. Stage 6 trained vs swap per seed, validation and test. Data: runs/stage6/result-seed*-*.json.
+8. Stage 6 per-digit accuracy and confusion. Data: runs/stage6/result-seed*-*.json (per_digit, outputs).
+*/}
