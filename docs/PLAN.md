@@ -8,6 +8,7 @@ Resume point for the project. The experiment design and staged gates are in [pro
 - Budget: no cap for now. Spend is still tracked per call and per stage; a stage can set `max_usd` if needed.
 - Model: `jev-1.13.0`, pinned. A model change starts a new baseline.
 - Credits: use the existing Jev credits; no top-ups and no rate-limit increase request.
+- Backends: calls are split between TypeSafe direct (1,100/min) and Vercel AI Gateway (5,000/min, key `VERCEL_API_KEY`). The gateway is pinned to the `typesafe-ai` upstream and only exposes the unversioned `typesafe-ai/jev` alias; `backend_check` measured it as the same neuron (88.0% vs 87.3% sign accuracy, per-state difference 0.018 below repeat noise 0.022). Every journal line records `backend` and `served`.
 
 ## Design changes from measured results
 

@@ -1,0 +1,16 @@
+{
+ "equivalence": {
+  "typesafe": {
+   "sign_accuracy": 0.88,
+   "mean_p": 0.5036333333333333
+  },
+  "vercel": {
+   "sign_accuracy": 0.8733333333333333,
+   "mean_p": 0.5025333333333333
+  },
+  "mean_abs_diff_between_backends": 0.0175,
+  "mean_abs_diff_between_repeats": 0.021899999999999996
+ },
+ "throughput_calls_per_min": 2961,
+ "retries": 0
+}

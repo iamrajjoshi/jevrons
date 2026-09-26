@@ -35,7 +35,10 @@ class Backend:
     endpoint: str
     key_var: str
     per_min: float  # our pacing target, just under the backend's request limit
-    model: str = MODEL
+    model: str = MODEL  # model id we send
+    served_model: str = MODEL  # model id the response must report
+    provider: str | None = None  # upstream a gateway must route to (None: not a gateway)
+    extra: dict = field(default_factory=dict)  # backend-specific request fields
     _next: float = field(default=0.0, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
@@ -54,9 +57,18 @@ class Backend:
             self._next = slot + 60 / self.per_min
             return slot - now
 
+    def served(self, resp: dict) -> str:
+        """Check who answered; raise if it isn't the pinned model and upstream."""
+        routing = ((resp.get("provider_metadata") or {}).get("gateway") or {}).get("routing") or {}
+        upstream = routing.get("finalProvider")
+        if resp.get("model") != self.served_model or upstream != self.provider:
+            raise RuntimeError(f"{self.name} served {resp.get('model')!r} via {upstream!r}, "
+                               f"expected {self.served_model!r} via {self.provider!r}")
+        return f"{resp['model']}@{upstream}" if upstream else resp["model"]
+
     def post(self, state, questions: dict) -> tuple[dict, int]:
         """One request with retries on 429, 5xx and network errors. Returns (body, attempts)."""
-        body = json.dumps({"model": self.model, "state": state, "questions": questions}).encode()
+        body = json.dumps({"model": self.model, "state": state, "questions": questions, **self.extra}).encode()
         headers = {"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"}
         for attempt in range(7):
             try:
@@ -76,7 +88,11 @@ class Backend:
 BACKENDS = {
     "typesafe": Backend("typesafe", "https://api.typesafe.ai/v1/systemone", "TYPESAFE_API_KEY", 1100),
     # TypeSafe-compatible gateway path: same request and response shape as TypeSafe's API.
-    "vercel": Backend("vercel", "https://ai-gateway.vercel.sh/typesafe/v1/systemone", "AI_GATEWAY_API_KEY", 1100),
+    # Only the unversioned alias exists here; pin the upstream and journal what served. Measured
+    # 2026-09-26: same neuron as direct (backend_check), clean at ~5,900/min, heavy 429s at 12,000/min.
+    "vercel": Backend("vercel", "https://ai-gateway.vercel.sh/typesafe/v1/systemone", "VERCEL_API_KEY", 5000,
+                      model="typesafe-ai/jev", served_model="typesafe-ai/jev", provider="typesafe-ai",
+                      extra={"providerOptions": {"gateway": {"only": ["typesafe-ai"]}}}),
 }
 
 
@@ -110,12 +126,11 @@ class Jev:
         t0 = time.monotonic()
         resp, attempts = backend.post(state, questions)
         latency = time.monotonic() - t0
-        if resp.get("model") != MODEL:
-            raise RuntimeError(f"{backend.name} served model {resp.get('model')!r}, expected {MODEL}")
+        served = backend.served(resp)
         answers = {name: a["noul"] for name, a in resp["answers"].items()}
         usage = resp.get("usage") or {}
         tokens = usage.get("input_tokens", 0)
-        record = {"t": time.time(), "backend": backend.name, "tag": tag, "state": state,
+        record = {"t": time.time(), "backend": backend.name, "served": served, "tag": tag, "state": state,
                   "questions": questions, "answers": answers, "usage": usage,
                   "latency_s": round(latency, 3), "attempts": attempts}
         with self._lock:
