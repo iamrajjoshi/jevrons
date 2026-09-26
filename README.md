@@ -2,7 +2,7 @@
 
 Training a network around neurons it can't see inside: an MNIST classifier whose neurons are frozen Jev evaluations, with only the outer weights learned.
 
-The question is whether learned connections can compensate for an imperfect model acting as a neuron. The plan is in [docs/proposal.md](docs/proposal.md); the pre-audit version is [docs/original-proposal.md](docs/original-proposal.md).
+Inspired by [Mustafa Akın's NAND-gate ALU built from Jev calls](https://x.com/mustafaakin/status/2103574428475154635) (7 + 5 = 12 in 116 gates, 7.6 s, $0.0018). That had fixed wiring; Jevrons adds learning. The question is whether learned connections can compensate for an imperfect model acting as a neuron. The plan is in [docs/proposal.md](docs/proposal.md); the pre-audit version is [docs/original-proposal.md](docs/original-proposal.md).
 
 ## Status
 

@@ -5,6 +5,8 @@ Research and experimental design
 26 September 2026
 
 > Pre-audit version, kept for history. The current plan is [proposal.md](proposal.md).
+>
+> Correction: the NAND-gate ALU below was Mustafa Akın's experiment ([tweet](https://x.com/mustafaakin/status/2103574428475154635)), not Raj's. The text is left as originally written.
 
 We propose training an image classifier whose neuron activations are supplied by Jev API evaluations. The optimizer learns the outer network's weights and biases while Jev remains frozen. The main research question is whether those learned connections can compensate for an imperfect model acting as a neuron.
 

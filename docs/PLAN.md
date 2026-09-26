@@ -2,6 +2,8 @@
 
 Resume point for the project. The experiment design and staged gates are in [proposal.md](proposal.md); this file records owner decisions and where the work stands.
 
+Inspiration: [Mustafa Akın's NAND-gate ALU made of Jev calls](https://x.com/mustafaakin/status/2103574428475154635). Credit him wherever the ALU numbers appear.
+
 ## Decisions (2026-09-26, Raj)
 
 - Deliverables: a live draw-a-digit demo, a short screen-recorded video of it for Twitter, and a long-form post for Raj's engineering blog. Blog figures and the video need saved artifacts from every stage, so every paid call is journaled.
