@@ -4,7 +4,9 @@ Forward uses the neuron's real output. Backward is straight-through on the inten
 sum: dL/dz = dL/da * sigmoid'(z / tau) / tau. SPSA is the derivative-free alternative.
 """
 
+import pickle
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import numpy as np
 
@@ -164,18 +166,36 @@ if __name__ == "__main__":
     assert solved >= 7
 
 
-def fit(params, X, Y, neuron, epochs, batch=32, lr=0.01, tau=1.0, seed=0, log=None, tag=None, output="logit"):
-    """Minibatch straight-through training; one Jev forward pass per batch."""
+def fit(params, X, Y, neuron, epochs, batch=32, lr=0.01, tau=1.0, seed=0, log=None, tag=None, output="logit",
+        on_epoch=None, checkpoint=None):
+    """Minibatch straight-through training; one Jev forward pass per batch.
+
+    on_epoch(epoch, params) runs after each epoch. With a checkpoint path, params, optimizer state
+    and log are saved after every epoch, and a rerun resumes from the last finished epoch.
+    """
     opt, rng = Adam(params, lr), np.random.default_rng(seed)
-    step = 0
+    step, start = 0, 0
+    if checkpoint is not None and Path(checkpoint).exists():
+        state = pickle.loads(Path(checkpoint).read_bytes())
+        params, opt.m, opt.v, opt.t, step, start = (state[k] for k in ("params", "m", "v", "t", "step", "epoch"))
+        if log is not None:
+            log[:] = state["log"]
     for epoch in range(epochs):
-        for i in np.array_split(rng.permutation(len(X)), max(1, len(X) // batch)):
+        order = rng.permutation(len(X))  # drawn every epoch so a resumed run sees the same batches
+        if epoch < start:
+            continue
+        for i in np.array_split(order, max(1, len(X) // batch)):
             acts, zs = forward(params, X[i], neuron, {**(tag or {}), "epoch": epoch, "step": step})
             if log is not None:
                 log.append({"epoch": epoch, "step": step, "loss": bce(acts[-1], Y[i]),
                             "acc": float(np.mean(decide(acts[-1]) == (np.argmax(Y[i], 1) if Y.shape[1] > 1 else Y[i, 0])))})
             params = opt.step(params, ste_grads(params, acts, zs, Y[i], tau, output))
             step += 1
+        if checkpoint is not None:
+            Path(checkpoint).write_bytes(pickle.dumps({"params": params, "m": opt.m, "v": opt.v, "t": opt.t,
+                                                       "step": step, "epoch": epoch + 1, "log": log or []}))
+        if on_epoch is not None:
+            on_epoch(epoch, params)
     return params
 
 

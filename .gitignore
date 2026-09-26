@@ -7,3 +7,6 @@ runs/smoke/
 runs/**/*.jsonl
 runs/*.log
 .DS_Store
+runs/stage6/journal*
+runs/stage6/checkpoint-*
+runs/stage6/partial-*

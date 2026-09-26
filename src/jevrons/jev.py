@@ -85,8 +85,10 @@ class Backend:
                                             timeout=120) as r:
                     return json.load(r), attempt + 1
             except urllib.error.HTTPError as e:
+                detail = e.read()[:300].decode(errors="replace")
+                if e.code in (401, 402, 403):  # key or credits problem: let another backend carry on
+                    raise BackendDown(f"{self.name}: HTTP {e.code} {detail}") from None
                 if e.code != 429 and e.code < 500:
-                    detail = e.read()[:500].decode(errors="replace")
                     raise RuntimeError(f"{self.name} HTTP {e.code}: {detail}") from None
                 errors.append(str(e.code))
             except (urllib.error.URLError, TimeoutError) as e:
