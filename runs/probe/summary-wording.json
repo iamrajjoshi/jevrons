@@ -1,0 +1,163 @@
+{
+ "wording": [
+  {
+   "fmt": "products",
+   "wording": "v1",
+   "k": 10,
+   "sign_accuracy": 0.9,
+   "follows_bias": 0.9
+  },
+  {
+   "fmt": "products",
+   "wording": "v1",
+   "k": 30,
+   "sign_accuracy": 0.85,
+   "follows_bias": 0.95
+  },
+  {
+   "fmt": "products",
+   "wording": "v1",
+   "k": 75,
+   "sign_accuracy": 0.825,
+   "follows_bias": 0.85
+  },
+  {
+   "fmt": "products",
+   "wording": "v1",
+   "k": 150,
+   "sign_accuracy": 0.75,
+   "follows_bias": 0.875
+  },
+  {
+   "fmt": "products",
+   "wording": "v2",
+   "k": 10,
+   "sign_accuracy": 0.85,
+   "follows_bias": 0.95
+  },
+  {
+   "fmt": "products",
+   "wording": "v2",
+   "k": 30,
+   "sign_accuracy": 0.825,
+   "follows_bias": 0.975
+  },
+  {
+   "fmt": "products",
+   "wording": "v2",
+   "k": 75,
+   "sign_accuracy": 0.8,
+   "follows_bias": 0.875
+  },
+  {
+   "fmt": "products",
+   "wording": "v2",
+   "k": 150,
+   "sign_accuracy": 0.725,
+   "follows_bias": 0.9
+  },
+  {
+   "fmt": "folded",
+   "wording": "v1",
+   "k": 10,
+   "sign_accuracy": 0.95,
+   "follows_bias": 0.8
+  },
+  {
+   "fmt": "folded",
+   "wording": "v1",
+   "k": 30,
+   "sign_accuracy": 0.85,
+   "follows_bias": 0.85
+  },
+  {
+   "fmt": "folded",
+   "wording": "v1",
+   "k": 75,
+   "sign_accuracy": 0.85,
+   "follows_bias": 0.725
+  },
+  {
+   "fmt": "folded",
+   "wording": "v1",
+   "k": 150,
+   "sign_accuracy": 0.9,
+   "follows_bias": 0.725
+  },
+  {
+   "fmt": "folded",
+   "wording": "v2",
+   "k": 10,
+   "sign_accuracy": 0.925,
+   "follows_bias": 0.825
+  },
+  {
+   "fmt": "folded",
+   "wording": "v2",
+   "k": 30,
+   "sign_accuracy": 0.8,
+   "follows_bias": 0.75
+  },
+  {
+   "fmt": "folded",
+   "wording": "v2",
+   "k": 75,
+   "sign_accuracy": 0.85,
+   "follows_bias": 0.725
+  },
+  {
+   "fmt": "folded",
+   "wording": "v2",
+   "k": 150,
+   "sign_accuracy": 0.85,
+   "follows_bias": 0.775
+  }
+ ],
+ "tokens": {
+  "wording/folded/10": {
+   "calls": 80,
+   "tokens_per_call": 373,
+   "latency_s": 0.14
+  },
+  "wording/folded/150": {
+   "calls": 80,
+   "tokens_per_call": 1128,
+   "latency_s": 0.138
+  },
+  "wording/folded/30": {
+   "calls": 80,
+   "tokens_per_call": 480,
+   "latency_s": 0.139
+  },
+  "wording/folded/75": {
+   "calls": 80,
+   "tokens_per_call": 724,
+   "latency_s": 0.146
+  },
+  "wording/products/10": {
+   "calls": 80,
+   "tokens_per_call": 381,
+   "latency_s": 0.131
+  },
+  "wording/products/150": {
+   "calls": 80,
+   "tokens_per_call": 1136,
+   "latency_s": 0.137
+  },
+  "wording/products/30": {
+   "calls": 80,
+   "tokens_per_call": 488,
+   "latency_s": 0.139
+  },
+  "wording/products/75": {
+   "calls": 80,
+   "tokens_per_call": 732,
+   "latency_s": 0.145
+  }
+ },
+ "spend": {
+  "calls": 640,
+  "tokens": 435512,
+  "usd": 0.0183
+ }
+}

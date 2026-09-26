@@ -3,3 +3,7 @@ data/
 __pycache__/
 .env
 *.env
+runs/smoke/
+runs/**/*.jsonl
+runs/*.log
+.DS_Store
