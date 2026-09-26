@@ -7,9 +7,9 @@ updatedDate: 2026-09-26
 
 ## Where this started
 
-Before this, I built a 4-bit ALU out of NAND gates where every gate was a call to Jev, TypeSafe AI's evaluation model. It computed 7 + 5 = 12 using 116 gates in 7.6 seconds for $0.0018, with a compound probability of 84% that the answer was right (a computed figure, which I never re-measured end to end).
+[Mustafa Akın made Jev act as a NAND gate](https://x.com/mustafaakin/status/2103574428475154635) and wired enough of them together to run a 4-bit ALU. Jev is TypeSafe AI's frozen evaluation model, so every gate was an API call. By his numbers, 7 + 5 = 12 took 116 gates, 7.6 seconds and $0.0018, with a compound probability of 84% that the answer came out right. He joked that billions of these will play Doom one day, and had Opus 5.5 cut a Nolan-style video about it. That tweet is why this project exists.
 
-That experiment had no learning in it. Every gate had fixed wiring, and if a gate misfired, the answer was wrong. So the obvious next question was: what if the wiring could learn? If a model acting as a neuron is imperfect, can the weights around it learn to compensate?
+His ALU had no learning in it. Every gate had fixed wiring, and if a gate misfired, the answer was wrong. So the obvious next question was: what if the wiring could learn? If a model acting as a neuron is imperfect, can the weights around it learn to compensate?
 
 Jevrons is that experiment. It's a small neural network where every neuron is a live Jev call, trained with ordinary backprop on MNIST. Over one day and about 532,000 calls it went from a single neuron to a network that separates handwritten 3s from 8s at 94.2%. The more interesting result is what happens when you take a network trained with perfect arithmetic and drop Jev in: it falls apart, and the one trained through Jev doesn't.
 
@@ -184,7 +184,7 @@ Jev's errors cluster near zero. A network trained with an exact step neuron does
 
 The second thing training does is tolerate the misfires that remain. Even at 93% agreement on 3 vs 8, Jev is wrong on 7% of hidden evaluations, and the network still gets 94.2%. It learned weights whose downstream use absorbs those errors. That's the only effect the audit's noisy mock showed: there, training left the neuron slightly less accurate and recovered accuracy anyway. The stage 5 mock, fitted to stage 1's random states, didn't capture how far real training moves the sums, which is why it underestimated the swap gap on 0 vs 1.
 
-This is the answer to the question from the NAND experiment, at least for two digits. The weights can compensate, and they do it both by avoiding the inputs the neuron is bad at and by absorbing the errors it still makes.
+That answers the question Mustafa's ALU raised for me, at least for two digits. The weights can compensate, and they do it both by avoiding the inputs the neuron is bad at and by absorbing the errors it still makes.
 
 ## Ten digits
 
@@ -218,7 +218,7 @@ Stage 3 wasn't converged (150 steps of batch 16), and exact-trained networks var
 
 The stage 0 ceiling I quoted in the proposal was wrong, as described above, because of how ties were broken. It's corrected from stage 4 on, but anything comparing against the old ~84% number should use 77-79% instead.
 
-Some things I haven't measured at all. I don't know how correlated Jev's errors are across neurons in the same image, which the mock assumed away. I haven't run the dense 784-pixel variant or compared soft versus sampled activations. And the 84% compound figure from the NAND ALU is still an estimate, not a measured end-to-end accuracy.
+Some things I haven't measured at all. I don't know how correlated Jev's errors are across neurons in the same image, which the mock assumed away. I haven't run the dense 784-pixel variant or compared soft versus sampled activations. And the 84% in the opening is his reported compound figure for the ALU, not something Jevrons measured.
 
 ## What's next
 

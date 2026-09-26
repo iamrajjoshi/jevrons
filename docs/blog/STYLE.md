@@ -26,7 +26,7 @@ Use tables for comparisons with more than two cells (stage 1 accuracy by term co
 
 ## Structure
 
-Opening: one or two short paragraphs. Start from the concrete precursor (the NAND-gate ALU) and the question, not a statement about AI in general. Offer the repo or results early if they're public (Willow does "If you can't wait, here is the code"); Jevrons is private, so skip that line.
+Opening: one or two short paragraphs. Start from the concrete precursor (Mustafa Akın's NAND-gate ALU tweet, credited by name and linked, with his figures attributed to him) and the question it raised, not a statement about AI in general. Quote at most one short phrase from someone else's post; paraphrase the rest. Offer the repo or results early if they're public (Willow does "If you can't wait, here is the code"); Jevrons is private, so skip that line.
 
 Middle: `##` headings that name the thing, not tease it ("The neuron over-trusts the bias", not "A surprising twist"). Paragraphs of 2-5 sentences with varied length. One idea per section. Results embedded in the prose where they're discussed, not saved for the end.
 
