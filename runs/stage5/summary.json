@@ -1,0 +1,77 @@
+{
+ "results": [
+  {
+   "pair": "0v1",
+   "arm": "jev",
+   "val_jev": {
+    "accuracy": 0.994,
+    "accuracy_per_pass": [
+     0.994,
+     0.994
+    ],
+    "fires_as_intended": {
+     "hidden": 0.9935624999999999,
+     "output": 0.996
+    }
+   },
+   "val_exact_step": 0.992
+  },
+  {
+   "pair": "0v1",
+   "arm": "swap",
+   "val_jev": {
+    "accuracy": 0.915,
+    "accuracy_per_pass": [
+     0.918,
+     0.912
+    ],
+    "fires_as_intended": {
+     "hidden": 0.964375,
+     "output": 0.845
+    }
+   },
+   "val_exact_step": 0.994
+  },
+  {
+   "pair": "3v8",
+   "arm": "jev",
+   "val_jev": {
+    "accuracy": 0.942,
+    "accuracy_per_pass": [
+     0.94,
+     0.944
+    ],
+    "fires_as_intended": {
+     "hidden": 0.9297500000000001,
+     "output": 0.975
+    }
+   },
+   "val_exact_step": 0.944
+  },
+  {
+   "pair": "3v8",
+   "arm": "swap",
+   "val_jev": {
+    "accuracy": 0.678,
+    "accuracy_per_pass": [
+     0.666,
+     0.69
+    ],
+    "fires_as_intended": {
+     "hidden": 0.86871875,
+     "output": 0.916
+    }
+   },
+   "val_exact_step": 0.928
+  }
+ ],
+ "spend": {
+  "calls": 297000,
+  "tokens": 330501596,
+  "usd": 13.8811,
+  "by_backend": {
+   "typesafe": 79766,
+   "vercel": 217234
+  }
+ }
+}

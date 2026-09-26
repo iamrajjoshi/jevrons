@@ -35,5 +35,26 @@ def stage3():
     print(FIG / "stage3-boundary.png")
 
 
+def stage5():
+    pairs, arms = ("0v1", "3v8"), (("jev", "Trained through Jev"), ("swap", "Trained exact, swapped to Jev"))
+    fig, ax = plt.subplots(figsize=(7, 4.8), constrained_layout=True)
+    width = 0.2
+    for k, pair in enumerate(pairs):
+        for a, (arm, label) in enumerate(arms):
+            r = json.loads((ROOT / f"runs/stage5/result-{pair}-{arm}.json").read_text())
+            for m, (value, hatch) in enumerate(((r["val_exact_step"], "//"), (r["val_jev"]["accuracy"], ""))):
+                x = k + (a * 2 + m - 1.5) * width
+                ax.bar(x, value, width, color=("#b2182b", "#2166ac")[a], hatch=hatch, alpha=0.55 if hatch else 1,
+                       label=f"{label}, {'exact neuron' if hatch else 'live Jev'}" if k == 0 else None)
+                ax.text(x, value + 0.01, f"{value:.0%}", ha="center", fontsize=8)
+    ax.set_xticks(range(len(pairs)), ["0 vs 1", "3 vs 8"])
+    ax.set_ylim(0.5, 1.05)
+    ax.set_ylabel("Validation accuracy (500 images)")
+    ax.legend(fontsize=8, loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2, frameon=False)
+    FIG.mkdir(parents=True, exist_ok=True)
+    fig.savefig(FIG / "stage5-swap.png", dpi=160)
+    print(FIG / "stage5-swap.png")
+
+
 if __name__ == "__main__":
-    {"stage3": stage3}[sys.argv[1]]()
+    {"stage3": stage3, "stage5": stage5}[sys.argv[1]]()

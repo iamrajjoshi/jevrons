@@ -16,7 +16,7 @@ Resume point for the project. The experiment design and staged gates are in [pro
 - Neurons go one per request. Packing 8 into a request flipped 11-18% of answers.
 - The neuron state is the folded-bias products list: `{"products": [x1*w1, ..., xk*wk, bias]}` with "Add all the numbers in products together." Separate-bias formats over-weight the bias and fail XOR.
 - Variant A (scalar) needs the question "Is the number z positive?"; the first wording answered yes for every z.
-- Spend so far: $3.52 over ~235,000 calls (stages 1-4 plus backend check).
+- Spend so far: $17.40 over ~532,000 calls (stages 1-5 plus backend check).
 
 ## Stages
 
@@ -27,7 +27,7 @@ Resume point for the project. The experiment design and staged gates are in [pro
 | 2. Logic (AND/OR/XOR) | Done, gate passed | [stage2-logic.md](results/stage2-logic.md) |
 | 3. Circle | Done, gate passed | [stage3-circle.md](results/stage3-circle.md) |
 | 4. Variant A digits | Done, gate passed | [stage4-scalar-digits.md](results/stage4-scalar-digits.md) |
-| 5. Two digits | Running | |
+| 5. Two digits | Done, gate passed | [stage5-two-digits.md](results/stage5-two-digits.md) |
 | 6. Ten digits | Not started | |
 | 7. Scale | Not started | |
 | Demo + video | Not started | |

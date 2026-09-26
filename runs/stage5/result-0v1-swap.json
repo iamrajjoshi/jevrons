@@ -1,0 +1,1 @@
+{"pair": "0v1", "arm": "swap", "val_jev": {"accuracy": 0.915, "accuracy_per_pass": [0.918, 0.912], "fires_as_intended": {"hidden": 0.964375, "output": 0.845}}, "val_exact_step": 0.994}
