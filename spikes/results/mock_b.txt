@@ -1,0 +1,6 @@
+sigma=0.5 swap (trained clean)        val acc 0.818 ±0.007  neuron agrees w/ true sign 0.959
+sigma=0.5 trained with noisy neuron   val acc 0.826 ±0.006  neuron agrees w/ true sign 0.958
+sigma=1.0 swap (trained clean)        val acc 0.770 ±0.017  neuron agrees w/ true sign 0.916
+sigma=1.0 trained with noisy neuron   val acc 0.796 ±0.005  neuron agrees w/ true sign 0.909
+sigma=2.0 swap (trained clean)        val acc 0.607 ±0.037  neuron agrees w/ true sign 0.845
+sigma=2.0 trained with noisy neuron   val acc 0.706 ±0.007  neuron agrees w/ true sign 0.800

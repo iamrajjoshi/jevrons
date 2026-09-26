@@ -1,0 +1,22 @@
+nonzero pixels/image: mean 150, p95 219, max 351
+1k train ep=10  H=32   hidden=soft  out=soft  val acc 0.837 ±0.011 | swap->step 0.829
+1k train ep=10  H=32   hidden=hard  out=soft  val acc 0.834 ±0.003
+1k train ep=10  H=32   hidden=hard  out=hard  val acc 0.834 ±0.003
+1k train ep=10  H=64   hidden=soft  out=soft  val acc 0.857 ±0.003 | swap->step 0.857
+1k train ep=10  H=64   hidden=hard  out=soft  val acc 0.853 ±0.005
+1k train ep=10  H=64   hidden=hard  out=hard  val acc 0.853 ±0.005
+1k train ep=10  H=128  hidden=soft  out=soft  val acc 0.865 ±0.003 | swap->step 0.866
+1k train ep=10  H=128  hidden=hard  out=soft  val acc 0.863 ±0.001
+1k train ep=10  H=128  hidden=hard  out=hard  val acc 0.863 ±0.001
+1k train ep=50  H=32   hidden=soft  out=soft  val acc 0.843 ±0.003 | swap->step 0.831
+1k train ep=50  H=32   hidden=hard  out=soft  val acc 0.836 ±0.004
+1k train ep=50  H=32   hidden=hard  out=hard  val acc 0.836 ±0.004
+1k train ep=50  H=64   hidden=soft  out=soft  val acc 0.857 ±0.001 | swap->step 0.853
+1k train ep=50  H=64   hidden=hard  out=soft  val acc 0.849 ±0.007
+1k train ep=50  H=64   hidden=hard  out=hard  val acc 0.849 ±0.007
+1k train ep=50  H=128  hidden=soft  out=soft  val acc 0.860 ±0.003 | swap->step 0.863
+1k train ep=50  H=128  hidden=hard  out=soft  val acc 0.864 ±0.004
+1k train ep=50  H=128  hidden=hard  out=hard  val acc 0.864 ±0.004
+50k train H=32 hidden=soft  out=soft  val 0.952 test 0.953 | z1 range p1..p99 -86.8..96.9, |z1|<0.05 frac 0.001
+50k train H=32 hidden=hard  out=soft  val 0.942 test 0.945 | z1 range p1..p99 -79.1..82.6, |z1|<0.05 frac 0.001
+50k train H=32 hidden=hard  out=hard  val 0.942 test 0.945 | z1 range p1..p99 -79.1..82.6, |z1|<0.05 frac 0.001

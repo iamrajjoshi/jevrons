@@ -1,0 +1,6 @@
+[project]
+name = "jevrons"
+version = "0.0.0"
+description = "Training a neural network whose neurons are frozen Jev evaluations"
+requires-python = ">=3.12,<3.13"
+dependencies = ["numpy>=2.2,<3"]
