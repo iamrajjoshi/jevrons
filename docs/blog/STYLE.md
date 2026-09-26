@@ -28,7 +28,7 @@ Use tables for comparisons with more than two cells (stage 1 accuracy by term co
 
 Opening: one or two short paragraphs. Start from the concrete precursor (Mustafa Akın's NAND-gate ALU tweet, credited by name and linked, with his figures attributed to him) and the question it raised, not a statement about AI in general. Quote at most one short phrase from someone else's post; paraphrase the rest. Offer the repo or results early if they're public (Willow does "If you can't wait, here is the code"); Jevrons is private, so skip that line.
 
-Middle: `##` headings that name the thing, not tease it ("The neuron over-trusts the bias", not "A surprising twist"). Paragraphs of 2-5 sentences with varied length. One idea per section. Results embedded in the prose where they're discussed, not saved for the end.
+Middle: `##` headings that name the thing, not tease it ("The bias trick", not "A surprising twist"). Paragraphs of 2-5 sentences with varied length. One idea per section. Results embedded in the prose where they're discussed, not saved for the end.
 
 Code: fenced, with a language tag, short enough to read in one glance (under ~15 lines), and immediately followed by a sentence saying what it does or why it's shaped that way. Willow's pattern: show the struct, then one sentence on the consequence. Show real state/JSON from the journals where possible, trimmed with `...`.
 
@@ -37,6 +37,20 @@ Figures: markdown images with descriptive alt text (the Sentry post writes full-
 Footnotes (`[^1]`) for side facts and references, as in Willow and the Sentry post. Keep them to one or two sentences.
 
 Closing: no recap, no moral. End on the next concrete thing (the demo, stage 7) or a practical pointer. The Willow ending ("If you want to try it:" then a command) is the model.
+
+## Rules from Raj's revision (these override anything above)
+
+Tell the story as a chain of experiments, each one raising the question the next answers: one neuron, does it add, the bias trick, XOR, a circle, digits with the sum in code, digits with Jev summing, all ten digits. Name each experiment by what it is. Never "stage N" in prose or headings (figure filenames are fine).
+
+Don't narrate the planning. No "I wrote a proposal", no audit, no "what the plan got wrong". When something didn't work, say what it was and why, directly: SPSA's update noise grows with parameter count and it lost to straight-through at equal call budgets; Jev isn't deterministic, so no lookup tables or caching; packing neurons into one request flips answers; the statement-style wording said yes to everything; a separate bias field gets over-trusted.
+
+Focus on the experiments, not execution. No project-management narrative, rate-limit logistics, backend routing, commit history or agents. Keep code and infrastructure only where they're part of the story: the neuron state JSON, the straight-through snippet, and the fact that every neuron is its own paid API call. Cost is one short, concrete aside.
+
+Equations where they help, in fenced `text` blocks: the neuron (z = sum of w_i x_i + b, p = Jev(state)), BCE, the straight-through rule (dL/dz = dL/dp · σ'(z/τ)/τ), the SPSA estimator and why its variance grows with dimension. The blog has no remark-math or KaTeX configured (`~/code/blog/astro.config.mjs`), so no `$...$`. Don't overdo it.
+
+Headings follow Raj's own posts ("Why I built it", "Keeping it thin", "Embedding fzf", "Stacked branches"): short, specific, plain, sentence case. Not allowed: "What X is", "Why this matters", "Key takeaways", "The problem" / "The solution", colon pairs ("Stage 1: it adds"), or Title Case Gerund Phrases.
+
+MDX: a bare `{` or `<` in prose is parsed as JSX. Keep braces and comparison signs inside inline code or fenced blocks.
 
 ## Frontmatter
 
