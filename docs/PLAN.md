@@ -32,7 +32,9 @@ Inspiration: [Mustafa Akın's NAND-gate ALU made of Jev calls](https://x.com/mus
 | 5. Two digits | Done, gate passed | [stage5-two-digits.md](results/stage5-two-digits.md) |
 | 6. Ten digits | Not started | |
 | 7. Scale | Not started | |
-| Demo + video | Not started | |
+| 8. Improvements | Planned | |
+| 9. Open-weight neurons (Ollaya) | Planned, needs install approval | |
+| Demo + video | Demo built (`demo/`), video not started | |
 | Blog post | Not started | |
 
 ## Stage 1 probe
@@ -43,3 +45,21 @@ Answers: is Jev deterministic on identical states; how sign accuracy falls with 
 - Full-state: 100 random neurons per (format, term count), formats paired / parallel / products, term counts 10, 30, 75, 150, 250. Inputs are nonzero MNIST pixel values, weights N(0, 1) at two decimals, bias set so the true sum spans a normalized margin of -2 to +2. 20 neurons per cell repeated 5 times. Paired-format neurons also sent packed 8 per request.
 
 Gate: the go/no-go rules in proposal.md stage 1.
+
+## Stage 8: improvements (planned)
+
+Each arm is compared against the stage 6 baseline on the same split, seeds and test set, and reports accuracy, misfire rate, tokens per inference and training cost.
+
+- 8a Sparse neurons. L1 or top-k on first-layer weights so each hidden neuron sums ~30 terms instead of ~150. Stage 1 says Jev is more accurate on shorter sums (90% at 75 terms vs 80% at 150), and tokens drop ~4x. Target: equal or better accuracy at a quarter of the cost per call.
+- 8b Margin training. Add a hinge term that pushes each neuron's intended sum at least m spreads away from zero. Stage 5 found training does this implicitly; doing it explicitly should cut misfires further.
+- 8c Pretrain on the stand-in, fine-tune on Jev. Train most epochs locally against the graded mock neuron (free), then 1-2 epochs through live Jev. Target: stage 6 accuracy at ~20% of its training cost.
+- 8d Test-time voting. Jev is stochastic, so average k live passes per image. Measure accuracy against cost for k = 1, 3, 5.
+
+## Stage 9: open-weight neurons (planned)
+
+[Ollaya](https://ollaya.dev/) ([source](https://github.com/ollaya-dev/ollaya), Apache-2.0) runs open-weight System-1 models locally (laya 322-421M, nli, decider 0.75-4.2B, others) behind the same `/v1/systemone` API, so it is one more `Backend` entry (`http://127.0.0.1:11435`, no key). Runs on this Mac's CPU via ONNX Runtime; free per call.
+
+- 9a Probe each model with the stage 1 neuron probe (sign accuracy vs term count, determinism, latency).
+- 9b XOR and 3 vs 8 with the best model, with the swap control.
+- 9c If a local model is a usable adder, run the stage 8 sweeps on it for free, then confirm the winners on Jev.
+- Question for the blog: which System-1 model is the best neuron, and does training compensate for a worse one?
