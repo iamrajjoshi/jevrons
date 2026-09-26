@@ -1,0 +1,1 @@
+{"task": "AND", "seed": 2, "arm": "spsa_products", "train_calls": 240, "pass_accuracy": [0.75, 0.75, 0.75, 0.75, 0.75], "all_correct_frac": 0.0, "mean_p": [0.03, 0.046, 0.062, 0.096], "local_step_correct": false, "loss_first": 1.7882654107080809, "loss_last": 0.6880988222047653, "params": [[[[0.82], [-1.46]], [-1.46]]]}

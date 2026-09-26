@@ -1,0 +1,1 @@
+{"task": "AND", "seed": 1, "arm": "ste_folded", "train_calls": 240, "pass_accuracy": [1.0, 1.0, 1.0, 1.0, 0.75], "all_correct_frac": 0.8, "mean_p": [0.024, 0.064, 0.06, 0.556], "local_step_correct": true, "loss_first": 1.872519226113299, "loss_last": 0.1313467190244817, "params": [[[[0.71], [1.05]], [-1.07]]]}

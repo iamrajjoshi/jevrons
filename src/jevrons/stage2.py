@@ -45,6 +45,10 @@ def main():
                 "spsa_products": ("products", lambda n, p, log: train_spsa(p, X, Y, n, steps // 2, lr=0.3, c=0.3, seed=seed, log=log)),
             }
             for arm, (fmt, fit) in arms.items():
+                done = OUT / f"result-{task}-{arm}-{seed}.json"
+                if done.exists():  # resume: never pay for a finished run twice
+                    results.append(json.loads(done.read_text()))
+                    continue
                 neuron = JevNeuron(jev, fmt)
                 log = []
                 calls0 = jev.calls
@@ -55,6 +59,7 @@ def main():
                        "loss_first": log[0]["loss"], "loss_last": log[-1]["loss"],
                        "params": [[W.round(2).tolist(), b.round(2).tolist()] for W, b in params]}
                 (OUT / f"curve-{task}-{arm}-{seed}.json").write_text(json.dumps(log))
+                done.write_text(json.dumps(res))
                 results.append(res)
                 print(f"{task} seed={seed} {arm:<14} calls={res['train_calls']:<5} "
                       f"all-correct {res['all_correct_frac']:.1f}  pass acc {np.mean(res['pass_accuracy']):.2f}  "

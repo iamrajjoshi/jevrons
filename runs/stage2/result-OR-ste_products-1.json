@@ -1,0 +1,1 @@
+{"task": "OR", "seed": 1, "arm": "ste_products", "train_calls": 240, "pass_accuracy": [1.0, 1.0, 1.0, 1.0, 1.0], "all_correct_frac": 1.0, "mean_p": [0.032, 0.914, 0.934, 0.954], "local_step_correct": true, "loss_first": 0.030620881417661484, "loss_last": 0.04611247502765046, "params": [[[[4.08], [4.34]], [-0.81]]]}

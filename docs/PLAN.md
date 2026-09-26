@@ -7,14 +7,23 @@ Resume point for the project. The experiment design and staged gates are in [pro
 - Deliverables: a live draw-a-digit demo, a short screen-recorded video of it for Twitter, and a long-form post for Raj's engineering blog. Blog figures and the video need saved artifacts from every stage, so every paid call is journaled.
 - Budget: no cap for now. Spend is still tracked per call and per stage; a stage can set `max_usd` if needed.
 - Model: `jev-1.13.0`, pinned. A model change starts a new baseline.
+- Credits: use the existing Jev credits; no top-ups and no rate-limit increase request.
+
+## Design changes from measured results
+
+- Jev answers vary between identical calls, so there's no tabulation or caching; every forward pass is live.
+- Neurons go one per request. Packing 8 into a request flipped 11-18% of answers.
+- The neuron state is the folded-bias products list: `{"products": [x1*w1, ..., xk*wk, bias]}` with "Add all the numbers in products together." Separate-bias formats over-weight the bias and fail XOR.
+- Variant A (scalar) needs the question "Is the number z positive?"; the first wording answered yes for every z.
+- Spend so far: $0.95 over 49,500 calls (stages 1-2).
 
 ## Stages
 
 | Stage | Status | Output |
 | --- | --- | --- |
 | 0. Local capacity | Done | `spikes/results/` |
-| 1. Probe | In progress | `runs/probe/` |
-| 2. Logic (AND/OR/XOR) | Not started | |
+| 1. Probe | Done, gate passed | [stage1-probe.md](results/stage1-probe.md) |
+| 2. Logic (AND/OR/XOR) | Done, gate passed | [stage2-logic.md](results/stage2-logic.md) |
 | 3. Circle | Not started | |
 | 4. Variant A digits | Not started | |
 | 5. Two digits | Not started | |

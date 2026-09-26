@@ -12,7 +12,6 @@ ENDPOINT = "https://api.typesafe.ai/v1/systemone"
 MODEL = "jev-1.13.0"
 USD_PER_INPUT_TOKEN = 0.042 / 1_000_000
 CREDENTIALS = Path.home() / ".config/jev-research/credentials.env"
-RETRYABLE = {429, 500, 502, 503, 504, 529}
 MIN_INTERVAL_S = 60 / 1100  # stay just under 1,200 requests/min
 
 
@@ -61,7 +60,7 @@ class Jev:
                     resp = json.load(r)
                 break
             except urllib.error.HTTPError as e:
-                if e.code not in RETRYABLE:
+                if e.code != 429 and e.code < 500:  # 429 and any 5xx (incl. Cloudflare 52x) retry
                     detail = e.read()[:500].decode(errors="replace")
                     raise RuntimeError(f"Jev HTTP {e.code}: {detail}") from None
             except (urllib.error.URLError, TimeoutError):
