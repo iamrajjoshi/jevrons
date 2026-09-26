@@ -108,13 +108,13 @@ for layer in reversed(range(len(params))):
     da = dz @ params[layer][0].T             # flows to the earlier layer through w
 ```
 
-That's the core of `ste_grads` in `net.py`. The loss is computed on Jev's real output, so if Jev misfires, the loss sees it. The direction to move each weight comes from the arithmetic Jev was supposed to do. `tau` sets how wide the pretend slope is: 0.3 on the circle and 3 on digits, where sums are larger. It costs zero extra calls, which matters when every forward pass is already 42 calls per image.
+That's the core of `ste_grads` in `net.py`. The loss is computed on Jev's real output, so if Jev misfires, the loss sees it. The direction to move each weight comes from the arithmetic Jev was supposed to do. `tau` sets how wide the pretend slope is: 1 on XOR, 0.3 on the circle and 3 on digits, where sums are larger. It costs zero extra calls, which matters when every forward pass is already 42 calls per image.
 
 Weights are clipped to ±9.99 after every Adam step so they always go on the wire as two-decimal numbers, and the state doesn't grow as training goes on.
 
 ## XOR: one format change, 0 of 3 to 3 of 3
 
-AND and OR need one neuron. XOR needs a hidden layer, so stage 2 used 2 inputs, 4 hidden Jev neurons and 1 output Jev neuron, which is 20 calls to run the four rows of the truth table once. Three arms got the same call budget: straight-through with a separate bias field, straight-through with the bias folded in, and SPSA. Each trained net was then run 5 more times through live Jev.
+AND and OR need one neuron. XOR needs a hidden layer, so stage 2 used 2 inputs, 4 hidden Jev neurons and 1 output Jev neuron, which is 20 calls to run the four rows of the truth table once. Three arms got the same call budget: straight-through with a separate bias field, straight-through with the bias folded in, and SPSA. Each trained net was then run 5 more times through live Jev. The whole stage took 33,183 calls and $0.46, including a first attempt that an HTTP 520 killed.
 
 | XOR arm | Seed 0 | Seed 1 | Seed 2 | Fully correct passes |
 | --- | --- | --- | --- | --- |
