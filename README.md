@@ -6,7 +6,7 @@ Inspired by [Mustafa Akın's NAND-gate ALU built from Jev calls](https://x.com/m
 
 ## Status
 
-Stage 0 (local capacity check) is done. No Jev calls have been made yet.
+Stages 0-5 are done; stage 6 (ten digits, 3 seeds) is running. Results are in [docs/results/](docs/results/) and the current plan and decisions in [docs/PLAN.md](docs/PLAN.md).
 
 ## Reproduce the local spikes
 
