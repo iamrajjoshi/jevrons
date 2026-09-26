@@ -8,7 +8,7 @@ Resume point for the project. The experiment design and staged gates are in [pro
 - Budget: no cap for now. Spend is still tracked per call and per stage; a stage can set `max_usd` if needed.
 - Model: `jev-1.13.0`, pinned. A model change starts a new baseline.
 - Credits: use the existing Jev credits; no top-ups and no rate-limit increase request.
-- Backends: calls are split between TypeSafe direct (1,100/min) and Vercel AI Gateway (5,000/min, key `VERCEL_API_KEY`). The gateway is pinned to the `typesafe-ai` upstream and only exposes the unversioned `typesafe-ai/jev` alias; `backend_check` measured it as the same neuron (88.0% vs 87.3% sign accuracy, per-state difference 0.018 below repeat noise 0.022). Every journal line records `backend` and `served`.
+- Backends: calls are split between TypeSafe direct (1,100/min) and Vercel AI Gateway (3,000/min, key `VERCEL_API_KEY`). The gateway is pinned to the `typesafe-ai` upstream and only exposes the unversioned `typesafe-ai/jev` alias; `backend_check` measured it as the same neuron (88.0% vs 87.3% sign accuracy, per-state difference 0.018 below repeat noise 0.022). Every journal line records `backend` and `served`.
 
 ## Design changes from measured results
 
@@ -16,7 +16,7 @@ Resume point for the project. The experiment design and staged gates are in [pro
 - Neurons go one per request. Packing 8 into a request flipped 11-18% of answers.
 - The neuron state is the folded-bias products list: `{"products": [x1*w1, ..., xk*wk, bias]}` with "Add all the numbers in products together." Separate-bias formats over-weight the bias and fail XOR.
 - Variant A (scalar) needs the question "Is the number z positive?"; the first wording answered yes for every z.
-- Spend so far: $2.24 over ~137,000 calls (stages 1-3 plus backend check).
+- Spend so far: $3.52 over ~235,000 calls (stages 1-4 plus backend check).
 
 ## Stages
 
@@ -26,8 +26,8 @@ Resume point for the project. The experiment design and staged gates are in [pro
 | 1. Probe | Done, gate passed | [stage1-probe.md](results/stage1-probe.md) |
 | 2. Logic (AND/OR/XOR) | Done, gate passed | [stage2-logic.md](results/stage2-logic.md) |
 | 3. Circle | Done, gate passed | [stage3-circle.md](results/stage3-circle.md) |
-| 4. Variant A digits | Not started | |
-| 5. Two digits | Not started | |
+| 4. Variant A digits | Done, gate passed | [stage4-scalar-digits.md](results/stage4-scalar-digits.md) |
+| 5. Two digits | Running | |
 | 6. Ten digits | Not started | |
 | 7. Scale | Not started | |
 | Demo + video | Not started | |

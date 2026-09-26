@@ -23,7 +23,7 @@ class StepNeuron:
 class JevNeuron:
     """Each (example, neuron) pair is one Jev call. Zero inputs are dropped from the state."""
 
-    def __init__(self, jev, fmt="paired", threads=16):
+    def __init__(self, jev, fmt="paired", threads=64):
         self.jev, self.fmt, self.threads = jev, fmt, threads
 
     def __call__(self, X, W, b, tag=None):
@@ -39,6 +39,38 @@ class JevNeuron:
         with ThreadPoolExecutor(self.threads) as ex:
             out = list(ex.map(one, jobs))
         return np.array(out).reshape(X.shape[0], W.shape[1])
+
+
+class ScalarJevNeuron:
+    """Variant A: the sum is computed in code; Jev only answers whether z is positive."""
+
+    def __init__(self, jev, threads=64):
+        self.jev, self.threads = jev, threads
+
+    def __call__(self, X, W, b, tag=None):
+        from jevrons.states import SCALAR_Q_ALT, r2
+        Z = X @ W + b
+        jobs = [(i, j) for i in range(Z.shape[0]) for j in range(Z.shape[1])]
+
+        def one(ij):
+            i, j = ij
+            return self.jev.ask({"z": r2(Z[i, j])}, SCALAR_Q_ALT, {**(tag or {}), "i": i, "j": j})["pos"]
+
+        with ThreadPoolExecutor(self.threads) as ex:
+            return np.array(list(ex.map(one, jobs))).reshape(Z.shape)
+
+
+class MockJevNeuron:
+    """Local stand-in for the full-state neuron, fitted to stage 1: fires on z + noise > 0 with
+    noise sd 0.77 x the spread of the terms (the per-term products and bias), p in {0.03, 0.97}."""
+
+    def __init__(self, seed=0, noise=0.77):
+        self.rng, self.noise = np.random.default_rng(seed), noise
+
+    def __call__(self, X, W, b, tag=None):
+        z = X @ W + b
+        spread = np.sqrt((X**2) @ (W**2) + b**2)
+        return np.where(z + self.noise * spread * self.rng.standard_normal(z.shape) > 0, 0.97, 0.03)
 
 
 def init(sizes, seed):
@@ -59,13 +91,17 @@ def bce(p, Y):
     return float(np.mean(-Y * np.log(p) - (1 - Y) * np.log(1 - p)))
 
 
-def ste_grads(params, acts, zs, Y, tau=1.0):
+def ste_grads(params, acts, zs, Y, tau=1.0, output="bce"):
+    """output="bce": exact dBCE/dp times the surrogate slope (stages 2-3).
+    output="logit": dL/dz = (p - Y), as if p were sigmoid(z); stable when p is near 0 or 1."""
     p = np.clip(acts[-1], 1e-3, 1 - 1e-3)
     da = (p - Y) / (p * (1 - p)) / Y.size  # dBCE/dp
     grads = []
     for layer in reversed(range(len(params))):
         s = sig(zs[layer] / tau)
         dz = da * s * (1 - s) / tau
+        if output == "logit" and layer == len(params) - 1:
+            dz = (p - Y) / Y.size
         grads.append((acts[layer].T @ dz, dz.sum(0)))
         da = dz @ params[layer][0].T
     return grads[::-1]
@@ -126,3 +162,30 @@ if __name__ == "__main__":
         solved += bool(np.all(out == Y))
     print(f"local step XOR solved {solved}/10 seeds")
     assert solved >= 7
+
+
+def fit(params, X, Y, neuron, epochs, batch=32, lr=0.01, tau=1.0, seed=0, log=None, tag=None, output="logit"):
+    """Minibatch straight-through training; one Jev forward pass per batch."""
+    opt, rng = Adam(params, lr), np.random.default_rng(seed)
+    step = 0
+    for epoch in range(epochs):
+        for i in np.array_split(rng.permutation(len(X)), max(1, len(X) // batch)):
+            acts, zs = forward(params, X[i], neuron, {**(tag or {}), "epoch": epoch, "step": step})
+            if log is not None:
+                log.append({"epoch": epoch, "step": step, "loss": bce(acts[-1], Y[i]),
+                            "acc": float(np.mean(decide(acts[-1]) == (np.argmax(Y[i], 1) if Y.shape[1] > 1 else Y[i, 0])))})
+            params = opt.step(params, ste_grads(params, acts, zs, Y[i], tau, output))
+            step += 1
+    return params
+
+
+def decide(out, seed=0):
+    """Class from output activations. Ties (common with near-binary outputs) break at random,
+    never by the intended sum, which would leak exact arithmetic into the prediction."""
+    if out.shape[1] == 1:
+        return (out[:, 0] >= 0.5).astype(int)
+    return np.argmax(out + 1e-6 * np.random.default_rng(seed).random(out.shape), 1)
+
+
+def predict(params, X, neuron, tag=None):
+    return decide(forward(params, X, neuron, tag)[0][-1])

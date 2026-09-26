@@ -1,0 +1,34 @@
+{
+ "weights_trained_with": "exact step, 1,000 images, 10 epochs",
+ "val": {
+  "n": 1000,
+  "acc_exact_step": 0.775,
+  "acc_jev": 0.77,
+  "no_output_fires_jev": 0.141,
+  "jev_fires_as_intended": {
+   "hidden": 0.99953125,
+   "output": 0.9989
+  },
+  "prediction_agreement": 0.951
+ },
+ "test": {
+  "n": 1000,
+  "acc_exact_step": 0.785,
+  "acc_jev": 0.791,
+  "no_output_fires_jev": 0.11,
+  "jev_fires_as_intended": {
+   "hidden": 0.99959375,
+   "output": 0.9992
+  },
+  "prediction_agreement": 0.946
+ },
+ "spend": {
+  "calls": 84000,
+  "tokens": 26089501,
+  "usd": 1.0958,
+  "by_backend": {
+   "typesafe": 22552,
+   "vercel": 61448
+  }
+ }
+}
