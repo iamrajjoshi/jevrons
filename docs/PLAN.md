@@ -31,6 +31,7 @@ Inspiration: [Mustafa Akın's NAND-gate ALU made of Jev calls](https://x.com/mus
 | 4. Variant A digits | Done, gate passed | [stage4-scalar-digits.md](results/stage4-scalar-digits.md) |
 | 5. Two digits | Done, gate passed | [stage5-two-digits.md](results/stage5-two-digits.md) |
 | 6. Ten digits | Not started | |
+| 6b. What Jev's behaviour reveals | Running (offline analysis + <$1 live traps) | |
 | 7. Scale | Not started | |
 | 8. Improvements | Planned | |
 | 9. Open-weight neurons (Ollaya) | Planned, needs install approval | |
@@ -45,6 +46,10 @@ Answers: is Jev deterministic on identical states; how sign accuracy falls with 
 - Full-state: 100 random neurons per (format, term count), formats paired / parallel / products, term counts 10, 30, 75, 150, 250. Inputs are nonzero MNIST pixel values, weights N(0, 1) at two decimals, bias set so the true sum spans a normalized margin of -2 to +2. 20 neurons per cell repeated 5 times. Paired-format neurons also sent packed 8 per request.
 
 Gate: the go/no-go rules in proposal.md stage 1.
+
+## Stage 6b: what Jev's behaviour reveals
+
+Mostly offline, over journals already paid for (backed up to `~/jevrons-journal-backup/`). Error model of misfires (margin, term count, sign mix, where the big terms sit, whether Jev skims the list); calibration of p; margin distributions by epoch for Jev-trained vs swap runs; about 5 adversarial trap families with matched controls (live, $1 cap); weight maps for Jev-trained vs exact-trained networks from the same start; repeat noise and backend equivalence at scale. Framing: optimization finds quirks you didn't know to look for, led by the bias-trust story. Output: `docs/results/stage6b-jev-quirks.md`.
 
 ## Stage 8: improvements (planned)
 
