@@ -2,6 +2,7 @@
 
 import gzip
 import json
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -13,7 +14,7 @@ from jevrons.states import (SCALAR_Q, SCALAR_Q_ALT, neuron_question, neuron_stat
                             packed_questions, sample_neuron)
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "runs" / "probe"
+OUT = ROOT / "runs" / os.environ.get("JEVRONS_PROBE_DIR", "probe")
 THREADS = 16  # ~20 req/s allowed; latency ~0.2-1 s per call
 FORMATS = ("paired", "parallel", "products")
 TERMS = (10, 30, 75, 150, 250)

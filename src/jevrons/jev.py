@@ -37,19 +37,21 @@ def _secret(var: str) -> str | None:
 class Backend:
     name: str
     endpoint: str
-    key_var: str
+    key_var: str | None  # None: no key needed (local server)
     per_min: float  # our pacing target, just under the backend's request limit
     model: str = MODEL  # model id we send
     served_model: str = MODEL  # model id the response must report
     provider: str | None = None  # upstream a gateway must route to (None: not a gateway)
     extra: dict = field(default_factory=dict)  # backend-specific request fields
+    default: bool = True  # included when no backends are named; False for a different model
+    usd_per_token: float = USD_PER_INPUT_TOKEN
     _next: float = field(default=0.0, repr=False)
     _cool_until: float = field(default=0.0, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     @property
     def key(self) -> str | None:
-        return _secret(self.key_var)
+        return _secret(self.key_var) if self.key_var else "local"
 
     def next_slot(self) -> float:
         return max(self._next, self._cool_until, time.monotonic())
@@ -105,6 +107,10 @@ BACKENDS = {
     "vercel": Backend("vercel", "https://ai-gateway.vercel.sh/typesafe/v1/systemone", "VERCEL_API_KEY", 3000,
                       model="typesafe-ai/jev", served_model="typesafe-ai/jev", provider="typesafe-ai",
                       extra={"providerOptions": {"gateway": {"only": ["typesafe-ai"]}}}),
+    # Open-weight System-1 model served locally by Ollaya (https://ollaya.dev), same API. A different
+    # neuron from Jev, so it is never picked by default: name it with backends=["ollaya"].
+    "ollaya": Backend("ollaya", "http://127.0.0.1:11435/v1/systemone", None, 60000,
+                      model="laya:en", served_model="laya:en", default=False, usd_per_token=0.0),
 }
 
 
@@ -115,7 +121,7 @@ def noul(instructions: str, true: str, false: str) -> dict:
 class Jev:
     def __init__(self, journal: Path, max_usd: float | None = None, backends: list[str] | None = None):
         names = backends or [n for n in os.environ.get("JEVRONS_BACKENDS", "").split(",") if n]
-        self.backends = [BACKENDS[n] for n in names] if names else [b for b in BACKENDS.values() if b.key]
+        self.backends = [BACKENDS[n] for n in names] if names else [b for b in BACKENDS.values() if b.default and b.key]
         missing = [b.name for b in self.backends if not b.key]
         if missing or not self.backends:
             raise RuntimeError(f"no key for {missing or 'any backend'}; set it in the env or {CREDENTIALS}")
@@ -162,7 +168,7 @@ class Jev:
         with self._lock:
             self.calls += 1
             self.tokens += tokens
-            self.usd += tokens * USD_PER_INPUT_TOKEN
+            self.usd += tokens * backend.usd_per_token
             self.by_backend[backend.name] = self.by_backend.get(backend.name, 0) + 1
             with self.journal.open("a") as f:
                 f.write(json.dumps(record) + "\n")
