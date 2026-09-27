@@ -36,6 +36,7 @@ Inspiration: [Mustafa Akın's NAND-gate ALU made of Jev calls](https://x.com/mus
 | 8g. A Jevron that behaves like a neuron | Queued after stage 6 | `runs/stage8g/` |
 | 8. Improvements | Planned | |
 | 9. Open-weight neurons (Ollaya) | Planned, needs install approval | |
+| 10. Teaching laya to add | Running (local, free) | `laya/`, `runs/stage10/` |
 | Demo + video | Demo built (`demo/`), video not started | |
 | Blog post | Not started | |
 
@@ -74,3 +75,7 @@ Each arm is compared against the stage 6 baseline on the same split, seeds and t
 - 9b XOR and 3 vs 8 with the best model, with the swap control.
 - 9c If a local model is a usable adder, run the stage 8 sweeps on it for free, then confirm the winners on Jev.
 - Question for the blog: which System-1 model is the best neuron, and does training compensate for a worse one?
+
+## Stage 10: teaching laya to add (running)
+
+Hypothesis: laya (421M, open weights, Apache-2.0) fails as a neuron because it was never taught, not because a model its size can't learn it. Fine-tune it on Mac MPS in an isolated `laya/` sub-project: a "true math" arm (unlimited synthetic folded-format sums up to the 512-token limit plus real journal states, labelled with the true sign) and a "copy Jev" arm (journal states labelled with Jev's p). Evaluate with Jev's margin probe (k, m0 per term count, held-out lengths), the stage 6b traps and the scalar sweep. Serve the winner through Ollaya or a local /v1/systemone server as a new backend, then train a sparse 3 vs 8 network through it with the swap control. No Jev calls.
