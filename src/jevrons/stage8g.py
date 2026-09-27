@@ -8,6 +8,8 @@ where n is the number of terms the neuron sends.
   C  B's backward on a symmetric curve, plus pre-compensation: the bias sent to Jev is shifted
      by m0 * spread so Jev's drifted threshold lands on the true zero
   D  C plus phrase averaging: three wordings of the question on the same state in one call
+  E  no pre-compensation; average the noul with a neutral choice question on the same state (their
+     leans point opposite ways and largely cancel); backward on the symmetric curve
 
 The swap control (stage 5's exact-trained 3v8 weights) is re-run on the C and D neurons: if the
 neuron now behaves as intended, the swap gap should shrink.
@@ -41,6 +43,10 @@ QUESTIONS = {
     "v1": noul(INSTRUCTIONS["folded"], TRUE, FALSE),
     "v2": noul("Sum every number in the products list.", "The sum is positive.", "The sum is zero or negative."),
     "v3": noul("Compute the total of all values in products.", "The total is above zero.", "The total is zero or below."),
+    # A neutral choice leans the other way from the noul (threshold above zero instead of below),
+    # so averaging the two cancels much of the lean: runs/choice-jev.
+    "choice": {"type": "choice", "instructions": "Add all the numbers in products together, then compare the total with zero.",
+               "criteria": {"above": "The total is above zero.", "below": "The total is below zero or equal to zero."}},
 }
 
 
@@ -89,7 +95,7 @@ class CalibratedJevNeuron:
                 shift = float(curve(len(products) + 1)[1]) * spread  # send z + m0 * spread
             state = {"products": products + [r2(bias + shift)]}
             ans = self.jev.ask(state, self.questions, {**(tag or {}), "i": i, "j": j, "z": z, "shift": shift})
-            return float(np.mean(list(ans.values())))
+            return float(np.mean([a["above"] if isinstance(a, dict) else a for a in ans.values()]))
 
         with ThreadPoolExecutor(self.threads) as ex:
             return np.array(list(ex.map(one, jobs))).reshape(X.shape[0], W.shape[1])
@@ -146,20 +152,20 @@ def main():
     X, Y, Xv, yv = data()
     jev = Jev(OUT / "journal.jsonl")
     swap = [tuple(np.load(ROOT / "runs/stage5/weights-3v8-swap.npz")[f"arr_{i}"] for i in pair) for pair in ((0, 1), (2, 3))]
-    arms = {"B": (False, ["v1"]), "C": (True, ["v1"]), "D": (True, ["v1", "v2", "v3"])}
+    arms = {"B": (False, ["v1"]), "C": (True, ["v1"]), "D": (True, ["v1", "v2", "v3"]), "E": ("none", ["v1", "choice"])}
     for name, (comp, phrasings) in arms.items():
         done = OUT / f"result-{name}.json"
         if done.exists():
             continue
-        neuron = CalibratedJevNeuron(jev, comp, phrasings)
+        neuron = CalibratedJevNeuron(jev, comp is True, phrasings)
         tag = {"arm": name}
         log = []
         params = fit(init(SEED), X, Y, neuron, EPOCHS, BATCH, LR, 3.0, SEED, log, {**tag, "split": "train"},
-                     slope=slope_for(comp), checkpoint=OUT / f"checkpoint-{name}.pkl")
+                     slope=slope_for(comp is not False), checkpoint=OUT / f"checkpoint-{name}.pkl")
         res = {"arm": name, "compensate": comp, "phrasings": phrasings,
                "trained": evaluate(params, Xv, yv, neuron, {**tag, "split": "val"}),
                "trained_exact_step": float(np.mean((forward(params, Xv, StepNeuron())[0][-1][:, 0] >= 0.5) == (yv >= 0.5)))}
-        if comp:  # the neuron itself changed, so the swap control changes too
+        if comp is not False:  # the neuron itself changed, so the swap control changes too
             res["swap"] = evaluate(swap, Xv, yv, neuron, {**tag, "split": "val", "swap": True})
         np.savez(OUT / f"weights-{name}.npz", *[a for layer in params for a in layer])
         (OUT / f"curve-{name}.json").write_text(json.dumps(log))

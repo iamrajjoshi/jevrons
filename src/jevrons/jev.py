@@ -142,7 +142,8 @@ class Jev:
             f.write(json.dumps({"t": time.time(), "backend": backend, "error": error, "tag": tag}) + "\n")
 
     def ask(self, state, questions: dict, tag: dict | None = None) -> dict[str, float]:
-        """Send one request to whichever backend frees up first; return {question: P(yes)}."""
+        """Send one request to whichever backend frees up first; return {question: P(yes)} for noul
+        questions and {question: {option: probability}} for choice questions."""
         if self.max_usd is not None and self.usd >= self.max_usd:
             raise RuntimeError(f"spend cap ${self.max_usd} reached")
         failures = []
@@ -161,7 +162,7 @@ class Jev:
             raise RuntimeError(f"every backend failed: {failures}")
         latency = time.monotonic() - t0
         served = backend.served(resp)
-        answers = {name: a["noul"] for name, a in resp["answers"].items()}
+        answers = {name: a["noul"] if "noul" in a else a["probabilities"] for name, a in resp["answers"].items()}
         usage = resp.get("usage") or {}
         tokens = usage.get("input_tokens", 0)
         record = {"t": time.time(), "backend": backend.name, "served": served, "tag": tag,
