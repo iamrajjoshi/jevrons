@@ -17,6 +17,7 @@ const S = {
   compare: "training", trained: "jev", source: "mock", task: null,
   panels: [], t: Infinity, session: { calls: 0, usd: 0 },
   sel: null,                          // {panel, layer, j}
+  ink: "A",                           // pad effect variant
 };
 
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -25,28 +26,131 @@ const hid = (j) => "h" + String(j + 1).padStart(2, "0");
 
 // ---------- drawing pad and MNIST preprocessing ----------
 
-const pad = $("#pad"), pctx = pad.getContext("2d", { willReadFrequently: true });
-let drawing = false, last = null;
+// Strokes live on an offscreen full-resolution layer (`ink`), which is also what preprocessing reads, so the
+// visible pad is free to animate. The layer is only ever drawn, never redrawn, so it is the same raster as before.
+const pad = $("#pad"), pctx = pad.getContext("2d");
+const N = pad.width, CELL = N / 28;
+const ink = document.createElement("canvas"); ink.width = ink.height = N;
+const ictx = ink.getContext("2d", { willReadFrequently: true });
+const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+const clock = () => window.__inkT ?? performance.now();  // tests pin time here to capture mid-animation frames
+const QUANT_MS = 350, SETTLE_MS = 300, POP_MS = 120;
+let drawing = false, last = null, penTimer = null, frame = null, live = null;
 
 function padPoint(e) {
   const r = pad.getBoundingClientRect();
-  return [(e.clientX - r.left) * pad.width / r.width, (e.clientY - r.top) * pad.height / r.height];
+  return [(e.clientX - r.left) * N / r.width, (e.clientY - r.top) * N / r.height];
 }
 pad.addEventListener("pointerdown", (e) => {
   pad.setPointerCapture(e.pointerId);
+  clearTimeout(penTimer); cancelAnimationFrame(frame);
   if (S.real) { clearPad(); S.real = null; }
-  drawing = true; last = padPoint(e); stroke(last, last);
+  if (S.ink === "B" && !live) live = { prev: softGrid(cellMeans(alpha(), CELL)), at: new Float64Array(784) };
+  drawing = true; last = padPoint(e); stroke(last, last); showDrawing();
 });
-pad.addEventListener("pointermove", (e) => { if (drawing) { const p = padPoint(e); stroke(last, p); last = p; } });
-const end = () => { if (!drawing) return; drawing = false; updateInput(); if (S.source !== "live") runAll(); };
+pad.addEventListener("pointermove", (e) => { if (drawing) { const p = padPoint(e); stroke(last, p); last = p; showDrawing(); } });
+const end = () => { if (!drawing) return; drawing = false; penTimer = setTimeout(penUp, 150); };
 pad.addEventListener("pointerup", end);
 pad.addEventListener("pointercancel", end);
 
 function stroke(a, b) {
-  pctx.strokeStyle = css("--ink"); pctx.lineWidth = 42; pctx.lineCap = pctx.lineJoin = "round";
-  pctx.beginPath(); pctx.moveTo(...a); pctx.lineTo(...b); pctx.stroke();
+  ictx.strokeStyle = css("--ink"); ictx.lineWidth = 42; ictx.lineCap = ictx.lineJoin = "round";
+  ictx.beginPath(); ictx.moveTo(...a); ictx.lineTo(...b); ictx.stroke();
 }
-function clearPad() { pctx.clearRect(0, 0, pad.width, pad.height); }
+function clearPad() {
+  clearTimeout(penTimer); cancelAnimationFrame(frame); live = null;
+  ictx.clearRect(0, 0, N, N); pctx.clearRect(0, 0, N, N); pad.classList.remove("gridded");
+}
+
+function penUp() {
+  const a = alpha();
+  S.input = preprocess(a, N, N);
+  $("#pad-note").textContent = S.input ? "your drawing" : "draw a digit";
+  renderInput();
+  if (S.input && S.source !== "live") runAll();
+  animateInk(a);
+}
+
+// ---------- ink display ----------
+
+function alpha() {
+  const d = ictx.getImageData(0, 0, N, N).data, a = new Uint8ClampedArray(N * N);
+  for (let i = 0; i < a.length; i++) a[i] = d[i * 4 + 3];
+  return a;
+}
+function cellMeans(a, b) {             // mean ink per b x b block, 0..1
+  const n = N / b, out = new Float32Array(n * n);
+  for (let y = 0; y < N; y++) { const row = (y / b | 0) * n; for (let x = 0; x < N; x++) out[row + (x / b | 0)] += a[y * N + x]; }
+  return out.map((v) => v / (255 * b * b));
+}
+function softGrid(v) {                 // B's brush: a touched cell also lifts its four neighbors a little
+  return v.map((x, k) => { const i = k % 28, j = k / 28 | 0;
+    const nb = Math.max(i ? v[k - 1] : 0, i < 27 ? v[k + 1] : 0, j ? v[k - 28] : 0, j < 27 ? v[k + 28] : 0);
+    return Math.max(x, 0.35 * nb); });
+}
+function cells(v, n, mul = 1) {
+  const c = N / n; pctx.fillStyle = css("--ink");
+  for (let k = 0; k < v.length; k++) if (v[k] > 0.004) { pctx.globalAlpha = Math.min(1, v[k] * mul); pctx.fillRect((k % n) * c, (k / n | 0) * c, c, c); }
+  pctx.globalAlpha = 1;
+}
+function gridLines() {
+  pctx.strokeStyle = css("--rule"); pctx.lineWidth = 1; pctx.beginPath();
+  for (let i = 1; i < 28; i++) { const x = i * CELL + 0.5; pctx.moveTo(x, 0); pctx.lineTo(x, N); pctx.moveTo(0, x); pctx.lineTo(N, x); }
+  pctx.stroke();
+}
+function smooth() { pctx.clearRect(0, 0, N, N); pctx.drawImage(ink, 0, 0); pad.classList.remove("gridded"); }
+function finalGrid(v) {                // the exact 28x28 input sent to the model
+  pctx.clearRect(0, 0, N, N); gridLines(); cells(v, 28); pad.classList.add("gridded"); S.shown = v;
+}
+
+function showDrawing() {
+  if (S.ink !== "B" || !live) return smooth();
+  cancelAnimationFrame(frame);
+  const v = softGrid(cellMeans(alpha(), CELL)), t = clock(); let popping = false;
+  pctx.clearRect(0, 0, N, N); gridLines(); pad.classList.add("gridded");
+  const shown = v.map((x, k) => {
+    if (live.prev[k] < 0.03 && x >= 0.03 && !live.at[k]) live.at[k] = t;
+    const age = t - live.at[k];
+    if (reduced.matches || !live.at[k] || age >= POP_MS) return x;
+    popping = true; return x + (1 - x) * 0.8 * (1 - age / POP_MS);  // overshoot, then settle to the value
+  });
+  cells(shown, 28);
+  if (popping) frame = requestAnimationFrame(() => { if (drawing || penTimer) showDrawing(); });
+}
+
+const easeOut = (u) => 1 - (1 - u) ** 3;
+function animateInk(a) {
+  cancelAnimationFrame(frame); penTimer = null;
+  const fin = S.input, raw = S.ink === "B" && live ? softGrid(cellMeans(a, CELL)) : cellMeans(a, CELL);
+  live = null;
+  if (!fin) return smooth();
+  if (reduced.matches) return finalGrid(fin);
+  const g = fin.box, from = [g.x0, g.y0, g.w, g.h], to = [g.ox * CELL, g.oy * CELL, g.tw * CELL, g.th * CELL];
+  const levels = [2, 4, 5, 7, 10, 14, 20].map((b) => [N / b, b === CELL ? raw : cellMeans(a, b)]);
+  const order = Float32Array.from({ length: 784 }, () => Math.random() * QUANT_MS);
+  const quant = S.ink === "B" ? 0 : QUANT_MS, t0 = clock();
+  const step = () => {
+    const t = clock() - t0;
+    pctx.clearRect(0, 0, N, N);
+    if (t < quant && S.ink === "A") {          // smooth -> 2px -> 4px ... -> 28x28 blocks, all at once
+      pad.classList.remove("gridded");
+      const [n, v] = levels[Math.min(levels.length - 1, Math.floor(t / quant * levels.length))]; cells(v, n);
+    } else if (t < quant) {                    // C: each 28x28 cell snaps at its own random moment
+      pad.classList.remove("gridded"); pctx.drawImage(ink, 0, 0);
+      for (let k = 0; k < 784; k++) if (order[k] <= t && raw[k] > 0.004) pctx.clearRect((k % 28) * CELL, (k / 28 | 0) * CELL, CELL, CELL);
+      cells(raw.map((v, k) => order[k] <= t ? v : 0), 28);
+    } else if (t < quant + SETTLE_MS) {         // settle: the model's 28x28 slides and scales into place
+      const u = (t - quant) / SETTLE_MS, k = easeOut(u), fade = Math.min(1, u / 0.2);
+      pad.classList.add("gridded"); gridLines();
+      if (fade < 1) cells(raw, 28, 1 - fade);
+      const cur = from.map((f, i) => f + (to[i] - f) * k), sx = cur[2] / to[2], sy = cur[3] / to[3];
+      pctx.save(); pctx.setTransform(sx, 0, 0, sy, cur[0] - to[0] * sx, cur[1] - to[1] * sy);
+      cells(fin, 28, fade); pctx.restore();
+    } else return finalGrid(fin);
+    frame = requestAnimationFrame(step);
+  };
+  step();
+}
 
 // MNIST: bounding box scaled to fit 20x20 (area-averaged, so anti-aliased), then placed in 28x28 so the
 // center of mass sits at the center.
@@ -70,25 +174,15 @@ function preprocess(alpha, W, H) {
   const oy = Math.min(28 - th, Math.max(0, Math.round(14 - my / m)));
   const out = new Float32Array(784);
   for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) out[(y + oy) * 28 + x + ox] = small[y * tw + x];
+  out.box = { x0, y0, w, h, ox, oy, tw, th };  // where the digit was drawn and where it lands, for the settle
   return out;
-}
-
-function updateInput() {
-  const d = pctx.getImageData(0, 0, pad.width, pad.height).data;
-  const a = new Uint8ClampedArray(pad.width * pad.height);
-  for (let i = 0; i < a.length; i++) a[i] = d[i * 4 + 3];
-  S.input = preprocess(a, pad.width, pad.height);
-  $("#pad-note").textContent = S.input ? "your drawing" : "draw a digit";
-  renderInput();
 }
 
 async function loadReal(index) {
   const labels = $("#real-label").value || S.panels[0].model.labels.join(",");
   const r = await (await fetch(Number.isInteger(index) ? `/api/digit?index=${index}` : `/api/digit?labels=${labels}`)).json();
   S.input = Float32Array.from(r.pixels); S.real = { index: r.index, label: r.label };
-  const c = document.createElement("canvas"); c.width = c.height = 28;
-  paintGray(c, S.input);
-  clearPad(); pctx.imageSmoothingEnabled = false; pctx.drawImage(c, 0, 0, pad.width, pad.height);
+  clearPad(); finalGrid(S.input);
   $("#pad-note").textContent = `MNIST test #${r.index}, label ${r.label}`;
   renderInput();
   if (S.source !== "live") runAll();  // live runs only on an explicit click
@@ -457,6 +551,11 @@ async function boot() {
   $("#real-label").innerHTML = `<option value="">any in task</option>` + [...Array(10).keys()].map((d) => `<option>${d}</option>`).join("");
   $("#task").addEventListener("change", (e) => { S.task = e.target.value; configure().then(() => S.input && S.source !== "live" && runAll()); });
   bindSeg("#compare", "compare"); bindSeg("#trained", "trained"); bindSeg("#source", "source");
+  $("#ink").addEventListener("click", (e) => {
+    const v = e.target.dataset.v; if (!v) return;
+    S.ink = v; setSeg("#ink", v);
+    if (S.input && !S.real) animateInk(alpha());  // replay on the same drawing, so variants compare directly
+  });
   $("#clear").addEventListener("click", () => { clearPad(); S.real = null; S.input = null; renderInput(); configure(); $("#pad-note").textContent = "draw a digit"; });
   $("#real").addEventListener("click", () => loadReal());
   $("#run").addEventListener("click", runAll);
