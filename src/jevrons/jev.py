@@ -149,17 +149,25 @@ class Jev:
         if self.max_usd is not None and self.usd >= self.max_usd:
             raise RuntimeError(f"spend cap ${self.max_usd} reached")
         failures = []
-        for backend in sorted(self.backends, key=Backend.next_slot):
-            if (wait := backend.reserve()) > 0:
-                time.sleep(wait)
-            t0 = time.monotonic()
-            try:
-                resp, attempts = backend.post(state, questions)
-                break
-            except BackendDown as e:  # cool it off and let the next backend take this call
-                backend.cool_off()
-                failures.append(str(e))
-                self._log_failure(backend.name, str(e), tag)
+        for rnd in range(6):
+            for backend in sorted(self.backends, key=Backend.next_slot):
+                if (wait := backend.reserve()) > 0:
+                    time.sleep(wait)
+                t0 = time.monotonic()
+                try:
+                    resp, attempts = backend.post(state, questions)
+                    break
+                except BackendDown as e:  # cool it off and let the next backend take this call
+                    backend.cool_off()
+                    failures.append(str(e))
+                    self._log_failure(backend.name, str(e), tag)
+            else:
+                # Rate limits and outages pass; billing and key errors don't. Wait out the former.
+                if not any("retries exhausted" in f for f in failures):
+                    raise RuntimeError(f"every backend failed: {failures}")
+                time.sleep(60 * (rnd + 1))
+                continue
+            break
         else:
             raise RuntimeError(f"every backend failed: {failures}")
         latency = time.monotonic() - t0
