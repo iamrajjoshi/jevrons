@@ -56,5 +56,32 @@ def stage5():
     print(FIG / "stage5-swap.png")
 
 
+def margin():
+    """Jev as a function: fire rate vs normalized margin m = z / spread, with a fitted noisy threshold."""
+    from math import erf
+    rows = json.loads((ROOT / "runs/probe/full2_rows.json").read_text())  # mode, fmt, k, m, z, bias, p
+    rows = [r for r in rows if r[0] == "bias0"]
+    m, fired = np.array([r[3] for r in rows]), np.array([r[6] >= 0.5 for r in rows], float)
+    Phi = np.vectorize(lambda t: 0.5 * (1 + erf(t / np.sqrt(2))))
+    ks = np.linspace(0.3, 5, 200)
+    nll = [-np.mean(fired * np.log(Phi(k * m) + 1e-9) + (1 - fired) * np.log(1 - Phi(k * m) + 1e-9)) for k in ks]
+    k = ks[int(np.argmin(nll))]
+    edges = np.linspace(-3, 3, 25)
+    mid = (edges[1:] + edges[:-1]) / 2
+    idx = np.digitize(m, edges) - 1
+    rate = [fired[idx == i].mean() if np.any(idx == i) else np.nan for i in range(len(mid))]
+    fig, ax = plt.subplots(figsize=(6.5, 4), constrained_layout=True)
+    ax.plot(mid, rate, "o", color="#1e1e1e", ms=5, label=f"Jev, {len(rows)} neurons, bias 0")
+    t = np.linspace(-3, 3, 300)
+    ax.plot(t, Phi(k * t), color="#e4507a", lw=2, label=f"noisy threshold  Φ({k:.2f} m)")
+    ax.step(t, (t > 0).astype(float), color="#999999", lw=1, ls="--", where="post", label="exact neuron")
+    ax.set_xlabel("normalized margin  m = z / spread of the terms")
+    ax.set_ylabel("fraction of calls where Jev said fire")
+    ax.legend(fontsize=8, frameon=False, loc="upper left")
+    FIG.mkdir(parents=True, exist_ok=True)
+    fig.savefig(FIG / "jev-as-a-function.png", dpi=160)
+    print(FIG / "jev-as-a-function.png", "fitted k =", round(k, 2))
+
+
 if __name__ == "__main__":
-    {"stage3": stage3, "stage5": stage5}[sys.argv[1]]()
+    {"stage3": stage3, "stage5": stage5, "margin": margin}[sys.argv[1]]()
