@@ -30,8 +30,8 @@ Inspiration: [Mustafa Akın's NAND-gate ALU made of Jev calls](https://x.com/mus
 | 3. Circle | Done, gate passed | [stage3-circle.md](results/stage3-circle.md) |
 | 4. Variant A digits | Done, gate passed | [stage4-scalar-digits.md](results/stage4-scalar-digits.md) |
 | 5. Two digits | Done, gate passed | [stage5-two-digits.md](results/stage5-two-digits.md) |
-| 6. Ten digits | Not started | |
-| 6b. What Jev's behaviour reveals | Running (offline analysis + <$1 live traps) | |
+| 6. Ten digits | Done | [stage6-ten-digits.md](results/stage6-ten-digits.md) |
+| 6b. What Jev's behaviour reveals | Done | [stage6b-jev-quirks.md](results/stage6b-jev-quirks.md) |
 | 7. Scale | Not started | |
 | 8g. A Jevron that behaves like a neuron | Queued after stage 6 | `runs/stage8g/` |
 | 8. Improvements | Planned | |
