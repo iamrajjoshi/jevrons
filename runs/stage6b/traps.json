@@ -1,0 +1,72 @@
+{
+ "calls_this_run": 1800,
+ "usd_this_run": 0.0751,
+ "tokens_this_run": 1787372,
+ "families": {
+  "last": {
+   "trap_misfire": 0.045,
+   "control_misfire": 0.825,
+   "diff": -0.78,
+   "diff_ci": [
+    -0.8392089630590899,
+    -0.7207910369409102
+   ],
+   "trap_mean_p": 0.34055,
+   "control_mean_p": 0.6128,
+   "trap_mean_m": -0.49915023476235887,
+   "control_mean_m": -0.4991502347623593
+  },
+  "first": {
+   "trap_misfire": 0.275,
+   "control_misfire": 0.825,
+   "diff": -0.55,
+   "diff_ci": [
+    -0.6364898983266996,
+    -0.4635101016733006
+   ],
+   "trap_mean_p": 0.451,
+   "control_mean_p": 0.6128,
+   "trap_mean_m": -0.49915023476235915,
+   "control_mean_m": -0.4991502347623593
+  },
+  "vote": {
+   "trap_misfire": 0.99,
+   "control_misfire": 0.59,
+   "diff": 0.4,
+   "diff_ci": [
+    0.32915385769572925,
+    0.4708461423042708
+   ],
+   "trap_mean_p": 0.6938500000000001,
+   "control_mean_p": 0.51195,
+   "trap_mean_m": -0.49973938059425893,
+   "control_mean_m": -0.49939880723704433
+  },
+  "long": {
+   "trap_misfire": 0.745,
+   "control_misfire": 0.0,
+   "diff": 0.745,
+   "diff_ci": [
+    0.6844411304314795,
+    0.8055588695685205
+   ],
+   "trap_mean_p": 0.55645,
+   "control_mean_p": 0.7578999999999999,
+   "trap_mean_m": -0.9992985478687021,
+   "control_mean_m": 0.9992985478687021
+  },
+  "zeros": {
+   "trap_misfire": 0.0,
+   "control_misfire": 0.01,
+   "diff": -0.01,
+   "diff_ci": [
+    -0.023824426710332212,
+    0.0038244267103322103
+   ],
+   "trap_mean_p": 0.7460499999999999,
+   "control_mean_p": 0.6890999999999999,
+   "trap_mean_m": 0.3004936907024158,
+   "control_mean_m": 0.3003529591657246
+  }
+ }
+}

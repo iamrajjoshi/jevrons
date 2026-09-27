@@ -1,0 +1,39 @@
+{
+ "backend": "ollaya-von",
+ "scalar": {
+  "v1": {
+   "sign_accuracy": 0.9900497512437811,
+   "mean_p_neg": 0.12407199999999997,
+   "mean_p_pos": 0.927291
+  },
+  "v2": {
+   "sign_accuracy": 0.8208955223880597,
+   "mean_p_neg": 0.038396000000000007,
+   "mean_p_pos": 0.606251
+  }
+ },
+ "full_folded": [
+  {
+   "k": 10,
+   "sign_accuracy": 0.65,
+   "frac_yes": 0.975
+  },
+  {
+   "k": 30,
+   "sign_accuracy": 0.525,
+   "frac_yes": 1.0
+  },
+  {
+   "k": 75,
+   "sign_accuracy": 0.475,
+   "frac_yes": 1.0
+  },
+  {
+   "k": 150,
+   "sign_accuracy": 0.55,
+   "frac_yes": 1.0
+  }
+ ],
+ "calls": 562,
+ "median_latency_s": 0.089
+}

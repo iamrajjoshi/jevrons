@@ -1,0 +1,39 @@
+{
+ "backend": "ollaya-decider",
+ "scalar": {
+  "v1": {
+   "sign_accuracy": 0.9701492537313433,
+   "mean_p_neg": 0.23323899999999997,
+   "mean_p_pos": 0.9195439999999999
+  },
+  "v2": {
+   "sign_accuracy": 0.9950248756218906,
+   "mean_p_neg": 0.0016569999999999998,
+   "mean_p_pos": 0.9601700000000001
+  }
+ },
+ "full_folded": [
+  {
+   "k": 10,
+   "sign_accuracy": 0.8,
+   "frac_yes": 0.825
+  },
+  {
+   "k": 30,
+   "sign_accuracy": 0.725,
+   "frac_yes": 0.8
+  },
+  {
+   "k": 75,
+   "sign_accuracy": 0.6,
+   "frac_yes": 0.825
+  },
+  {
+   "k": 150,
+   "sign_accuracy": 0.6,
+   "frac_yes": 0.85
+  }
+ ],
+ "calls": 562,
+ "median_latency_s": 0.327
+}

@@ -1,0 +1,39 @@
+{
+ "scalar": {
+  "points": 2181,
+  "repeats": 5,
+  "repeat_identical_frac": 1.0,
+  "repeat_max_range": 0.0,
+  "sign_accuracy": 0.5048143053645117,
+  "sign_accuracy_neg": 0.010091743119266056,
+  "sign_accuracy_pos": 0.9990825688073395,
+  "sign_accuracy_abs_le_1": 0.5472636815920398,
+  "p_at_zero": 0.1868,
+  "alt_wording_sign_accuracy": 0.5024875621890548,
+  "alt_vs_main_mean_abs_diff": 0.7455313432835821,
+  "batched_vs_isolated_mean_abs_diff": 0.2546407960199005,
+  "batched_sign_accuracy": 0.4925373134328358
+ },
+ "tokens": {
+  "scalar": {
+   "calls": 10905,
+   "tokens_per_call": 38,
+   "latency_s": 0.225
+  },
+  "scalar_alt": {
+   "calls": 201,
+   "tokens_per_call": 42,
+   "latency_s": 0.249
+  },
+  "scalar_batched": {
+   "calls": 5,
+   "tokens_per_call": 18499,
+   "latency_s": 2.939
+  }
+ },
+ "spend": {
+  "calls": 11111,
+  "tokens": 520677,
+  "usd": 0.0
+ }
+}

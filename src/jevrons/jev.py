@@ -109,8 +109,11 @@ BACKENDS = {
                       extra={"providerOptions": {"gateway": {"only": ["typesafe-ai"]}}}),
     # Open-weight System-1 model served locally by Ollaya (https://ollaya.dev), same API. A different
     # neuron from Jev, so it is never picked by default: name it with backends=["ollaya"].
-    "ollaya": Backend("ollaya", "http://127.0.0.1:11435/v1/systemone", None, 60000,
-                      model="laya:en", served_model="laya:en", default=False, usd_per_token=0.0),
+    **{name: Backend(name, "http://127.0.0.1:11435/v1/systemone", None, 60000, model=m, served_model=served,
+                     default=False, usd_per_token=0.0)
+       for name, m, served in (("ollaya", "laya:en", "laya:en"),  # 512-token context: short states only
+                               ("ollaya-von", "von", "von:latest"),  # 8k context
+                               ("ollaya-decider", "decider:0.8b", "decider:0.8b"))},
 }
 
 
