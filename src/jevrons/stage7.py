@@ -1,5 +1,7 @@
-"""Stage 7: more data. Ten digits, 784-32-10 full-state Jev neurons, the stage 6 recipe on 5,000
-training images (5x stage 6), 8 epochs, 1 seed, sized to a ~$80 budget with a hard $85 cap.
+"""Stage 7: more data and a better neuron. Ten digits, 784-32-10, 5,000 training images (5x stage 6),
+8 epochs, 1 seed, ~$82 with a hard $92 cap. The neuron is stage 8g's arm E: each call asks the
+yes/no and a neutral choice question about the same folded-bias state and averages them, and
+backprop goes through Jev's measured response curve (swap gap 4.6 points vs 25 in stage 8g).
 Validation on 500 images after epochs 4 and 8; one test on 2,000 stratified test images; swap
 control (same init, trained with an exact step neuron on the same 5,000 images, run on Jev).
 Usage: uv run python -m jevrons.stage7
@@ -12,14 +14,15 @@ import numpy as np
 
 from jevrons.digits import mnist, split, test_subset
 from jevrons.jev import Jev
-from jevrons.net import JevNeuron, StepNeuron, fit
+from jevrons.net import StepNeuron, fit
+from jevrons.stage8g import CalibratedJevNeuron, slope_for
 from jevrons.stage6 import BATCH, LR, TAU, evaluate, exact_accuracy, init
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "runs" / "stage7"
 SEED, EPOCHS, N_TRAIN, N_VAL, N_TEST = 0, 8, 5000, 500, 2000
 VAL_EPOCHS = (3, 7)  # zero-based
-MAX_USD = 85.0
+MAX_USD = 92.0
 
 
 def main():
@@ -29,7 +32,7 @@ def main():
     te = test_subset(yte, N_TEST, seed=7)
     X, Y, Xv, yv, Xt, yt = xtr[tr], np.eye(10)[ytr[tr]], xtr[va], ytr[va], xte[te], yte[te]
     jev = Jev(OUT / "journal.jsonl", max_usd=MAX_USD)
-    neuron = JevNeuron(jev, "folded", threads=128)
+    neuron = CalibratedJevNeuron(jev, compensate=False, phrasings=["v1", "choice"])
     for arm in ("jev", "swap"):
         done = OUT / f"result-{arm}.json"
         if done.exists():
@@ -48,7 +51,8 @@ def main():
 
         log = []
         params = fit(init(SEED), X, Y, neuron if arm == "jev" else StepNeuron(), EPOCHS, BATCH, LR, TAU, SEED, log,
-                     {**tag, "split": "train"}, on_epoch=on_epoch, checkpoint=OUT / f"checkpoint-{arm}.pkl")
+                     {**tag, "split": "train"}, on_epoch=on_epoch, checkpoint=OUT / f"checkpoint-{arm}.pkl",
+                     slope=slope_for(True) if arm == "jev" else None)
         if arm == "swap":
             r = evaluate(params, Xv, yv, neuron, {**tag, "split": "val"})
             r["exact_step"] = exact_accuracy(params, Xv, yv)
