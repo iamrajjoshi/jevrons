@@ -93,15 +93,19 @@ def bce(p, Y):
     return float(np.mean(-Y * np.log(p) - (1 - Y) * np.log(1 - p)))
 
 
-def ste_grads(params, acts, zs, Y, tau=1.0, output="bce"):
+def ste_grads(params, acts, zs, Y, tau=1.0, output="bce", slope=None):
     """output="bce": exact dBCE/dp times the surrogate slope (stages 2-3).
-    output="logit": dL/dz = (p - Y), as if p were sigmoid(z); stable when p is near 0 or 1."""
+    output="logit": dL/dz = (p - Y), as if p were sigmoid(z); stable when p is near 0 or 1.
+    slope(layer, z, a_in, W, b) -> dp/dz replaces sigmoid'(z / tau) / tau, e.g. a measured curve."""
     p = np.clip(acts[-1], 1e-3, 1 - 1e-3)
     da = (p - Y) / (p * (1 - p)) / Y.size  # dBCE/dp
     grads = []
     for layer in reversed(range(len(params))):
-        s = sig(zs[layer] / tau)
-        dz = da * s * (1 - s) / tau
+        if slope is None:
+            s = sig(zs[layer] / tau)
+            dz = da * s * (1 - s) / tau
+        else:
+            dz = da * slope(layer, zs[layer], acts[layer], *params[layer])
         if output == "logit" and layer == len(params) - 1:
             dz = (p - Y) / Y.size
         grads.append((acts[layer].T @ dz, dz.sum(0)))
@@ -167,7 +171,7 @@ if __name__ == "__main__":
 
 
 def fit(params, X, Y, neuron, epochs, batch=32, lr=0.01, tau=1.0, seed=0, log=None, tag=None, output="logit",
-        on_epoch=None, checkpoint=None):
+        on_epoch=None, checkpoint=None, slope=None):
     """Minibatch straight-through training; one Jev forward pass per batch.
 
     on_epoch(epoch, params) runs after each epoch. With a checkpoint path, params, optimizer state
@@ -189,7 +193,7 @@ def fit(params, X, Y, neuron, epochs, batch=32, lr=0.01, tau=1.0, seed=0, log=No
             if log is not None:
                 log.append({"epoch": epoch, "step": step, "loss": bce(acts[-1], Y[i]),
                             "acc": float(np.mean(decide(acts[-1]) == (np.argmax(Y[i], 1) if Y.shape[1] > 1 else Y[i, 0])))})
-            params = opt.step(params, ste_grads(params, acts, zs, Y[i], tau, output))
+            params = opt.step(params, ste_grads(params, acts, zs, Y[i], tau, output, slope))
             step += 1
         if checkpoint is not None:
             Path(checkpoint).write_bytes(pickle.dumps({"params": params, "m": opt.m, "v": opt.v, "t": opt.t,
