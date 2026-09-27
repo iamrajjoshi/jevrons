@@ -1,0 +1,4 @@
+jev: margin curve: predicted misfire 0.058, repeat if independent 0.54 (measured 0.88); per-image var 12.05 (measured 16.94); worst 5% share 36% (measured 34%)
+jev: 6b logistic: predicted misfire 0.076, repeat if independent 0.52 (measured 0.88); per-image var 14.78 (measured 16.94); worst 5% share 29% (measured 34%)
+swap: margin curve: predicted misfire 0.159, repeat if independent 0.58 (measured 0.86); per-image var 5.68 (measured 4.61); worst 5% share 10% (measured 10%)
+swap: 6b logistic: predicted misfire 0.195, repeat if independent 0.59 (measured 0.86); per-image var 6.80 (measured 4.61); worst 5% share 10% (measured 10%)

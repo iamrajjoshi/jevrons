@@ -125,6 +125,14 @@ Per pixel, the norm over hidden neurons of ΔW_Jev − ΔW_exact is almost the s
 
 The differences don't sit on the pixels that 0, 3 and 8 use. Those digits' pixels carry about half their share of the difference, and the pixels those digits use more than average are slightly avoided. On 3 vs 8 the 3's pixels carry 11% of the difference against 31% of the pixels. The swapped networks' failure on 0, 3 and 8 is a matter of how long their lists are (190, 165 and 172 active pixels on average, against 85 for a 1), not of specific pixel weights that Jev training rewrote.
 
+## 6. Jev repeats its own mistakes
+
+Stage 5's 3 vs 8 validation asked every hidden call twice. When Jev misfired on a call the first time, it misfired on the same call again 88% of the time (Jev-trained network) and 86% (twin). If each call misfired independently with the probability the margin curve gives it, the repeat rate would be 52-59%. Jev's p jitters between repeats, but its decision barely moves: its mistakes belong to the list, not to the draw.
+
+How misfires spread across images is not the difference. Independent sampling from the curve reproduces the per-image clustering: in the Jev-trained network the worst 5% of images hold 34% of misfires, the curve predicts 29-36%, and the twin gets 10% for both. The curve gets the rate and the placement roughly right and the persistence wrong.
+
+This fits two earlier results. Averaging three yes/no phrasings (8g D) added nothing, and averaging yes/no with a choice question (E) cut the gap from 25 to 4.6. Asking again, or rewording, draws the same wrong answer. A different format draws a different one. It also means the simulated neurons above, which flip a fresh coin every call, model a friendlier neuron than Jev. It doesn't by itself explain the larger swap gap, since a single pass sees one draw either way. Code: `src/jevrons/stage6c_repeat.py`, output `runs/stage6c/repeat.log`.
+
 ## Caveats
 
 - One seed per 3 vs 8 arm, and the noise floor says two runs of a noisy neuron can differ by 0.5-0.8 in bend on their own. Differences of 0.1-0.3 between 8g arms are within it. The plain-vs-E and Jev-vs-laya-neuron differences are not.
