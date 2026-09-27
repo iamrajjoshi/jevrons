@@ -46,17 +46,18 @@ class JevNeuron:
 class ScalarJevNeuron:
     """Variant A: the sum is computed in code; Jev only answers whether z is positive."""
 
-    def __init__(self, jev, threads=64):
-        self.jev, self.threads = jev, threads
+    def __init__(self, jev, threads=64, question=None):
+        from jevrons.states import SCALAR_Q_ALT
+        self.jev, self.threads, self.question = jev, threads, question or SCALAR_Q_ALT
 
     def __call__(self, X, W, b, tag=None):
-        from jevrons.states import SCALAR_Q_ALT, r2
+        from jevrons.states import r2
         Z = X @ W + b
         jobs = [(i, j) for i in range(Z.shape[0]) for j in range(Z.shape[1])]
 
         def one(ij):
             i, j = ij
-            return self.jev.ask({"z": r2(Z[i, j])}, SCALAR_Q_ALT, {**(tag or {}), "i": i, "j": j})["pos"]
+            return self.jev.ask({"z": r2(Z[i, j])}, self.question, {**(tag or {}), "i": i, "j": j})["pos"]
 
         with ThreadPoolExecutor(self.threads) as ex:
             return np.array(list(ex.map(one, jobs))).reshape(Z.shape)

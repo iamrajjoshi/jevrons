@@ -12,3 +12,4 @@ runs/stage6/checkpoint-*
 runs/stage6/partial-*
 runs/stage8g/checkpoint-*
 runs/stage6b/features.npz
+runs/stage9c/checkpoint-*
