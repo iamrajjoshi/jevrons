@@ -33,6 +33,7 @@ Inspiration: [Mustafa Akın's NAND-gate ALU made of Jev calls](https://x.com/mus
 | 6. Ten digits | Not started | |
 | 6b. What Jev's behaviour reveals | Running (offline analysis + <$1 live traps) | |
 | 7. Scale | Not started | |
+| 8g. A Jevron that behaves like a neuron | Queued after stage 6 | `runs/stage8g/` |
 | 8. Improvements | Planned | |
 | 9. Open-weight neurons (Ollaya) | Planned, needs install approval | |
 | Demo + video | Demo built (`demo/`), video not started | |
@@ -50,6 +51,10 @@ Gate: the go/no-go rules in proposal.md stage 1.
 ## Stage 6b: what Jev's behaviour reveals
 
 Mostly offline, over journals already paid for (backed up to `~/jevrons-journal-backup/`). Error model of misfires (margin, term count, sign mix, where the big terms sit, whether Jev skims the list); calibration of p; margin distributions by epoch for Jev-trained vs swap runs; about 5 adversarial trap families with matched controls (live, $1 cap); weight maps for Jev-trained vs exact-trained networks from the same start; repeat noise and backend equivalence at scale. Framing: optimization finds quirks you didn't know to look for, led by the bias-trust story. Output: `docs/results/stage6b-jev-quirks.md`.
+
+## Stage 8g: make a Jevron behave like a real neuron (queued)
+
+Stage 5's 3 vs 8 setup, so stage 5 is the baseline. Uses the measured response curve P(fire) = Φ(k(n)(z/spread − m0(n))). Arms: B backprops through the measured curve; C also pre-compensates the threshold by shifting the sent bias by m0 × spread; D also averages three phrasings asked about the same state in one call. The swap gap (exact-trained network: accuracy on an exact neuron minus accuracy on Jev) is re-measured on the C and D neurons; if Jev now behaves like the intended neuron, it shrinks. A quirk-matched local mock checked the code (swap 86.1% → 88.4% with compensation); real Jev is harsher than the mock. ~$17, ~2 h.
 
 ## Stage 8: improvements (planned)
 
