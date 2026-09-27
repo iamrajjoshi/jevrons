@@ -256,7 +256,7 @@ The weights show it too. Both 3 vs 8 networks started from the same random weigh
 
 Training through Jev moved the first layer more than twice as far (a change of 42.3 against 18.0, in Frobenius norm), and the change draws clear 3 and 8 templates, marking the gaps on the left of a 3 where an 8 has ink. The exact-trained weights still look like the random start.
 
-One prediction didn't hold. If training were compensating for Jev's yes-lean, the Jev-trained sums should drift negative. They drift the other way: on ten digits, the median neuron's mean sum moved +4.1 when trained through Jev and -3.5 when trained exact. Training doesn't learn to counter the lean. It pushes sums far enough out that the lean matters less. My guess at why the Jev-trained weights move so much further: Jev's `p` almost never reaches 0 or 1, so `p - y` never vanishes and every example keeps pushing, like logistic regression. That's untested.
+One prediction didn't hold. If training were compensating for Jev's yes-lean, the Jev-trained sums should drift negative. They drift the other way: on ten digits, the median neuron's mean sum moved +4.1 when trained through Jev and -3.5 when trained exact. Training doesn't learn to counter the lean. It pushes sums far enough out that the lean matters less. My guess at why the Jev-trained weights move so much further: Jev's `p` almost never reaches 0 or 1, so `p - y` never vanishes and every example keeps pushing, like logistic regression. A simulation later backed that up, further down.
 
 The second thing training does is tolerate the misfires that remain. Even at 93% on 3 vs 8, Jev is wrong on 7% of hidden evaluations, and the network still gets 94.2%. The local mock neuron I tuned against didn't capture how far real training moves the sums, which is why it underestimated the swap gap.
 
@@ -314,9 +314,31 @@ It holds 97.8% at 150 terms (Jev: 89.1%) and gets 99.1% of real journal states r
 
 Then the swap test. Ollaya serves 512 tokens, so this 3 vs 8 network keeps 64 weights per hidden neuron (about 35 terms). Trained through the fine-tuned laya it gets 91.0%. Its exact-trained twin, swapped onto the same neuron, keeps 90.2%, down 1 point from 91.2% on an exact neuron. On Jev the dense network lost 25. The networks aren't identical, but the direction is clear: when the neuron adds well enough, there's nothing for the network to adapt to. The swap gap measures how wrong the neuron is.
 
-## About $90 of API calls
+## Two questions per neuron
 
-Everything before the ten-digit run came to $17.40 over about 532,000 calls, and the ten-digit run added about $70 over about 1.7 million. Jev bills $0.042 per million input tokens, so even the two-digit networks, at 330.5 million input tokens, were $13.88. Money was never the constraint. The number of calls was: at 42 requests per image, one pass over 1,000 images is 42,000 of them.
+If the swap gap measures how wrong the neuron is, the next move is to make Jev less wrong without retraining it. I tried three fixes on 3 vs 8, each with the exact-trained network swapped onto the new neuron. Shifting the bias sent to Jev by the measured threshold drift closed about 30% of the 25-point gap. Asking three yes/no phrasings in one call and averaging them added nothing, because all three lean the same way.
+
+The fix that worked borrowed laya's neutral-choice question: ask it too. Each call now carries the usual yes/no question and a two-option question ("above zero" against "below zero or equal"), and the neuron's output is their average. The two lean in opposite directions, yes/no toward "fire" and the choice toward "below", so the average cancels most of both. The exact-trained network keeps 88.2% on that neuron against 67.8% on plain yes/no, so the gap falls from 25.0 to 4.6 points. Its hidden neurons fire as intended 96.0% of the time, the most faithful Jev neuron I've built, and training through it gets 95.2% (94.2% before). That's one seed per arm, so the trained accuracies are within noise, but the swap gaps aren't.
+
+## How far the weights bend
+
+That gave me neurons of known faithfulness, from plain Jev to fine-tuned laya, and a question I could answer without another API call: does a more faithful neuron leave weights closer to the exact solution? I measured how far each network's first-layer change moved from its exact twin's:
+
+```text
+bend = ‖ΔW1_trained − ΔW1_twin‖ / ‖ΔW1_twin‖          ΔW1 = W1 − W1 at the shared random start
+```
+
+![Three scatter plots for 3 vs 8. Bend against swap gap and against the twin's misfire rate: plain Jev sits highest at 1.77, the averaged two-question neuron at 1.13, and fine-tuned laya lowest at 0.31, while simulated neurons built from Jev's curve bend much less than Jev at the same misfire rate. A third panel shows the cosine between each network's weight change and its twin's.](../figures/stage6c-bend.png)
+
+It does, loosely. Plain Jev bends 1.77, the averaged neuron 1.13, and fine-tuned laya 0.31. But the bias shift cut the swap gap from 25 to 18 points without bending any less than the unshifted neuron trained the same way. And at the same misfire rate, a simulated neuron built from Jev's own margin curve bends 0.58 to 0.88, half of what Jev does or less. The curve doesn't capture everything, so there's a quirk left over that I haven't named.
+
+The weights also settled two questions from earlier. 92-99% of Jev's hidden misfires are false fires, and training still doesn't aim at them: the Jev-trained 3 vs 8 network pushed its sums out on both sides (median `m` around -2.5 and +2.2), and relative to its exact twin it gained more margin on the positive side than the negative, the opposite of compensating for a yes-lean. The upward drift of sums on ten digits does reproduce in simulation, but only when the simulated neuron's output stays inside 0.03-0.97, and it does with or without the threshold lean. So the drift comes from `p` never saturating, as guessed above.
+
+Two things the weights won't tell me. I hoped to read Jev's threshold `m0` straight off a trained network. A simulated neuron with noise and no threshold drift at all reads two-thirds as far below its twin, so the method mostly measures noise, not the threshold. And the difference between Jev-trained and exact-trained weights sits mostly on rarely-on pixels at the rim of the digit area, the same map in all three ten-digit seeds (r 0.96-0.97). It isn't on the pixels 0, 3 and 8 use. Those digits fail on Jev because their lists are long, not because of specific weights.
+
+## About $120 of API calls
+
+Everything before the ten-digit run came to $17.40 over about 532,000 calls. The ten-digit run added about $70 over about 1.7 million, and the two-question neurons $29 over 561,000. The weight analysis and the laya runs were free. Jev bills $0.042 per million input tokens, so even the two-digit networks, at 330.5 million input tokens, were $13.88. Money was never the constraint. The number of calls was: at 42 requests per image, one pass over 1,000 images is 42,000 of them.
 
 ## One seed, 500 images
 
