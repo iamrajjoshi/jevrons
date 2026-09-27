@@ -1,0 +1,35 @@
+{
+ "backend": "ollaya-laya-neuron",
+ "run": "truth",
+ "calls": 2001,
+ "max_abs_diff_vs_offline": 5.969085693358078e-05,
+ "yes_no_agreement_vs_offline": 1.0,
+ "scalar_sign_accuracy": 1.0,
+ "curves": {
+  "10": {
+   "k": 13.5,
+   "m0": -0.05,
+   "sign_accuracy": 0.9866666666666667,
+   "fires_when_negative": 0.01935483870967742,
+   "fires_when_positive": 0.993103448275862,
+   "n": 600
+  },
+  "30": {
+   "k": 6.5,
+   "m0": -0.1,
+   "sign_accuracy": 0.9733333333333334,
+   "fires_when_negative": 0.05319148936170213,
+   "fires_when_positive": 0.9968553459119497,
+   "n": 600
+  },
+  "75": {
+   "k": 7.5,
+   "m0": -0.1,
+   "sign_accuracy": 0.975,
+   "fires_when_negative": 0.04391891891891892,
+   "fires_when_positive": 0.993421052631579,
+   "n": 600
+  }
+ },
+ "median_latency_s": 0.598
+}

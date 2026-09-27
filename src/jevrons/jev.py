@@ -113,7 +113,9 @@ BACKENDS = {
                      default=False, usd_per_token=0.0)
        for name, m, served in (("ollaya", "laya:en", "laya:en"),  # 512-token context: short states only
                                ("ollaya-von", "von", "von:latest"),  # 8k context
-                               ("ollaya-decider", "decider:0.8b", "decider:0.8b"))},
+                               ("ollaya-decider", "decider:0.8b", "decider:0.8b"),
+                               # stage 10: laya:en fine-tuned to add (laya/, runs/stage10/truth); 512-token context
+                               ("ollaya-laya-neuron", "laya-neuron", "laya-neuron:latest"))},
 }
 
 

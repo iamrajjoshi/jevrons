@@ -1,0 +1,38 @@
+{
+ "ollaya laya-neuron k=10": {
+  "median_single_s": 0.0183,
+  "throughput_per_s_8_threads": 56.6
+ },
+ "ollaya laya:en k=10": {
+  "median_single_s": 0.0185,
+  "throughput_per_s_8_threads": 56.9
+ },
+ "ollaya laya-neuron k=30": {
+  "median_single_s": 0.0284,
+  "throughput_per_s_8_threads": 36.6
+ },
+ "ollaya laya:en k=30": {
+  "median_single_s": 0.0282,
+  "throughput_per_s_8_threads": 36.5
+ },
+ "ollaya laya-neuron k=75": {
+  "median_single_s": 0.0594,
+  "throughput_per_s_8_threads": 17.8
+ },
+ "ollaya laya:en k=75": {
+  "median_single_s": 0.0598,
+  "throughput_per_s_8_threads": 17.9
+ },
+ "pytorch mps fp32 k=10": {
+  "single_s": 0.0289,
+  "batched_per_s": 80.8
+ },
+ "pytorch mps fp32 k=30": {
+  "single_s": 0.0347,
+  "batched_per_s": 41.0
+ },
+ "pytorch mps fp32 k=75": {
+  "single_s": 0.0605,
+  "batched_per_s": 18.8
+ }
+}

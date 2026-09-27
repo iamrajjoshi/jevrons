@@ -1,0 +1,29 @@
+{
+ "n": 64,
+ "active_pixels": 379,
+ "swap": {
+  "val_laya": {
+   "accuracy": 0.902,
+   "fires_as_intended": {
+    "hidden": 0.9548125,
+    "output": 0.958
+   }
+  },
+  "val_exact_step": 0.912,
+  "minutes": 11.2
+ },
+ "laya": {
+  "val_laya": {
+   "accuracy": 0.91,
+   "fires_as_intended": {
+    "hidden": 0.9566875,
+    "output": 0.938
+   }
+  },
+  "val_exact_step": 0.906,
+  "minutes": 45.1
+ },
+ "laya_calls": 115500,
+ "laya_seconds": 3374,
+ "max_terms_sent": 54
+}

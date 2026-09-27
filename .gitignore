@@ -16,3 +16,10 @@ runs/stage9c/checkpoint-*
 runs/stage7/journal*
 runs/stage7/checkpoint-*
 runs/stage7/partial-*
+runs/stage10/*/checkpoint*
+runs/stage10/jev/
+runs/stage10/truth/
+runs/stage10/pilot-truth/
+laya/hf/
+laya/.venv/
+__pycache__/
