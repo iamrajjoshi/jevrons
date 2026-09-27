@@ -69,15 +69,26 @@ spread = sqrt( (x_1 w_1)^2 + (x_2 w_2)^2 + ... + (x_k w_k)^2 )
 m      = z / spread                                   normalized margin
 ```
 
-Plot the fraction of calls where Jev said "fire" against `m`, for the 900 bias-zero neurons above with all three formats pooled, and the dots fall almost on one curve:
+To see the whole shape, I ran one more probe on the exact format the digit networks use (products with the bias folded in, bias at zero): 600 neurons per term count with margins spread evenly from -3 to 3, each asked twice. That's 6,000 calls for $0.22. Plot the fraction of calls where Jev said "fire" against `m`, one curve per term count:
 
-![Fraction of calls where Jev said fire, plotted against the normalized margin m from -3 to 3, for 900 neurons with bias 0. The points follow a smooth S-curve that crosses 0.5 near m = 0 and reaches 0 and 1 by about m = -1.5 and m = 1.5. A fitted curve, Φ(1.53 m), runs through them, and a dashed exact step at m = 0 is shown for comparison.](../figures/jev-as-a-function.png)
+![Fraction of calls where Jev said fire against the normalized margin m from -3 to 3, one curve per term count, with an exact step at m = 0 dashed. The 10-term curve is steep and crosses 0.5 just right of zero. As the term count grows, the curves get shallower and slide left, until the 250-term curve crosses 0.5 near m = -1.1 and fires on a large share of negative totals.](../figures/jev-margin-by-terms.png)
+
+Each curve fits a shifted normal CDF, with `k` for how sharp it is and `m0` for where it crosses 50/50:
 
 ```text
-P(fire) ≈ Φ(1.53 · m)          Φ is the standard normal CDF, 1.53 fitted by maximum likelihood
+P(fire) ≈ Φ(k · (m - m0))          Φ is the standard normal CDF
+
+terms    k     m0      fires when z < 0   fires when z > 0   sign accuracy
+   10   3.2   +0.20          1.9%              91.9%             95.1%
+   30   2.2   +0.15          4.8%              92.1%             93.6%
+   75   1.8   -0.10          9.5%              96.1%             93.3%
+  150   1.8   -0.60         19.4%              98.1%             89.1%
+  250   1.5   -1.10         38.8%             100.0%             80.9%
 ```
 
-That's Jev as a function. It's a noisy threshold whose noise scales with the size of the terms it's adding. At `m = 0` it's a coin flip, and past `|m| ≈ 1.5` it's essentially always right. The local stand-in neuron I tuned against assumed a slope of about 1.3, so the real thing is a little sharper than I'd guessed.
+That's Jev as a function: a noisy threshold, and two things happen to it as the list gets longer. The curve gets blurrier, with `k` falling from 3.2 to 1.5. More importantly, the threshold slides below zero, so Jev leans toward "fire". At 250 terms, 39% of negative totals fire while every positive total does. Short sums lean slightly the other way. So the long-sum errors are mostly false fires, the same yes-lean that shows up again in the wording trap further down. Asking the same neuron twice flipped the answer 2-5% of the time.
+
+The stand-in neuron I tuned against locally assumed one symmetric curve with a slope of about 1.3 and no lean at all, so it got the blur roughly right and missed the shift. One caveat on the probe itself: to reach large margins, the sampler nudges all of a neuron's weights the same way, so the high-`|m|` neurons mostly have products of the same sign.
 
 That's the doc's warning, measured. With the bias at zero, accuracy is 82-93% up to 75 terms and 65-82% at 150-250, and it's worst exactly where the total is close to zero. I'm not disproving the page. The network is built to work despite it, in three ways. The multiplication happens in my code, so Jev only sums. Each neuron only needs the sign of the total, never its magnitude. And, as the digit experiments showed later, training pushes the sums far from zero, where the sign is easy: trained neurons fired as intended 93-99% of the time.
 
@@ -110,7 +121,7 @@ This looked like a formatting detail. It turned out to decide whether the networ
 
 ## Backprop without a gradient
 
-Training needs the derivative of each neuron's output with respect to its input, and there are two reasons I can't have it. A threshold's slope is zero everywhere except at the jump, so even a perfect step gives backprop nothing to work with. And Jev is a remote black box: the curve above is something I measured, not something I can differentiate. The standard way around a neuron like this is the straight-through estimator[^2], the same trick used to train quantized and binarized networks. Run the forward pass through the real neuron. In the backward pass, pretend the neuron was a smooth sigmoid of the sum it was supposed to compute.
+Training needs the derivative of each neuron's output with respect to its input, and there are two reasons I can't have it. A threshold's slope is zero everywhere except at the jump, so even a perfect step gives backprop nothing to work with. And Jev is a remote black box: the curves above are something I measured, not something I can differentiate. The standard way around a neuron like this is the straight-through estimator[^2], the same trick used to train quantized and binarized networks. Run the forward pass through the real neuron. In the backward pass, pretend the neuron was a smooth sigmoid of the sum it was supposed to compute.
 
 [^2]: [Bengio, Léonard and Courville 2013](https://arxiv.org/abs/1308.3432) describe straight-through estimators for stochastic and hard-threshold neurons.
 
@@ -127,7 +138,7 @@ dL/dw_ij ≈ dL/da_j  ·  (1/τ) σ'(z_j / τ)  ·  a_i
            exact       invented               exact
 ```
 
-The first factor comes from Jev's real outputs downstream, and the last is the real input activation. Only the middle one is made up, a sigmoid's slope standing in for Jev's. It doesn't need to be the right size, only to point the right way, and it does because Jev's firing rate rises with `z` (the curve above).
+The first factor comes from Jev's real outputs downstream, and the last is the real input activation. Only the middle one is made up, a sigmoid's slope standing in for Jev's. It doesn't need to be the right size, only to point the right way, and it does because Jev's firing rate rises with `z` on every curve above.
 
 In code it's a few lines of `net.py`:
 
@@ -227,13 +238,13 @@ On paper both networks learn the task equally well: with an exact neuron they're
 
 The "fires as intended" columns explain the gap. On random 150-term states, Jev gets the sign right 80-90% of the time. The Jev-trained hidden neurons get it right 93-99% of the time. Same model, same term count, same wording. Training changed which sums Jev gets asked about.
 
-The curve from the adding test says why. Because the forward pass is live, what gradient descent actually minimizes is the loss averaged over how Jev really behaves:
+The curves from the adding test say why. Because the forward pass is live, what gradient descent actually minimizes is the loss averaged over how Jev really behaves:
 
 ```text
-min over W, b of   E[ L ]      with each neuron firing with probability ≈ Φ(1.53 · z / spread)
+min over W, b of   E[ L ]      with each neuron firing with probability ≈ Φ(k · (z / spread - m0))
 ```
 
-With a neuron like that, the obvious way to lower the expected loss is to make `|z|` large relative to `spread`, so every neuron sits out on the flat parts of the curve where Jev is almost never wrong. That's margin maximization, the same idea behind support vector machines, arrived at without anyone asking for it. The swapped networks were never under that pressure. An exact neuron fires the same way at 0.01 and at 40, so their sums sit wherever an ideal step is happy, often near zero, where Jev is a coin flip. With identical architecture and inputs, their hidden neurons fire as intended 87-96% of the time.
+There are two things to beat: the noise, and a yes-lean that grows with the length of the sum. The obvious way to lower the expected loss is to make `|z|` large relative to `spread`, so every neuron sits out on the flat parts of its curve where Jev is almost never wrong. That's margin maximization, the same idea behind support vector machines, arrived at without anyone asking for it. The lean can also be absorbed: a shifted threshold is the kind of thing a learned bias can compensate for. The swapped networks were never under either pressure. An exact neuron fires the same way at 0.01 and at 40 and has no lean, so their sums sit wherever an ideal step is happy, often near zero, where Jev is close to a coin flip. With identical architecture and inputs, their hidden neurons fire as intended 87-96% of the time.
 
 The second thing training does is tolerate the misfires that remain. Even at 93% on 3 vs 8, Jev is wrong on 7% of hidden evaluations, and the network still gets 94.2%. It learned weights whose downstream use absorbs those errors. That was the only effect the early noisy mock showed, where training left the neuron slightly less accurate and recovered accuracy anyway. The digit mock, fitted to random states, didn't capture how far real training moves the sums, which is why it underestimated the swap gap on 0 vs 1.
 
@@ -276,7 +287,7 @@ After that comes a bigger training set, 10,000 images with the best ten-digit co
 {/*
 TODO figures (proposed, not yet generated):
 
-1. (Pooled version done: ../figures/jev-as-a-function.png.) Optional per-format split of the same curve (paired, parallel, products, folded) against normalized margin m. Data: runs/probe/journal-full*.jsonl.gz and runs/probe/full2_rows.json, via src/jevrons/analyze_probe.py.
+1. Done: ../figures/jev-margin-by-terms.png (runs/margin/, src/jevrons/margin_probe.py). The pooled ../figures/jev-as-a-function.png is superseded and no longer referenced.
 2. The wording trap: p vs z over [-10, 10] for the statement wording (negatives at 0.66-0.74) and "Is the number z positive?" (0.01-0.05 / 0.99). Data: runs/probe/scalar_curve.json, runs/probe/wording_rows.json.
 3. Bias over-trust: fraction of neurons following the bias sign when it disagrees with the total, separate vs folded. Data: runs/probe/journal-wording.jsonl.gz and runs/probe/summary-wording.json.
 4. XOR truth table per version: mean p on each of the four rows for folded vs separate bias. Data: runs/stage2/result-XOR-*.json (mean_p, pass_accuracy).
