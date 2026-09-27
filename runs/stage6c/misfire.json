@@ -1,0 +1,1459 @@
+{
+ "s5 3v8 jev": {
+  "calls": 32000,
+  "measured": {
+   "misfire": 0.0683125,
+   "false_fire": 0.1218746365856495,
+   "false_silence": 0.006080259424402107,
+   "intended_fire_rate": 0.4625625,
+   "fire_rate": 0.52525
+  },
+  "curve": {
+   "misfire": 0.0578945419851782,
+   "false_fire": 0.1028170036837717,
+   "false_silence": 0.005700480622361589,
+   "per_neuron_corr": 0.7105123012433188,
+   "per_neuron_mean_abs_err": 0.017941149963618938
+  },
+  "6b logistic": {
+   "misfire": 0.0759443822751049,
+   "false_fire": 0.1346087665409518,
+   "false_silence": 0.0077839930976940485,
+   "per_neuron_corr": 0.7313591580465937,
+   "per_neuron_mean_abs_err": 0.018857978385859432
+  },
+  "per_neuron": {
+   "measured_misfire": [
+    0.058,
+    0.056,
+    0.048,
+    0.116,
+    0.0,
+    0.082,
+    0.056,
+    0.074,
+    0.12,
+    0.04,
+    0.108,
+    0.096,
+    0.104,
+    0.062,
+    0.03,
+    0.102,
+    0.044,
+    0.058,
+    0.07,
+    0.06,
+    0.082,
+    0.072,
+    0.064,
+    0.0,
+    0.088,
+    0.05,
+    0.104,
+    0.042,
+    0.1,
+    0.05,
+    0.106,
+    0.044
+   ],
+   "curve_misfire": [
+    0.0525,
+    0.0579,
+    0.0727,
+    0.065,
+    0.0,
+    0.0816,
+    0.0542,
+    0.06,
+    0.0641,
+    0.0484,
+    0.0647,
+    0.0712,
+    0.0687,
+    0.0577,
+    0.0508,
+    0.069,
+    0.0535,
+    0.055,
+    0.0534,
+    0.0652,
+    0.0652,
+    0.0707,
+    0.0722,
+    0.0,
+    0.0522,
+    0.0623,
+    0.0679,
+    0.058,
+    0.0718,
+    0.058,
+    0.0595,
+    0.0495
+   ],
+   "measured_false_fire_share": 0.958828911253431
+  },
+  "by_length": {
+   "short": {
+    "terms": [
+     77,
+     150
+    ],
+    "median_m_negative": -2.2872517188906727,
+    "median_m_positive": 2.052505213718011,
+    "share_negative_in_danger_zone": 0.14509536784741145,
+    "measured_false_fire": 0.07254768392370572,
+    "measured_false_silence": 0.00819672131147541
+   },
+   "mid": {
+    "terms": [
+     151,
+     179
+    ],
+    "median_m_negative": -2.5286469444544117,
+    "median_m_positive": 2.182546545948271,
+    "share_negative_in_danger_zone": 0.19337016574585636,
+    "measured_false_fire": 0.13225138121546962,
+    "measured_false_silence": 0.006289308176100629
+   },
+   "long": {
+    "terms": [
+     180,
+     270
+    ],
+    "median_m_negative": -2.739622436381966,
+    "median_m_positive": 2.400861690226777,
+    "share_negative_in_danger_zone": 0.23310444524756052,
+    "measured_false_fire": 0.1633538127936393,
+    "measured_false_silence": 0.003723624327678941
+   }
+  },
+  "per_neuron_corr_len_near_zero_vs_negative_margin": 0.2733701551709265
+ },
+ "s5 3v8 swap": {
+  "calls": 32000,
+  "measured": {
+   "misfire": 0.1284375,
+   "false_fire": 0.17822899041173154,
+   "false_silence": 0.029653114509511375,
+   "intended_fire_rate": 0.335125,
+   "fire_rate": 0.4436875
+  },
+  "curve": {
+   "misfire": 0.158910898589744,
+   "false_fire": 0.22789871201068634,
+   "false_silence": 0.022041752903062706,
+   "per_neuron_corr": 0.8997900278109855,
+   "per_neuron_mean_abs_err": 0.036804278380391214
+  },
+  "6b logistic": {
+   "misfire": 0.19509104115375303,
+   "false_fire": 0.2800523476272752,
+   "false_silence": 0.0265311048864407,
+   "per_neuron_corr": 0.8844746493437026,
+   "per_neuron_mean_abs_err": 0.06729273517828374
+  },
+  "per_neuron": {
+   "measured_misfire": [
+    0.0,
+    0.12,
+    0.144,
+    0.052,
+    0.102,
+    0.24,
+    0.156,
+    0.144,
+    0.232,
+    0.066,
+    0.226,
+    0.312,
+    0.0,
+    0.172,
+    0.014,
+    0.21,
+    0.146,
+    0.1,
+    0.014,
+    0.188,
+    0.126,
+    0.156,
+    0.118,
+    0.002,
+    0.136,
+    0.09,
+    0.18,
+    0.114,
+    0.014,
+    0.188,
+    0.246,
+    0.102
+   ],
+   "curve_misfire": [
+    0.0049,
+    0.1604,
+    0.1805,
+    0.0529,
+    0.2357,
+    0.2788,
+    0.2435,
+    0.1727,
+    0.3227,
+    0.1161,
+    0.2075,
+    0.2922,
+    0.0054,
+    0.1569,
+    0.0382,
+    0.2088,
+    0.2054,
+    0.1694,
+    0.0178,
+    0.2452,
+    0.1476,
+    0.1772,
+    0.1426,
+    0.0098,
+    0.1122,
+    0.122,
+    0.2026,
+    0.2052,
+    0.0029,
+    0.2173,
+    0.2342,
+    0.1964
+   ],
+   "measured_false_fire_share": 0.9226277372262773
+  },
+  "by_length": {
+   "short": {
+    "terms": [
+     77,
+     150
+    ],
+    "median_m_negative": -1.5729834056066818,
+    "median_m_positive": 0.8647626125367894,
+    "share_negative_in_danger_zone": 0.3545939870750211,
+    "measured_false_fire": 0.14301770160157348,
+    "measured_false_silence": 0.03852504127682994
+   },
+   "mid": {
+    "terms": [
+     151,
+     179
+    ],
+    "median_m_negative": -1.5657070592691296,
+    "median_m_positive": 0.8619838208279627,
+    "share_negative_in_danger_zone": 0.40687361419068735,
+    "measured_false_fire": 0.1696230598669623,
+    "measured_false_silence": 0.03220524017467249
+   },
+   "long": {
+    "terms": [
+     180,
+     270
+    ],
+    "median_m_negative": -1.726048514078412,
+    "median_m_positive": 0.8824816418629526,
+    "share_negative_in_danger_zone": 0.4701815038893691,
+    "measured_false_fire": 0.2232785940651109,
+    "measured_false_silence": 0.017513134851138354
+   }
+  },
+  "per_neuron_corr_len_near_zero_vs_negative_margin": -0.6011823321194645
+ },
+ "s5 0v1 jev": {
+  "calls": 32000,
+  "measured": {
+   "misfire": 0.006875,
+   "false_fire": 0.012767951270938268,
+   "false_silence": 0.00013399437223636607,
+   "intended_fire_rate": 0.4664375,
+   "fire_rate": 0.4731875
+  },
+  "curve": {
+   "misfire": 0.005841894650826946,
+   "false_fire": 0.009384799351561012,
+   "false_silence": 0.0017891306912709052,
+   "per_neuron_corr": 0.9577106018754848,
+   "per_neuron_mean_abs_err": 0.002248676668190273
+  },
+  "6b logistic": {
+   "misfire": 0.007235828331300924,
+   "false_fire": 0.012159393959717739,
+   "false_silence": 0.001603712591009574,
+   "per_neuron_corr": 0.9554874202773856,
+   "per_neuron_mean_abs_err": 0.0022645721580416816
+  },
+  "per_neuron": {
+   "measured_misfire": [
+    0.006,
+    0.006,
+    0.012,
+    0.006,
+    0.0,
+    0.008,
+    0.004,
+    0.002,
+    0.0,
+    0.0,
+    0.008,
+    0.008,
+    0.006,
+    0.01,
+    0.004,
+    0.006,
+    0.01,
+    0.006,
+    0.004,
+    0.004,
+    0.004,
+    0.006,
+    0.052,
+    0.006,
+    0.006,
+    0.006,
+    0.002,
+    0.006,
+    0.0,
+    0.008,
+    0.008,
+    0.006
+   ],
+   "curve_misfire": [
+    0.0042,
+    0.0038,
+    0.0059,
+    0.0049,
+    0.0,
+    0.007,
+    0.0074,
+    0.0039,
+    0.0043,
+    0.0,
+    0.0054,
+    0.0042,
+    0.0045,
+    0.0059,
+    0.0042,
+    0.0038,
+    0.004,
+    0.0062,
+    0.0038,
+    0.0059,
+    0.0044,
+    0.0045,
+    0.0379,
+    0.0079,
+    0.0063,
+    0.0058,
+    0.0039,
+    0.0058,
+    0.0031,
+    0.0056,
+    0.0077,
+    0.005
+   ],
+   "measured_false_fire_share": 0.990909090909091
+  },
+  "by_length": {
+   "short": {
+    "terms": [
+     44,
+     93
+    ],
+    "median_m_negative": -4.065589945689202,
+    "median_m_positive": 3.56724103753855,
+    "share_negative_in_danger_zone": 0.005025125628140704,
+    "measured_false_fire": 0.006184770003865481,
+    "measured_false_silence": 0.0
+   },
+   "mid": {
+    "terms": [
+     94,
+     175
+    ],
+    "median_m_negative": -4.166737285865434,
+    "median_m_positive": 3.6204046440558053,
+    "share_negative_in_danger_zone": 0.040096785343933634,
+    "measured_false_fire": 0.020394054614586935,
+    "measured_false_silence": 0.0004027386226339106
+   },
+   "long": {
+    "terms": [
+     176,
+     294
+    ],
+    "median_m_negative": -5.094276819918858,
+    "median_m_positive": 4.89978667884571,
+    "share_negative_in_danger_zone": 0.014393195943735688,
+    "measured_false_fire": 0.011122015047432123,
+    "measured_false_silence": 0.0
+   }
+  },
+  "per_neuron_corr_len_near_zero_vs_negative_margin": -0.09783285253601408
+ },
+ "s5 0v1 swap": {
+  "calls": 32000,
+  "measured": {
+   "misfire": 0.0349375,
+   "false_fire": 0.04606112785191563,
+   "false_silence": 0.019528920691711388,
+   "intended_fire_rate": 0.41925,
+   "fire_rate": 0.4378125
+  },
+  "curve": {
+   "misfire": 0.04186666945411854,
+   "false_fire": 0.05286558134900248,
+   "false_silence": 0.02663084814713263,
+   "per_neuron_corr": 0.9253906826586918,
+   "per_neuron_mean_abs_err": 0.011318175987602524
+  },
+  "6b logistic": {
+   "misfire": 0.04973419374265605,
+   "false_fire": 0.07222385714332823,
+   "false_silence": 0.01858124915126581,
+   "per_neuron_corr": 0.9405113055177536,
+   "per_neuron_mean_abs_err": 0.015816065964595505
+  },
+  "per_neuron": {
+   "measured_misfire": [
+    0.1,
+    0.024,
+    0.01,
+    0.046,
+    0.0,
+    0.032,
+    0.048,
+    0.05,
+    0.048,
+    0.088,
+    0.146,
+    0.034,
+    0.0,
+    0.054,
+    0.034,
+    0.004,
+    0.012,
+    0.028,
+    0.072,
+    0.012,
+    0.01,
+    0.016,
+    0.07,
+    0.026,
+    0.004,
+    0.014,
+    0.042,
+    0.008,
+    0.016,
+    0.02,
+    0.01,
+    0.04
+   ],
+   "curve_misfire": [
+    0.0925,
+    0.0236,
+    0.0158,
+    0.0616,
+    0.0,
+    0.0484,
+    0.0776,
+    0.0515,
+    0.0609,
+    0.1034,
+    0.1298,
+    0.0408,
+    0.0,
+    0.0227,
+    0.0517,
+    0.0106,
+    0.0275,
+    0.0449,
+    0.0794,
+    0.0174,
+    0.0088,
+    0.0248,
+    0.1045,
+    0.0403,
+    0.01,
+    0.0102,
+    0.0323,
+    0.0135,
+    0.0228,
+    0.0295,
+    0.0216,
+    0.0617
+   ],
+   "measured_false_fire_share": 0.7656529516994633
+  },
+  "by_length": {
+   "short": {
+    "terms": [
+     44,
+     93
+    ],
+    "median_m_negative": -1.7557246411284275,
+    "median_m_positive": 1.3930419879235438,
+    "share_negative_in_danger_zone": 0.177430801987225,
+    "measured_false_fire": 0.06139105748757984,
+    "measured_false_silence": 0.038055764883195176
+   },
+   "mid": {
+    "terms": [
+     94,
+     175
+    ],
+    "median_m_negative": -2.5428259086119205,
+    "median_m_positive": 1.729584750437323,
+    "share_negative_in_danger_zone": 0.2163076923076923,
+    "measured_false_fire": 0.07076923076923076,
+    "measured_false_silence": 0.014111006585136407
+   },
+   "long": {
+    "terms": [
+     176,
+     294
+    ],
+    "median_m_negative": -3.7970170889793877,
+    "median_m_positive": 2.9952569843538166,
+    "share_negative_in_danger_zone": 0.015198511166253101,
+    "measured_false_fire": 0.007754342431761787,
+    "measured_false_silence": 0.0
+   }
+  },
+  "per_neuron_corr_len_near_zero_vs_negative_margin": -0.14946573872970317
+ },
+ "s6 seed0 jev": {
+  "calls": 16000,
+  "measured": {
+   "misfire": 0.0915625,
+   "false_fire": 0.1996832709473078,
+   "false_silence": 0.008614976805831677,
+   "intended_fire_rate": 0.565875,
+   "fire_rate": 0.6476875
+  },
+  "curve": {
+   "misfire": 0.0637008754890939,
+   "false_fire": 0.1375464316920225,
+   "false_silence": 0.007048430891618507,
+   "per_neuron_corr": 0.6770429840592689,
+   "per_neuron_mean_abs_err": 0.03208958592467874
+  },
+  "6b logistic": {
+   "misfire": 0.08131221020289436,
+   "false_fire": 0.1764268523035958,
+   "false_silence": 0.008342660387180617,
+   "per_neuron_corr": 0.6625263356950992,
+   "per_neuron_mean_abs_err": 0.02404819749633346
+  },
+  "per_neuron": {
+   "measured_misfire": [
+    0.058,
+    0.07,
+    0.138,
+    0.046,
+    0.092,
+    0.116,
+    0.122,
+    0.066,
+    0.076,
+    0.158,
+    0.11,
+    0.212,
+    0.122,
+    0.042,
+    0.132,
+    0.064,
+    0.052,
+    0.074,
+    0.026,
+    0.042,
+    0.116,
+    0.088,
+    0.118,
+    0.118,
+    0.032,
+    0.138,
+    0.034,
+    0.046,
+    0.094,
+    0.12,
+    0.11,
+    0.098
+   ],
+   "curve_misfire": [
+    0.0249,
+    0.0767,
+    0.0604,
+    0.0771,
+    0.0761,
+    0.0776,
+    0.088,
+    0.0637,
+    0.0501,
+    0.0834,
+    0.1061,
+    0.0806,
+    0.0688,
+    0.0289,
+    0.0973,
+    0.0363,
+    0.039,
+    0.0604,
+    0.0492,
+    0.0397,
+    0.0504,
+    0.0584,
+    0.0825,
+    0.0586,
+    0.0386,
+    0.0856,
+    0.0255,
+    0.0359,
+    0.0877,
+    0.0766,
+    0.0843,
+    0.0701
+   ],
+   "measured_false_fire_share": 0.9467576791808874
+  },
+  "by_length": {
+   "short": {
+    "terms": [
+     54,
+     138
+    ],
+    "median_m_negative": -2.133001023652947,
+    "median_m_positive": 2.3339424829324336,
+    "share_negative_in_danger_zone": 0.195424583171772,
+    "measured_false_fire": 0.11167119038386972,
+    "measured_false_silence": 0.014104882459312839
+   },
+   "mid": {
+    "terms": [
+     139,
+     167
+    ],
+    "median_m_negative": -2.06013321048521,
+    "median_m_positive": 2.299557226560995,
+    "share_negative_in_danger_zone": 0.27653880463871544,
+    "measured_false_fire": 0.21810883140053525,
+    "measured_false_silence": 0.008143322475570033
+   },
+   "long": {
+    "terms": [
+     168,
+     281
+    ],
+    "median_m_negative": -2.3967433392540096,
+    "median_m_positive": 2.5935588553027658,
+    "share_negative_in_danger_zone": 0.33129411764705885,
+    "measured_false_fire": 0.28705882352941176,
+    "measured_false_silence": 0.004349176762969867
+   }
+  },
+  "per_neuron_corr_len_near_zero_vs_negative_margin": -0.05601123714435167
+ },
+ "s6 seed0 swap": {
+  "calls": 16000,
+  "measured": {
+   "misfire": 0.141625,
+   "false_fire": 0.20048331629333582,
+   "false_silence": 0.02079755771799275,
+   "intended_fire_rate": 0.3275625,
+   "fire_rate": 0.4555625
+  },
+  "curve": {
+   "misfire": 0.14086608097673492,
+   "false_fire": 0.19402950674828487,
+   "false_silence": 0.03172940899121579,
+   "per_neuron_corr": 0.8348294651837891,
+   "per_neuron_mean_abs_err": 0.026188896035603912
+  },
+  "6b logistic": {
+   "misfire": 0.17454938110005924,
+   "false_fire": 0.24467220415763535,
+   "false_silence": 0.0305975678437224,
+   "per_neuron_corr": 0.8061058330435953,
+   "per_neuron_mean_abs_err": 0.03860382107629126
+  },
+  "per_neuron": {
+   "measured_misfire": [
+    0.15,
+    0.148,
+    0.12,
+    0.14,
+    0.094,
+    0.09,
+    0.142,
+    0.238,
+    0.134,
+    0.116,
+    0.238,
+    0.168,
+    0.1,
+    0.126,
+    0.15,
+    0.194,
+    0.1,
+    0.164,
+    0.212,
+    0.186,
+    0.092,
+    0.104,
+    0.268,
+    0.054,
+    0.224,
+    0.072,
+    0.136,
+    0.102,
+    0.04,
+    0.206,
+    0.17,
+    0.054
+   ],
+   "curve_misfire": [
+    0.1361,
+    0.1693,
+    0.1368,
+    0.1557,
+    0.1339,
+    0.0887,
+    0.1917,
+    0.1849,
+    0.1318,
+    0.1283,
+    0.246,
+    0.1342,
+    0.1304,
+    0.0704,
+    0.1174,
+    0.2119,
+    0.1343,
+    0.1675,
+    0.1709,
+    0.1458,
+    0.1044,
+    0.1493,
+    0.2054,
+    0.064,
+    0.1891,
+    0.0942,
+    0.1262,
+    0.1489,
+    0.0286,
+    0.2021,
+    0.1352,
+    0.0742
+   ],
+   "measured_false_fire_share": 0.9518976169461606
+  },
+  "by_length": {
+   "short": {
+    "terms": [
+     54,
+     138
+    ],
+    "median_m_negative": -1.4925317571282202,
+    "median_m_positive": 0.8577468903968951,
+    "share_negative_in_danger_zone": 0.34047415024278777,
+    "measured_false_fire": 0.143101970865467,
+    "measured_false_silence": 0.03906673901247965
+   },
+   "mid": {
+    "terms": [
+     139,
+     167
+    ],
+    "median_m_negative": -1.6437828345631813,
+    "median_m_positive": 0.9012540988562118,
+    "share_negative_in_danger_zone": 0.37034949267192785,
+    "measured_false_fire": 0.20293122886133033,
+    "measured_false_silence": 0.013038548752834467
+   },
+   "long": {
+    "terms": [
+     168,
+     281
+    ],
+    "median_m_negative": -1.849575324628594,
+    "median_m_positive": 0.994727378939656,
+    "share_negative_in_danger_zone": 0.42641509433962266,
+    "measured_false_fire": 0.2522911051212938,
+    "measured_false_silence": 0.008567931456548347
+   }
+  },
+  "per_neuron_corr_len_near_zero_vs_negative_margin": -0.6608828911597059
+ },
+ "s6 seed1 jev": {
+  "calls": 16000,
+  "measured": {
+   "misfire": 0.097875,
+   "false_fire": 0.21102449888641425,
+   "false_silence": 0.0056715063520871144,
+   "intended_fire_rate": 0.551,
+   "fire_rate": 0.642625
+  },
+  "curve": {
+   "misfire": 0.06677452264379237,
+   "false_fire": 0.13981000581414382,
+   "false_silence": 0.007259219661055887,
+   "per_neuron_corr": 0.6376672476650797,
+   "per_neuron_mean_abs_err": 0.032122344924474036
+  },
+  "6b logistic": {
+   "misfire": 0.08465913270616142,
+   "false_fire": 0.1780492357870123,
+   "false_silence": 0.00855721567657512,
+   "per_neuron_corr": 0.6341753363949969,
+   "per_neuron_mean_abs_err": 0.023170362842903393
+  },
+  "per_neuron": {
+   "measured_misfire": [
+    0.064,
+    0.2,
+    0.114,
+    0.068,
+    0.05,
+    0.128,
+    0.05,
+    0.064,
+    0.064,
+    0.116,
+    0.058,
+    0.106,
+    0.048,
+    0.046,
+    0.08,
+    0.146,
+    0.08,
+    0.204,
+    0.112,
+    0.114,
+    0.132,
+    0.094,
+    0.116,
+    0.066,
+    0.094,
+    0.124,
+    0.13,
+    0.106,
+    0.082,
+    0.118,
+    0.084,
+    0.074
+   ],
+   "curve_misfire": [
+    0.0741,
+    0.0747,
+    0.0784,
+    0.0665,
+    0.048,
+    0.0884,
+    0.0476,
+    0.0614,
+    0.0654,
+    0.0813,
+    0.032,
+    0.0739,
+    0.0186,
+    0.0327,
+    0.0689,
+    0.1165,
+    0.0726,
+    0.0802,
+    0.0562,
+    0.0866,
+    0.0687,
+    0.062,
+    0.0741,
+    0.0463,
+    0.0606,
+    0.0868,
+    0.0679,
+    0.0605,
+    0.054,
+    0.096,
+    0.0568,
+    0.0789
+   ],
+   "measured_false_fire_share": 0.9680715197956578
+  },
+  "by_length": {
+   "short": {
+    "terms": [
+     54,
+     138
+    ],
+    "median_m_negative": -2.1597269120504015,
+    "median_m_positive": 2.3233668981948226,
+    "share_negative_in_danger_zone": 0.17490494296577946,
+    "measured_false_fire": 0.10912547528517111,
+    "measured_false_silence": 0.009211495946941784
+   },
+   "mid": {
+    "terms": [
+     139,
+     167
+    ],
+    "median_m_negative": -2.0812557821181197,
+    "median_m_positive": 2.2394211689091135,
+    "share_negative_in_danger_zone": 0.2885042166000888,
+    "measured_false_fire": 0.24101198402130491,
+    "measured_false_silence": 0.006211180124223602
+   },
+   "long": {
+    "terms": [
+     168,
+     281
+    ],
+    "median_m_negative": -2.283400969940234,
+    "median_m_positive": 2.5918745212790038,
+    "share_negative_in_danger_zone": 0.34419817470664926,
+    "measured_false_fire": 0.29813124728378965,
+    "measured_false_silence": 0.001971738416036806
+   }
+  },
+  "per_neuron_corr_len_near_zero_vs_negative_margin": 0.0732155878544723
+ },
+ "s6 seed1 swap": {
+  "calls": 16000,
+  "measured": {
+   "misfire": 0.137125,
+   "false_fire": 0.1716523623031414,
+   "false_silence": 0.03350837709427357,
+   "intended_fire_rate": 0.2499375,
+   "fire_rate": 0.3703125
+  },
+  "curve": {
+   "misfire": 0.13715515151961666,
+   "false_fire": 0.17091428325179683,
+   "false_silence": 0.03584398874945056,
+   "per_neuron_corr": 0.9044385901451529,
+   "per_neuron_mean_abs_err": 0.023577066398046787
+  },
+  "6b logistic": {
+   "misfire": 0.17222525529448102,
+   "false_fire": 0.21817114881532457,
+   "false_silence": 0.034341617349083836,
+   "per_neuron_corr": 0.9001093988444594,
+   "per_neuron_mean_abs_err": 0.03974594113372806
+  },
+  "per_neuron": {
+   "measured_misfire": [
+    0.166,
+    0.136,
+    0.124,
+    0.114,
+    0.236,
+    0.182,
+    0.148,
+    0.236,
+    0.084,
+    0.182,
+    0.058,
+    0.188,
+    0.178,
+    0.248,
+    0.152,
+    0.208,
+    0.16,
+    0.196,
+    0.0,
+    0.208,
+    0.01,
+    0.18,
+    0.062,
+    0.184,
+    0.128,
+    0.13,
+    0.102,
+    0.024,
+    0.112,
+    0.0,
+    0.118,
+    0.134
+   ],
+   "curve_misfire": [
+    0.1414,
+    0.1402,
+    0.1592,
+    0.1215,
+    0.1757,
+    0.1144,
+    0.1033,
+    0.204,
+    0.0946,
+    0.1982,
+    0.0573,
+    0.1485,
+    0.188,
+    0.3097,
+    0.138,
+    0.2613,
+    0.1715,
+    0.1893,
+    0.0013,
+    0.225,
+    0.0124,
+    0.152,
+    0.0533,
+    0.1972,
+    0.182,
+    0.1077,
+    0.1148,
+    0.0153,
+    0.1434,
+    0.0,
+    0.1533,
+    0.1151
+   ],
+   "measured_false_fire_share": 0.9389243391066545
+  },
+  "by_length": {
+   "short": {
+    "terms": [
+     54,
+     138
+    ],
+    "median_m_negative": -1.6280101061300258,
+    "median_m_positive": 0.7858803456529131,
+    "share_negative_in_danger_zone": 0.3214468958440226,
+    "measured_false_fire": 0.12955361723961006,
+    "measured_false_silence": 0.06708160442600276
+   },
+   "mid": {
+    "terms": [
+     139,
+     167
+    ],
+    "median_m_negative": -1.829902052607192,
+    "median_m_positive": 0.7955255892968984,
+    "share_negative_in_danger_zone": 0.317773339990015,
+    "measured_false_fire": 0.1727408886669995,
+    "measured_false_silence": 0.021439509954058193
+   },
+   "long": {
+    "terms": [
+     168,
+     281
+    ],
+    "median_m_negative": -2.0062049187596895,
+    "median_m_positive": 0.9080522432577411,
+    "share_negative_in_danger_zone": 0.38760068342689774,
+    "measured_false_fire": 0.21064193312179644,
+    "measured_false_silence": 0.007217321571772253
+   }
+  },
+  "per_neuron_corr_len_near_zero_vs_negative_margin": -0.4235882050227865
+ },
+ "s6 seed2 jev": {
+  "calls": 16000,
+  "measured": {
+   "misfire": 0.08625,
+   "false_fire": 0.1993289614152814,
+   "false_silence": 0.007730594090860955,
+   "intended_fire_rate": 0.5901875,
+   "fire_rate": 0.6673125
+  },
+  "curve": {
+   "misfire": 0.058015071528117475,
+   "false_fire": 0.13177272846476623,
+   "false_silence": 0.0067994666849949545,
+   "per_neuron_corr": 0.6953115947891045,
+   "per_neuron_mean_abs_err": 0.03119398805433259
+  },
+  "6b logistic": {
+   "misfire": 0.07470527814269036,
+   "false_fire": 0.17099623734837321,
+   "false_silence": 0.007843071268639487,
+   "per_neuron_corr": 0.7025862443625168,
+   "per_neuron_mean_abs_err": 0.024197459357366825
+  },
+  "per_neuron": {
+   "measured_misfire": [
+    0.062,
+    0.078,
+    0.184,
+    0.094,
+    0.048,
+    0.1,
+    0.086,
+    0.056,
+    0.052,
+    0.148,
+    0.07,
+    0.09,
+    0.068,
+    0.084,
+    0.104,
+    0.046,
+    0.048,
+    0.146,
+    0.058,
+    0.206,
+    0.176,
+    0.072,
+    0.058,
+    0.044,
+    0.066,
+    0.114,
+    0.046,
+    0.042,
+    0.078,
+    0.07,
+    0.062,
+    0.104
+   ],
+   "curve_misfire": [
+    0.0547,
+    0.0692,
+    0.0941,
+    0.0366,
+    0.0361,
+    0.0455,
+    0.071,
+    0.0359,
+    0.0426,
+    0.0695,
+    0.0534,
+    0.0712,
+    0.0599,
+    0.0548,
+    0.0621,
+    0.0419,
+    0.0524,
+    0.0647,
+    0.0437,
+    0.0808,
+    0.0942,
+    0.046,
+    0.0497,
+    0.0626,
+    0.0583,
+    0.0648,
+    0.0626,
+    0.0293,
+    0.0745,
+    0.0778,
+    0.0417,
+    0.055
+   ],
+   "measured_false_fire_share": 0.9471014492753623
+  },
+  "by_length": {
+   "short": {
+    "terms": [
+     54,
+     138
+    ],
+    "median_m_negative": -2.0911172617997686,
+    "median_m_positive": 2.2856326157895825,
+    "share_negative_in_danger_zone": 0.18324164198053322,
+    "measured_false_fire": 0.11510791366906475,
+    "measured_false_silence": 0.01274740020127474
+   },
+   "mid": {
+    "terms": [
+     139,
+     167
+    ],
+    "median_m_negative": -2.0906554448726578,
+    "median_m_positive": 2.3583910652597035,
+    "share_negative_in_danger_zone": 0.2618604651162791,
+    "measured_false_fire": 0.2255813953488372,
+    "measured_false_silence": 0.007273877292852625
+   },
+   "long": {
+    "terms": [
+     168,
+     281
+    ],
+    "median_m_negative": -2.373781938267511,
+    "median_m_positive": 2.830687340181435,
+    "share_negative_in_danger_zone": 0.3204500978473581,
+    "measured_false_fire": 0.2690802348336595,
+    "measured_false_silence": 0.0036363636363636364
+   }
+  },
+  "per_neuron_corr_len_near_zero_vs_negative_margin": 0.11349055691491292
+ },
+ "s6 seed2 swap": {
+  "calls": 16000,
+  "measured": {
+   "misfire": 0.163125,
+   "false_fire": 0.21861452711669468,
+   "false_silence": 0.02959335746220992,
+   "intended_fire_rate": 0.2935625,
+   "fire_rate": 0.4393125
+  },
+  "curve": {
+   "misfire": 0.15073845176486536,
+   "false_fire": 0.19953289101110222,
+   "false_silence": 0.0333180670937529,
+   "per_neuron_corr": 0.6848403134091886,
+   "per_neuron_mean_abs_err": 0.035197752441488483
+  },
+  "6b logistic": {
+   "misfire": 0.189280195871601,
+   "false_fire": 0.25455153898626276,
+   "false_silence": 0.03220930142301207,
+   "per_neuron_corr": 0.6940494240624435,
+   "per_neuron_mean_abs_err": 0.04239929483843362
+  },
+  "per_neuron": {
+   "measured_misfire": [
+    0.198,
+    0.17,
+    0.208,
+    0.092,
+    0.174,
+    0.096,
+    0.096,
+    0.214,
+    0.094,
+    0.26,
+    0.094,
+    0.146,
+    0.128,
+    0.308,
+    0.172,
+    0.134,
+    0.064,
+    0.148,
+    0.136,
+    0.21,
+    0.264,
+    0.134,
+    0.188,
+    0.188,
+    0.046,
+    0.196,
+    0.178,
+    0.172,
+    0.158,
+    0.202,
+    0.128,
+    0.224
+   ],
+   "curve_misfire": [
+    0.1605,
+    0.1862,
+    0.1563,
+    0.0895,
+    0.1048,
+    0.1124,
+    0.0962,
+    0.2312,
+    0.1536,
+    0.1528,
+    0.1524,
+    0.1226,
+    0.1419,
+    0.2604,
+    0.1087,
+    0.1185,
+    0.067,
+    0.167,
+    0.1816,
+    0.1749,
+    0.1533,
+    0.1644,
+    0.1537,
+    0.1349,
+    0.0639,
+    0.2217,
+    0.2034,
+    0.127,
+    0.1716,
+    0.2044,
+    0.1214,
+    0.1656
+   ],
+   "measured_false_fire_share": 0.9467432950191571
+  },
+  "by_length": {
+   "short": {
+    "terms": [
+     54,
+     138
+    ],
+    "median_m_negative": -1.4573651922054491,
+    "median_m_positive": 0.9087436266758133,
+    "share_negative_in_danger_zone": 0.3557085484796328,
+    "measured_false_fire": 0.17183017785427424,
+    "measured_false_silence": 0.042518837459634015
+   },
+   "mid": {
+    "terms": [
+     139,
+     167
+    ],
+    "median_m_negative": -1.5128721486626338,
+    "median_m_positive": 0.8660682455764347,
+    "share_negative_in_danger_zone": 0.3919239904988123,
+    "measured_false_fire": 0.2174716283979942,
+    "measured_false_silence": 0.02954694681549573
+   },
+   "long": {
+    "terms": [
+     168,
+     281
+    ],
+    "median_m_negative": -1.783291923273252,
+    "median_m_positive": 0.8763639798638514,
+    "share_negative_in_danger_zone": 0.4414101290963257,
+    "measured_false_fire": 0.2601787487586892,
+    "measured_false_silence": 0.011398176291793313
+   }
+  },
+  "per_neuron_corr_len_near_zero_vs_negative_margin": -0.13272417800314612
+ },
+ "8g B": {
+  "calls": 32000,
+  "measured": {
+   "misfire": 0.0463125,
+   "false_fire": 0.0910181236673774,
+   "false_silence": 0.006826741996233522,
+   "intended_fire_rate": 0.531,
+   "fire_rate": 0.5700625
+  },
+  "curve": {
+   "misfire": 0.0470282854207137,
+   "false_fire": 0.09363926216590625,
+   "false_silence": 0.005859644943321403,
+   "per_neuron_corr": 0.9183438643682218,
+   "per_neuron_mean_abs_err": 0.009405613047946406
+  },
+  "6b logistic": {
+   "misfire": 0.05856022458099644,
+   "false_fire": 0.115736220336586,
+   "false_silence": 0.008060145467302472,
+   "per_neuron_corr": 0.9284087639295107,
+   "per_neuron_mean_abs_err": 0.01466447495275816
+  },
+  "per_neuron": {
+   "measured_misfire": [
+    0.068,
+    0.078,
+    0.052,
+    0.0,
+    0.0,
+    0.098,
+    0.05,
+    0.066,
+    0.0,
+    0.082,
+    0.05,
+    0.0,
+    0.1,
+    0.094,
+    0.0,
+    0.14,
+    0.07,
+    0.076,
+    0.0,
+    0.07,
+    0.072,
+    0.0,
+    0.076,
+    0.0,
+    0.0,
+    0.066,
+    0.0,
+    0.056,
+    0.0,
+    0.062,
+    0.0,
+    0.056
+   ],
+   "curve_misfire": [
+    0.0673,
+    0.0776,
+    0.0693,
+    0.0,
+    0.0,
+    0.083,
+    0.0654,
+    0.0552,
+    0.0,
+    0.1024,
+    0.0466,
+    0.0,
+    0.071,
+    0.0829,
+    0.0,
+    0.0814,
+    0.0889,
+    0.079,
+    0.0,
+    0.0893,
+    0.0621,
+    0.0,
+    0.0801,
+    0.0,
+    0.0,
+    0.0697,
+    0.0,
+    0.0839,
+    0.0,
+    0.0737,
+    0.0,
+    0.0762
+   ],
+   "measured_false_fire_share": 0.921727395411606
+  },
+  "by_length": {
+   "short": {
+    "terms": [
+     77,
+     150
+    ],
+    "median_m_negative": -2.8648845142183834,
+    "median_m_positive": 3.1831209979105233,
+    "share_negative_in_danger_zone": 0.12265235722499042,
+    "measured_false_fire": 0.05787658106554235,
+    "measured_false_silence": 0.0068666425731839535
+   },
+   "mid": {
+    "terms": [
+     151,
+     179
+    ],
+    "median_m_negative": -3.292234302867343,
+    "median_m_positive": 3.1950242714053902,
+    "share_negative_in_danger_zone": 0.17046818727490998,
+    "measured_false_fire": 0.09523809523809523,
+    "measured_false_silence": 0.008500510030601836
+   },
+   "long": {
+    "terms": [
+     180,
+     270
+    ],
+    "median_m_negative": -3.5110406048068574,
+    "median_m_positive": 3.4511588558230084,
+    "share_negative_in_danger_zone": 0.2020033388981636,
+    "measured_false_fire": 0.12270450751252086,
+    "measured_false_silence": 0.005021520803443328
+   }
+  },
+  "per_neuron_corr_len_near_zero_vs_negative_margin": -0.07601536076122607
+ },
+ "s5 3v8 init": {
+  "curve": {
+   "misfire": 0.22188436159487607,
+   "false_fire": 0.5043259765709664,
+   "false_silence": 0.023574291505280655
+  },
+  "intended_fire_rate": 0.5875
+ },
+ "s6 seed0 init": {
+  "curve": {
+   "misfire": 0.21113893518227791,
+   "false_fire": 0.4640385059819799,
+   "false_silence": 0.03466741803681528
+  },
+  "intended_fire_rate": 0.589
+ }
+}
