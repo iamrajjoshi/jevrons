@@ -278,27 +278,28 @@ Jev's `p` also isn't a probability in the calibrated sense. When Jev says 0.75-0
 
 ## All ten digits
 
-{/* TODO all-ten-digits results */}
+The full 784-32-10 network puts all 42 neurons on full-state Jev calls. I trained it on 1,000 images for 10 epochs with the same straight-through settings as the two-digit runs, three seeds, each with a swapped twin trained from the same starting weights on an exact neuron. Test accuracy on 1,000 images:
 
-This one is still running. It's the full 784-32-10 network with all 42 neurons as full-state Jev calls, trained on 1,000 images for 10 epochs with the same straight-through settings as the two-digit runs. There are three seeds, and each seed gets a swapped twin trained from the same starting weights with an exact neuron and then run on Jev. Validation runs on 500 images after epochs 5 and 10, and each finished network gets one pass over 1,000 stratified test images. The claim holds if the Jev-trained network beats its swapped twin on validation for all three seeds and the gap survives on the test set.
-
-| Seed | Trained through Jev, val (epoch 10) | Swapped, val | Trained through Jev, test | Swapped, test |
+| Seed | Trained through Jev, on Jev | Same weights, exact neuron | Trained exact, on Jev | Trained exact, exact neuron |
 | --- | --- | --- | --- | --- |
-| 0 | {/* TODO all-ten-digits results */} | {/* TODO all-ten-digits results */} | 71.0% | 43.7% |
-| 1 | 70.4% | {/* TODO all-ten-digits results */} | {/* TODO all-ten-digits results */} | {/* TODO all-ten-digits results */} |
-| 2 | {/* TODO all-ten-digits results */} | {/* TODO all-ten-digits results */} | {/* TODO all-ten-digits results */} | {/* TODO all-ten-digits results */} |
+| 0 | 71.0% | 61.5% | 43.7% | 78.7% |
+| 1 | 70.2% | 71.4% | 52.9% | 78.1% |
+| 2 | 64.4% | 68.7% | 47.5% | 73.6% |
+| Mean | 68.5% | 67.2% | 48.0% | 76.8% |
 
-Partial results, so far: seed 0 is finished and seed 1's Jev-trained network has reached epoch 10. On seed 0's test images, the network trained through Jev gets 71.0% on live Jev and its swapped twin gets 43.7%. On an exact neuron it's the reverse, 61.5% against 78.7%. The Jev-trained network is worse at ideal arithmetic and much better at Jev.
+Training through Jev wins by 17-27 points on every seed, even though the swapped twin is the better network on paper (76.8% on an exact neuron). Hidden neurons fired as intended 91.1% of the time in the Jev-trained networks and 84.9% in the swapped ones.
 
-{/* TODO all-ten-digits results: final three-seed numbers; fires-as-intended (hidden/output) for each network, no-output-fires rate, per-digit accuracy, calls and spend */}
+The swapped networks don't fail evenly. They nearly stop predicting 0, 3 and 8 (7%, 17% and 5% correct), the digits with the most ink and so the longest sums, where the yes-lean is strongest. The Jev-trained networks get 82%, 66% and 43% on those same digits.
 
-## $17 of API calls
+It isn't free. The ceiling for an exact neuron on 1,000 images is about 77-79%, and the Jev-trained networks sit about 8 points under it.
 
-Everything before the ten-digit run came to $17.40 over about 532,000 calls. Jev bills $0.042 per million input tokens, so even the two-digit networks, at 330.5 million input tokens, were $13.88. Money was never the constraint. The number of calls was: at 42 requests per image, one pass over 1,000 images is 42,000 of them.
+## About $90 of API calls
+
+Everything before the ten-digit run came to $17.40 over about 532,000 calls, and the ten-digit run added about $70 over about 1.7 million. Jev bills $0.042 per million input tokens, so even the two-digit networks, at 330.5 million input tokens, were $13.88. Money was never the constraint. The number of calls was: at 42 requests per image, one pass over 1,000 images is 42,000 of them.
 
 ## One seed, 500 images
 
-The two-digit results are one seed per network, on 500 validation images, and I've only reported validation, not test. The 8- and 26-point gaps are single runs. The ten-digit run is where that gets repeated.
+The two-digit results are one seed per network, on 500 validation images, and I've only reported validation, not test. The 8- and 26-point gaps are single runs. The ten-digit result is the one with three seeds and a test set behind it.
 
 The circle networks weren't converged (150 steps of batch 16), and exact-trained networks varied a lot by seed with those settings when I ran them locally (47-86% across 10 seeds). The swap gap pointed the same way on all three seeds, but its size per seed is noisy.
 
@@ -306,11 +307,11 @@ I don't know how correlated Jev's errors are across neurons in the same image, w
 
 ## A digit you can draw
 
-The claim I want to be able to make is simple: training through Jev recovers accuracy that swapping Jev in loses. Two pairs of digits show it. All ten digits across three seeds will either show it or not.
+The claim I want to be able to make is simple: training through Jev recovers accuracy that swapping Jev in loses. Two pairs of digits show it, and all ten digits show it on every seed.
 
-After that comes a bigger training set, 10,000 images with the best ten-digit configuration and a final test pass. And I'm building a live draw-a-digit page where each drawing runs through the network on real Jev calls, showing each neuron's intended sum, Jev's answer, and where the two disagree. Those disagreements are the whole point. Without them it would look like any small MLP.
+Next is a 5,000-image run, to see whether more data closes the 8 points to the exact-neuron ceiling. And I'm building a live draw-a-digit page where each drawing runs through the network on real Jev calls, showing each neuron's intended sum, Jev's answer, and where the two disagree. Those disagreements are the whole point. Without them it would look like any small MLP.
 
-{/* TODO: link the demo page and the 10,000-image results once they exist */}
+{/* TODO: link the demo page and the 5,000-image results once they exist */}
 
 {/*
 TODO figures (proposed, not yet generated):
