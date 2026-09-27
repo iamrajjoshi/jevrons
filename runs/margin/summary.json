@@ -1,0 +1,63 @@
+{
+ "by_terms": {
+  "10": {
+   "k_fit": 2.79933110367893,
+   "sign_accuracy": 0.9508333333333333,
+   "repeat_flip_rate": 0.021666666666666667
+  },
+  "30": {
+   "k_fit": 2.042809364548495,
+   "sign_accuracy": 0.9358333333333333,
+   "repeat_flip_rate": 0.018333333333333333
+  },
+  "75": {
+   "k_fit": 1.7712374581939798,
+   "sign_accuracy": 0.9333333333333333,
+   "repeat_flip_rate": 0.03333333333333333
+  },
+  "150": {
+   "k_fit": 1.2668896321070233,
+   "sign_accuracy": 0.8908333333333334,
+   "repeat_flip_rate": 0.03166666666666667
+  },
+  "250": {
+   "k_fit": 0.7625418060200668,
+   "sign_accuracy": 0.8091666666666667,
+   "repeat_flip_rate": 0.051666666666666666
+  }
+ },
+ "calls": 6000,
+ "usd": 0.2181,
+ "offset_fit": {
+  "10": {
+   "k": 3.2,
+   "threshold_m0": 0.2,
+   "fires_when_negative": 0.019,
+   "fires_when_positive": 0.919
+  },
+  "30": {
+   "k": 2.2,
+   "threshold_m0": 0.15,
+   "fires_when_negative": 0.048,
+   "fires_when_positive": 0.921
+  },
+  "75": {
+   "k": 1.8,
+   "threshold_m0": -0.1,
+   "fires_when_negative": 0.095,
+   "fires_when_positive": 0.961
+  },
+  "150": {
+   "k": 1.8,
+   "threshold_m0": -0.6,
+   "fires_when_negative": 0.194,
+   "fires_when_positive": 0.981
+  },
+  "250": {
+   "k": 1.5,
+   "threshold_m0": -1.1,
+   "fires_when_negative": 0.388,
+   "fires_when_positive": 1.0
+  }
+ }
+}

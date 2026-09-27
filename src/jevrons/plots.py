@@ -83,5 +83,32 @@ def margin():
     print(FIG / "jev-as-a-function.png", "fitted k =", round(k, 2))
 
 
+def margin_by_terms():
+    """Fire rate vs margin per term count (runs/margin), folded format, bias 0, fitted with Phi(k (m - m0))."""
+    from math import erf
+    rows = json.loads((ROOT / "runs/margin/rows.json").read_text())  # [terms, m, p_rep0, p_rep1]
+    fits = json.loads((ROOT / "runs/margin/summary.json").read_text())["offset_fit"]
+    Phi = np.vectorize(lambda t: 0.5 * (1 + erf(t / np.sqrt(2))))
+    colors = ["#c9c9c9", "#9a9a9a", "#6b6b6b", "#3a3a3a", "#e4507a"]
+    edges = np.linspace(-3, 3, 25)
+    mid = (edges[1:] + edges[:-1]) / 2
+    t = np.linspace(-3, 3, 300)
+    fig, ax = plt.subplots(figsize=(6.5, 4.2), constrained_layout=True)
+    for color, terms in zip(colors, sorted({r[0] for r in rows})):
+        m = np.array([r[1] for r in rows if r[0] == terms])
+        fired = np.array([[r[2] >= 0.5, r[3] >= 0.5] for r in rows if r[0] == terms], float).mean(1)
+        idx = np.digitize(m, edges) - 1
+        rate = [fired[idx == i].mean() if np.any(idx == i) else np.nan for i in range(len(mid))]
+        k, m0 = fits[str(terms)]["k"], fits[str(terms)]["threshold_m0"]
+        ax.plot(mid, rate, "o", color=color, ms=3.5)
+        ax.plot(t, Phi(k * (t - m0)), color=color, lw=2, label=f"{terms} terms   k = {k:.1f}, threshold {m0:+.2f}")
+    ax.step(t, (t > 0).astype(float), color="#1e1e1e", lw=1, ls="--", where="post", label="exact neuron")
+    ax.set_xlabel("normalized margin  m = z / spread of the terms")
+    ax.set_ylabel("fraction of calls where Jev said fire")
+    ax.legend(fontsize=8, frameon=False, loc="upper left")
+    fig.savefig(FIG / "jev-margin-by-terms.png", dpi=160)
+    print(FIG / "jev-margin-by-terms.png")
+
+
 if __name__ == "__main__":
-    {"stage3": stage3, "stage5": stage5, "margin": margin}[sys.argv[1]]()
+    {"stage3": stage3, "stage5": stage5, "margin": margin, "margin_by_terms": margin_by_terms}[sys.argv[1]]()
