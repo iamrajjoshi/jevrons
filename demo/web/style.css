@@ -47,10 +47,6 @@ h1 { font-size: 44px; line-height: 1; letter-spacing: -0.035em; font-weight: 700
 #pad { display: block; width: 100%; aspect-ratio: 1; touch-action: none; cursor: crosshair;
   background-image: radial-gradient(var(--rule) 1px, transparent 1px); background-size: 10px 10px; }
 .row { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--ink); }
-#pad.gridded { background-image: none; }
-.inkset { display: flex; gap: 4px; align-items: center; padding: 0 8px 7px; color: var(--mute); }
-.inkset button { border: 0; background: none; padding: 2px 3px; font: inherit; color: var(--mute); cursor: pointer; }
-.inkset button[aria-pressed="true"] { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
 .btn { font: 500 12px/1 var(--mono); border: 1px solid var(--ink); background: var(--paper); padding: 8px 10px; cursor: pointer; border-radius: 0; }
 .btn:hover { background: var(--faint); }
