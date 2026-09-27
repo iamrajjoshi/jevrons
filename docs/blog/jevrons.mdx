@@ -320,6 +320,8 @@ If the swap gap measures how wrong the neuron is, the next move is to make Jev l
 
 The fix that worked borrowed laya's neutral-choice question: ask it too. Each call now carries the usual yes/no question and a two-option question ("above zero" against "below zero or equal"), and the neuron's output is their average. The two lean in opposite directions, yes/no toward "fire" and the choice toward "below", so the average cancels most of both. The exact-trained network keeps 88.2% on that neuron against 67.8% on plain yes/no, so the gap falls from 25.0 to 4.6 points. Its hidden neurons fire as intended 96.0% of the time, the most faithful Jev neuron I've built, and training through it gets 95.2% (94.2% before). That's one seed per arm, so the trained accuracies are within noise, but the swap gaps aren't.
 
+Why rewording failed and a new format worked comes down to the cleanest fact I have about Jev. When it misfires on a call, it misfires on the same call again 86-88% of the time. If its errors were fresh coin flips at the rate its margin curve predicts, that would be 52-59%. Its `p` jitters between repeats, but the decision barely moves. Jev's mistakes belong to the input, not the draw. Asking again, or asking the same question in other words, gets the same wrong answer. A different format gets a different one.
+
 ## How far the weights bend
 
 That gave me neurons of known faithfulness, from plain Jev to fine-tuned laya, and a question I could answer without another API call: does a more faithful neuron leave weights closer to the exact solution? I measured how far each network's first-layer change moved from its exact twin's:
@@ -336,13 +338,26 @@ The weights also settled two questions from earlier. 92-99% of Jev's hidden misf
 
 Two things the weights won't tell me. I hoped to read Jev's threshold `m0` straight off a trained network. A simulated neuron with noise and no threshold drift at all reads two-thirds as far below its twin, so the method mostly measures noise, not the threshold. And the difference between Jev-trained and exact-trained weights sits mostly on rarely-on pixels at the rim of the digit area, the same map in all three ten-digit seeds (r 0.96-0.97). It isn't on the pixels 0, 3 and 8 use. Those digits fail on Jev because their lists are long, not because of specific weights.
 
-## About $120 of API calls
+## Five times the data
 
-Everything before the ten-digit run came to $17.40 over about 532,000 calls. The ten-digit run added about $70 over about 1.7 million, and the two-question neurons $29 over 561,000. The weight analysis and the laya runs were free. Jev bills $0.042 per million input tokens, so even the two-digit networks, at 330.5 million input tokens, were $13.88. Money was never the constraint. The number of calls was: at 42 requests per image, one pass over 1,000 images is 42,000 of them.
+The last run put both changes together: the full 784-32-10 network on 5,000 training images instead of 1,000, with the two-question neuron, one seed, tested on 2,000 images.
+
+| Test, 2,000 images | On Jev | Same weights, exact neuron |
+| --- | --- | --- |
+| Trained through Jev | 84.6% | 70.0% |
+| Trained exact, swapped | 52.6% | 83.9% |
+
+84.6% on Jev, up from 68.5%, and above the 77-79% an exact neuron reached at 1,000 images. More data and the new neuron changed together, so I can't credit either one alone. The Jev-trained weights now do worse on a perfect neuron than on Jev. They've specialised to the neuron they had.
+
+The twist is the swap gap. On 3 vs 8 the two-question neuron cut it from 25 to 4.6 points. On ten digits it's 31.3 (it was 28.8 at 1,000 images), so the new neuron didn't help the swapped network at all. Its hidden neurons are even more faithful than the Jev-trained ones (93.5% against 90.8% fire as intended). It fails at the output. No output neuron fires on 97.8% of images, so every prediction is a ranking of ten "no" answers, and Jev's graded "no" doesn't keep the order of small differences between sums. The Jev-trained network makes an output actually fire on about 40% of images. And 0 and 3 still collapse in the swapped network (6% and 17%).
+
+## About $200 of API calls
+
+Everything before the ten-digit run came to $17.40 over about 532,000 calls. The ten-digit run added about $70 over about 1.7 million, the two-question neurons $29 over 561,000, and the 5,000-image run $84.71 over 1.94 million. The weight analysis and the laya runs were free. Jev bills $0.042 per million input tokens, so even the two-digit networks, at 330.5 million input tokens, were $13.88. Money was never the constraint. The number of calls was: at 42 requests per image, one pass over 1,000 images is 42,000 of them.
 
 ## One seed, 500 images
 
-The two-digit results are one seed per network, on 500 validation images, and I've only reported validation, not test. The 8- and 26-point gaps are single runs. The ten-digit result is the one with three seeds and a test set behind it.
+The two-digit results are one seed per network, on 500 validation images, and I've only reported validation, not test. The 8- and 26-point gaps are single runs. The 1,000-image ten-digit result is the one with three seeds and a test set behind it. The 5,000-image run is one seed, with two changes at once.
 
 The circle networks weren't converged (150 steps of batch 16), and exact-trained networks varied a lot by seed with those settings when I ran them locally (47-86% across 10 seeds). The swap gap pointed the same way on all three seeds, but its size per seed is noisy.
 
@@ -350,11 +365,11 @@ I don't know how correlated Jev's errors are across neurons in the same image, w
 
 ## A digit you can draw
 
-The claim I want to be able to make is simple: training through Jev recovers accuracy that swapping Jev in loses. Two pairs of digits show it, and all ten digits show it on every seed.
+The claim I want to be able to make is simple: training through Jev recovers accuracy that swapping Jev in loses. Two pairs of digits show it, all ten digits show it on every seed, and five times the data shows it at 84.6%.
 
-Next is a 5,000-image run, to see whether more data closes the 8 points to the exact-neuron ceiling. And I'm building a live draw-a-digit page where each drawing runs through the network on real Jev calls, showing each neuron's intended sum, Jev's answer, and where the two disagree. Those disagreements are the whole point. Without them it would look like any small MLP.
+Next, I'm building a live draw-a-digit page where each drawing runs through the network on real Jev calls, showing each neuron's intended sum, Jev's answer, and where the two disagree. Those disagreements are the whole point. Without them it would look like any small MLP.
 
-{/* TODO: link the demo page and the 5,000-image results once they exist */}
+{/* TODO: link the demo page once it exists */}
 
 {/*
 TODO figures (proposed, not yet generated):
