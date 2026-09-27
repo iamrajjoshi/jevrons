@@ -23,3 +23,5 @@ runs/stage10/pilot-truth/
 laya/hf/
 laya/.venv/
 __pycache__/
+runs/stage7-baseline-aborted/
+runs/stage8g/journal*

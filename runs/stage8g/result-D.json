@@ -1,0 +1,1 @@
+{"arm": "D", "compensate": true, "phrasings": ["v1", "v2", "v3"], "trained": {"accuracy": 0.953, "fires_as_intended": {"hidden": 0.8900625, "output": 0.975}}, "trained_exact_step": 0.95, "swap": {"accuracy": 0.749, "fires_as_intended": {"hidden": 0.7784375, "output": 0.888}}}

@@ -1,0 +1,1 @@
+{"arm": "E", "compensate": "none", "phrasings": ["v1", "choice"], "trained": {"accuracy": 0.952, "fires_as_intended": {"hidden": 0.96028125, "output": 0.992}}, "trained_exact_step": 0.952, "swap": {"accuracy": 0.882, "fires_as_intended": {"hidden": 0.91425, "output": 0.963}}}

@@ -33,7 +33,7 @@ Inspiration: [Mustafa Akın's NAND-gate ALU made of Jev calls](https://x.com/mus
 | 6. Ten digits | Done | [stage6-ten-digits.md](results/stage6-ten-digits.md) |
 | 6b. What Jev's behaviour reveals | Done | [stage6b-jev-quirks.md](results/stage6b-jev-quirks.md) |
 | 7. Scale | Not started | |
-| 8g. A Jevron that behaves like a neuron | Queued after stage 6 | `runs/stage8g/` |
+| 8g. A Jevron that behaves like a neuron | Done | [stage8g-neuron-fixes.md](results/stage8g-neuron-fixes.md) |
 | 8. Improvements | Planned | |
 | 9. Open-weight neurons (Ollaya) | Planned, needs install approval | |
 | 9c. Laya as a scalar neuron | Done | [stage9c-laya-scalar.md](results/stage9c-laya-scalar.md) |
