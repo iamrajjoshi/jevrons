@@ -1,0 +1,39 @@
+{
+ "all-laya/trained": {
+  "val_on_laya": 0.726,
+  "val_on_tabulated_laya": 0.896,
+  "val_exact_step": 0.88,
+  "output_mean_by_class": {
+   "3": 0.3611749253731342,
+   "8": 0.7879164179104478
+  }
+ },
+ "all-laya/swap": {
+  "val_on_laya": 0.5,
+  "val_on_tabulated_laya": 0.5,
+  "val_exact_step": 0.928,
+  "output_mean_by_class": {
+   "3": 0.1285002985074627,
+   "8": 0.04100736318407964
+  }
+ },
+ "laya-hidden/trained": {
+  "val_on_laya": 0.96,
+  "val_on_tabulated_laya": 0.962,
+  "val_exact_step": 0.956,
+  "output_mean_by_class": {
+   "3": 0.19226323021239175,
+   "8": 0.8151002575842294
+  }
+ },
+ "laya-hidden/swap": {
+  "val_on_laya": 0.5,
+  "val_on_tabulated_laya": 0.5,
+  "val_exact_step": 0.928,
+  "output_mean_by_class": {
+   "3": 0.6404047840525579,
+   "8": 0.6814918462301214
+  }
+ },
+ "calls": 227500
+}
