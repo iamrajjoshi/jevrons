@@ -50,7 +50,9 @@ Multiplication happens in my code. Adding up and deciding the sign happen inside
 
 ## Does it add?
 
-Before training anything, I needed to know whether Jev can add at all. I built random neuron states from real MNIST pixel values and N(0, 1) weights, with 10 to 250 terms, and asked Jev for the sign. I tried three ways of writing the state: paired `{x, w}` records, parallel `x` and `w` arrays, and the precomputed products. With the bias fixed at zero, 60 neurons per cell:
+TypeSafe's own [jaggedness page for Jev 1.13](https://docs.typesafe.ai/model-jaggedness/jev-1.13#math-and-numbers) says it's bad at this. It "does not count reliably", and the error grows with the size of what's being counted. It can't reliably tell whether low-level numeric values are close to each other, its probabilities shouldn't be used to compute exact magnitudes, and the advice is to keep counting and computation in code. Every hidden neuron in a digit network asks it to add about 150 numbers.
+
+So before training anything, I needed to know how badly Jev adds. I built random neuron states from real MNIST pixel values and N(0, 1) weights, with 10 to 250 terms, and asked Jev for the sign. I tried three ways of writing the state: paired `{x, w}` records, parallel `x` and `w` arrays, and the precomputed products. With the bias fixed at zero, 60 neurons per cell:
 
 | Format | 10 terms | 30 | 75 | 150 | 250 |
 | --- | --- | --- | --- | --- | --- |
@@ -60,7 +62,9 @@ Before training anything, I needed to know whether Jev can add at all. I built r
 
 It adds, roughly. The errors cluster near zero: when the true total is more than one term-spread away from zero, accuracy is 100% up to 75 terms in every format. Products were the most accurate and the cheapest (1,673 tokens at 250 terms versus 5,395 for paired records), so products it was.
 
-80-90% at 150 terms is the range I was hoping for. A neuron that's always right would make the whole experiment pointless, and one at 50% would make it hopeless. A local mock neuron with injected noise suggested the effect I was after needs a neuron that's wrong somewhere around 5-20% of the time.
+That's the doc's warning, measured. With the bias at zero, accuracy is 82-93% up to 75 terms and 65-82% at 150-250, and it's worst exactly where the total is close to zero. I'm not disproving the page. The network is built to work despite it, in three ways. The multiplication happens in my code, so Jev only sums. Each neuron only needs the sign of the total, never its magnitude. And, as the digit experiments showed later, training pushes the sums far from zero, where the sign is easy: trained neurons fired as intended 93-99% of the time.
+
+Wrong about one time in five at 150 terms, in the products format, is the range I was hoping for. A neuron that's always right would make the whole experiment pointless, and one at 50% would make it hopeless. A local mock neuron with injected noise suggested the effect I was after needs a neuron that's wrong somewhere around 5-20% of the time.
 
 Two other things came out of this round that shaped everything after it.
 

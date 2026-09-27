@@ -2,7 +2,7 @@
 
 2026-09-26 · 16,299 calls · 11.5M input tokens · $0.48 · model `jev-1.13.0`
 
-A Jev neuron is a real but imperfect adder. With the bias out of the way, it gets the sign of a weighted sum right 82-93% of the time up to 75 terms, falling to 65-78% at 150-250 terms. That's the range where the local mock showed training can compensate, so the gate to stage 2 passes. Three findings overturned the audited proposal: Jev isn't deterministic, packing neurons into one request changes their answers, and the neuron over-trusts a standalone bias.
+A Jev neuron is a real but imperfect adder. With the bias out of the way, it gets the sign of a weighted sum right 82-93% of the time up to 75 terms, falling to 65-82% at 150-250 terms. That's the range where the local mock showed training can compensate, so the gate to stage 2 passes. Three findings overturned the audited proposal: Jev isn't deterministic, packing neurons into one request changes their answers, and the neuron over-trusts a standalone bias.
 
 Code: `src/jevrons/probe.py`, `src/jevrons/analyze_probe.py`. Raw journals: `runs/probe/*.jsonl.gz` (every state sent and answer received).
 
