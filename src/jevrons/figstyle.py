@@ -85,7 +85,8 @@ def save(fig, name, svg=True, colors=None):
         from PIL import Image
         Image.open(out).convert("RGB").quantize(colors, method=Image.Quantize.MEDIANCUT).save(out, optimize=True)
     if svg:
-        fig.savefig(out.with_suffix(".svg"), bbox_inches="tight", pad_inches=0.12)
+        with plt.rc_context({"svg.hashsalt": name}):  # stable ids and no date, so unchanged figures stay unchanged
+            fig.savefig(out.with_suffix(".svg"), bbox_inches="tight", pad_inches=0.12, metadata={"Date": None})
     plt.close(fig)
     kb = out.stat().st_size / 1024
     print(f"{out.relative_to(FIG.parents[1])}  {kb:.0f} KB" + (f", svg {out.with_suffix('.svg').stat().st_size / 1024:.0f} KB" if svg else ""))

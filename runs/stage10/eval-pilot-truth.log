@@ -19,8 +19,8 @@ trap long90 {'trap_misfire': 0.0, 'control_misfire': 0.0, 'diff': 0.0, 'diff_ci'
 trap zeros60 {'trap_misfire': 0.0, 'control_misfire': 0.08, 'diff': -0.08, 'diff_ci': [-0.11769367140942373, -0.04230632859057627], 'n_terms': 60, 'fit': True}
 scalar {'v1': {'sign_accuracy': 0.9950248756218906, 'mean_p_neg': 0.012319135540165007, 'mean_p_pos': 0.9966314417123795}, 'v2': {'sign_accuracy': 0.6417910447761194, 'mean_p_neg': 4.955223692377331e-05, 'mean_p_pos': 0.3001450799993836}, 'one_number_list': {'sign_accuracy': 1.0}}
 Traceback (most recent call last):
-  File "/Users/raj.joshi/code/jevrons/laya/evaluate.py", line 166, in <module>
+  File "~/code/jevrons/laya/evaluate.py", line 166, in <module>
     main(sys.argv[1])
-  File "/Users/raj.joshi/code/jevrons/laya/evaluate.py", line 157, in main
+  File "~/code/jevrons/laya/evaluate.py", line 157, in main
     ask(states, batch=64)
 TypeError: main.<locals>.<lambda>() got an unexpected keyword argument 'batch'

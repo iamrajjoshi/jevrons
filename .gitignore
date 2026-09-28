@@ -36,3 +36,9 @@ runs/stage8c/partial*
 video/score.wav
 video/nolan/score.wav
 video/explainer/score.wav
+*.pyc
+node_modules/
+.wrangler/
+.dev.vars
+demo/runs/spend.json
+docs/blog/STYLE.md

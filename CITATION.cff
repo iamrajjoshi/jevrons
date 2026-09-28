@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+title: "Jevrons: training a neural network whose neurons are Jev calls"
+type: software
+authors:
+  - family-names: Joshi
+    given-names: Raj
+license: MIT
+repository-code: "https://github.com/iamrajjoshi/jevrons"
+date-released: 2026-09-27
+keywords:
+  - neural networks
+  - MNIST
+  - straight-through estimator
+  - LLM
+  - Jev

@@ -1,9 +1,25 @@
 [project]
 name = "jevrons"
 version = "0.0.0"
-description = "Training a neural network whose neurons are frozen Jev evaluations"
+description = "An MNIST neural network whose neurons are live calls to Jev, trained with a straight-through estimator"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Raj Joshi" }]
+keywords = ["neural-networks", "mnist", "straight-through-estimator", "llm", "jev", "typesafe", "system-1"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 requires-python = ">=3.12,<3.13"
 dependencies = ["numpy>=2.2,<3", "matplotlib>=3.10,<4"]
+
+[project.urls]
+Repository = "https://github.com/iamrajjoshi/jevrons"
+Issues = "https://github.com/iamrajjoshi/jevrons/issues"
 
 [build-system]
 requires = ["hatchling>=1.27,<2"]

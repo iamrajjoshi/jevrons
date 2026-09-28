@@ -1,6 +1,6 @@
 real states: 410632 train, 47326 test
 eval {'step': 0, 'elapsed_s': 18, 'acc_s10': 0.56, 'acc_s30': 0.43, 'acc_s75': 0.43, 'acc_real': 0.21, 'real_mae_vs_jev': 0.7006524257938067}
-/Users/raj.joshi/code/jevrons/laya/train.py:146: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+~/code/jevrons/laya/train.py:146: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
 Consider using tensor.detach() first. (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:821.)
   log.write(json.dumps({"step": step, "loss": round(float(loss), 5), "acc": acc, "lr": sched.get_last_lr()[0],
 step 50 loss 0.3084 241s peak 14.1 GB
