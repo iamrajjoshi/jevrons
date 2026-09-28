@@ -32,8 +32,10 @@ Visitors pick between two:
   ($0.0017 for stage 7). It's the default when the server runs with `--live`. The page prices each draw before Run.
 - `exact` is a local step neuron, free. It's the default without `--live`, and the page says live is off.
 
-"Compare with the network trained on perfect math" runs the twin next to it, so a live compare is two draws (about
-$0.0035).
+"Also run a network trained with perfect math" runs the twin next to it, so a live compare is two draws (about
+$0.0035). The verdict above the panels names them A and B. "Show a test digit they read differently" loads a recorded
+test digit the twins disagree on (`GET /api/disagree?model=s8a-jev` lists them; stage 7's twin has no recorded answers,
+so it has no list).
 
 Two more stay in the code, for URL flags and as fallbacks:
 

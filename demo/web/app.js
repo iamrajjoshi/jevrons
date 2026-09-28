@@ -40,6 +40,9 @@ const S = {
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const fmt = (v, d = 2) => (v < 0 ? "−" : "") + Math.abs(v).toFixed(d);
 const hid = (j) => "h" + String(j + 1).padStart(2, "0");
+// Activations and answers are probabilities in [0, 1], so they drop the leading zero (".27", "1.00"): one character
+// less keeps ten outputs readable across a phone. Sums, seconds and dollars keep theirs (they can be negative or > 1).
+const pr = (v) => { const s = v.toFixed(2); return s[0] === "0" ? s.slice(1) : s; };
 const usd = (v) => "$" + v.toFixed(v < 0.01 ? 4 : 2);
 const setState = (s) => { document.body.dataset.state = s; };
 
@@ -233,8 +236,7 @@ function renderInput() {
   $("#pad-empty").style.opacity = S.input ? 0 : 1;
   $("#pad-note").textContent = S.real ? `MNIST test #${S.real.index}` : S.input ? "your drawing" : "28 × 28 after preprocessing";
   $("#seen-note").textContent = S.real
-    ? `Test digit #${S.real.index}, labeled ${S.real.label}. It's already 28 × 28, so it goes in as is.`
-    : "What the network sees: your strokes scaled to 20 × 20 and centered by mass, the way MNIST was made.";
+    ? `MNIST test #${S.real.index} · label ${S.real.label}` : "28 × 28 input";
   pad.setAttribute("aria-label", S.real ? `Drawing pad showing test digit ${S.real.index}, labeled ${S.real.label}`
     : S.input ? "Drawing pad with your drawing" : "Drawing pad, empty. Draw a digit with a mouse, pen or finger, or press Test digit.");
   $("#clear").disabled = !S.input;
@@ -287,20 +289,20 @@ function rove(items, cols, onFocus) {
 
 function sourceHelp() {
   return {
-    exact: S.live ? "Exact math: each neuron fires when its sum is above zero, worked out here. Free, and what these weights would do on a perfect neuron."
-      : "Live is off: this server was started without --live, so nothing goes to Jev. Each neuron fires when its sum is above zero, worked out here.",
-    mock: "Simulated answers: each call draws a recorded answer from a neuron with a similar sum. Nothing is sent to Jev.",
-    replay: "Recorded answers from real Jev calls, in their recorded order. Where this exact request was never recorded the answer is simulated, and labeled so.",
-    live: "Real calls to Jev, sent when you press Run. If Jev is busy or today's budget is spent, the draw finishes on recorded or simulated answers and says so.",
+    exact: S.live ? "Each neuron fires when its sum is above zero, computed locally. Free."
+      : "Live is off (server started without --live). Each neuron fires when its sum is above zero, computed locally. Free.",
+    mock: "Simulated: each call reuses a recorded answer from a neuron with a similar sum. Nothing goes to Jev.",
+    replay: "Recorded answers from real Jev calls. Requests that were never recorded get a simulated answer.",
+    live: "Real, billed Jev calls, sent when you press Run. If Jev is busy or today's budget is spent, the draw finishes on recorded or simulated answers.",
   }[S.source];
 }
 
 function renderLede(m) {
   const hidden = sparse(m) ? 64 : 32, n = hidden + m.labels.length;
-  $("#lede").innerHTML = `This digit reader has ${n} neurons, and every one of them is an API call. ` + (sparse(m)
-    ? `A hidden neuron multiplies the ${m.fields} pixels it's wired to by its weights, sends Jev the list, and asks whether it adds up to more than zero.`
-    : `A neuron multiplies its pixels by its weights, sends Jev the list, and asks whether it adds up to more than zero.`) +
-    ` Jev's answer is the neuron's output. The page does the sum too, and <span class="dis-key">pink</span> marks every answer that disagrees with it.`;
+  $("#lede").innerHTML = `A digit reader with ${n} neurons, each one an API call. ` + (sparse(m)
+    ? `A hidden neuron multiplies its ${m.fields} pixels by its weights, sends Jev the products and asks if they sum to more than zero.`
+    : `A neuron multiplies its pixels by its weights, sends Jev the products and asks if they sum to more than zero.`) +
+    ` Jev's answer is the neuron's output. The page also does the sum, and <span class="dis-key">pink</span> marks every answer that disagrees with it.`;
 }
 
 async function configure() {
@@ -315,22 +317,25 @@ async function configure() {
   let u = $("[data-v=url]", seg);
   if (viaUrl && !u) {
     u = document.createElement("button"); u.type = "button"; u.dataset.v = "url"; u.setAttribute("role", "radio");
-    u.title = "Set by the source= flag in the URL. Pick live Jev or exact math to switch."; seg.append(u);
+    u.title = "Set by ?source= in the URL"; seg.append(u);
   }
   if (!viaUrl && u) u.remove();
   if (u) u.textContent = `${SOURCE_NAME[S.source].split(" ")[0]} · URL`;  // "recorded · URL", "simulated · URL"
   setSeg("#source", viaUrl ? "url" : S.source);
   const cfg = plan(), m = cfg[0].model;
   const COMPARE_HELP = {
-    training: "Top: trained through Jev. Bottom: the same network from the same start, trained on perfect math, then run on the same neurons.",
-    neuron: "Same weights twice. Top: exact math. Bottom: Jev.", one: "" };
+    training: "", neuron: "Same weights twice. A: exact math. B: Jev.", one: "" };
   $("#source-help").textContent = [COMPARE_HELP[S.compare], sourceHelp()].filter(Boolean).join(" ");
   renderLede(m);
+  // which recorded test digits this network and its twin read differently, for "Show a test digit they read differently"
+  if (S.compare === "training" && !(m.name in diffs)) {
+    diffs[m.name] = [];
+    fetch(`/api/disagree?model=${m.name}`).then((r) => r.ok ? r.json() : { digits: [] })
+      .then((r) => { diffs[m.name] = r.digits; renderSummary(); }).catch(() => {});
+  }
   const labels = `<option value="">any</option>` + m.labels.map((d) => `<option>${d}</option>`).join("");
   if ($("#real-label").innerHTML !== labels) $("#real-label").innerHTML = labels;
   await buildPanels(cfg);
-  const twin = pick(S.task, "exact");  // so the compare switch can price its second draw
-  if (twin) { await weightsFor(twin.name); renderStatus(); }
 }
 
 // A live draw's cost before it happens: the numbers each call would send for this input (connected, nonzero
@@ -356,13 +361,8 @@ function renderStatus() {
     : live ? `live Jev · billed · ≈ ${usd(one.tokens * USD_PER_TOKEN)} a draw${both}`
     : { exact: S.live ? "exact math · free, no calls" : "live off · exact math, free", mock: "simulated Jev · free, no calls",
         replay: "recorded Jev · free, no calls" }[S.source]);
-  // what turning the comparison on costs live: the twin's draw on top of this one
-  const twin = pick(S.task, "exact"), p0 = S.panels[0];
-  const extra = S.panels.length > 1 ? per[1] : twin && p0 && S.weights[twin.name] ? estimate({ ...p0, model: twin, w: S.weights[twin.name] }) : null;
-  $("#compare-cost").textContent = !extra ? "" : !live ? "free"
-    : S.panels.length > 1 ? `≈ ${usd(all.tokens * USD_PER_TOKEN)} for both` : `+ ≈ ${usd(extra.tokens * USD_PER_TOKEN)}`;
-  $("#b-live").textContent = `Live, this draw would be ${all.calls} calls, ≈ ${(Math.round(all.tokens / 100) * 100).toLocaleString()} input tokens, ≈ ${usd(all.tokens * USD_PER_TOKEN)}` +
-    (S.panels.length > 1 ? ": two networks, so twice a single draw." : ".");
+  $("#b-live").textContent = `Live: ${all.calls} calls, ≈ ${(Math.round(all.tokens / 100) * 100).toLocaleString()} input tokens, ≈ ${usd(all.tokens * USD_PER_TOKEN)}` +
+    (S.panels.length > 1 ? " (two networks)." : ".");
   // Run: its price when live, its progress while running, disabled with nothing to read
   const run = $("#run"), busy = S.panels.some((p) => p.ctrl);
   const total = S.panels.reduce((a, p) => a + (p.tiles?.length || 0) + (p.outs?.length || 0), 0);
@@ -380,14 +380,14 @@ async function weightsFor(name) {
   return S.weights[name];
 }
 
-// In a comparison the part that differs between the panels leads, so you can tell them apart at a glance.
-const trainedName = (p) => p.model.trained === "jev" ? "trained through Jev" : "trained on perfect math";
+// In a comparison each network has one name everywhere (verdict, panel titles, calls, inspector): "A · trained
+// through Jev", "B · trained with perfect math". The part that differs leads, so they're easy to tell apart.
+const trainedName = (p) => p.model.trained === "jev" ? "trained through Jev" : "trained with perfect math";
 const runName = (p) => p.source === "exact" ? "run exact" : "on " + SOURCE_NAME[p.source];
-const panelKey = (p) => S.compare === "neuron" ? SOURCE_NAME[p.source] : trainedName(p);
+const panelKey = (p) => (S.panels.length > 1 ? "AB"[p.id] + " · " : "") + (S.compare === "neuron" ? SOURCE_NAME[p.source] : trainedName(p));
 function panelTitle(p) {
-  const parts = [p.model.title, trainedName(p), runName(p)];
-  if (S.panels.length > 1) parts.unshift(parts.splice(S.compare === "neuron" ? 2 : 1, 1)[0]);
-  return parts.join(" · ");
+  if (S.panels.length < 2) return [p.model.title, trainedName(p), runName(p)].join(" · ");
+  return [panelKey(p), p.model.title, S.compare === "neuron" ? trainedName(p) : runName(p)].join(" · ");
 }
 
 async function buildPanels(cfg) {
@@ -421,14 +421,14 @@ async function buildPanels(cfg) {
       const o = document.createElement("button");
       o.type = "button"; o.className = "out"; o.style.setProperty("--d", `${(-Math.random() * 1.1).toFixed(2)}s`);
       o.innerHTML = `<span class="lab" aria-hidden="true">${lab}</span><span class="bar-track"><i></i><b></b></span><span class="v" aria-hidden="true"></span>`;
-      o.title = `output ${lab}; the tick marks 0.5, where it fires`;
+      o.title = `output ${lab} · tick at 0.5`;
       o.addEventListener("click", () => select(p, 1, k));
       outs.append(o); return o;
     });
     // an axis under the bars, so the tick reads as 0.5
     const axis = document.createElement("div");
     axis.className = "out-axis"; axis.setAttribute("aria-hidden", "true");
-    axis.innerHTML = `<span></span><span><i>0</i><i>0.5</i><i>1</i></span><span></span>`;
+    axis.innerHTML = `<span></span><span><i>0</i><i>.5</i><i>1</i></span><span></span>`;
     outs.append(axis);
     const follow = (layer) => (i) => { if (S.sel) select(p, layer, i); };  // with the inspector open, it follows the focus
     rove(p.tiles, 8, follow(0));
@@ -491,7 +491,7 @@ function renderPanel(p) {
     t.dataset.fb = mark ? MARK[mark] : "";
     t.title = fb ? `${hid(j)}: ${fb}, not live` : "";
     t.style.setProperty("--p", e ? e.p : 0);
-    $(".lbl", t).textContent = e ? e.p.toFixed(2) : hid(j);
+    $(".lbl", t).textContent = e ? pr(e.p) : hid(j);
     t.setAttribute("aria-label", neuronLabel(`hidden ${hid(j)}`, e, flight, fb));
   });
   const outEv = p.outs.map((_, k) => byKey.get(`1:${k}`));
@@ -504,7 +504,7 @@ function renderPanel(p) {
       (!binary && top === p.model.labels[k] ? " top1" : "") + (isSel(p, 1, k) ? " sel" : "");
     o.dataset.fb = mark ? MARK[mark] : "";
     o.style.setProperty("--p", e ? e.p : 0);
-    $(".v", o).textContent = e ? e.p.toFixed(2) : "";
+    $(".v", o).textContent = e ? pr(e.p) : "";
     o.setAttribute("aria-label", neuronLabel(`output ${binary ? p.model.labels[1] : p.model.labels[k]}`, e, flight, fb) +
       (!binary && top === p.model.labels[k] ? ", the prediction" : ""));
   });
@@ -528,10 +528,10 @@ function renderPanel(p) {
   if (big.textContent !== text) { big.textContent = text; big.classList.remove("in"); if (text) { void big.offsetWidth; big.classList.add("in"); } }
   const fired = outs.filter((e) => e.p >= 0.5).length;
   $(".pred-cap", p.el).classList.toggle("err", !!p.error);
-  $(".pred-cap", p.el).textContent = p.error ? "Stopped before an answer." :
-    done ? (binary ? `p ${p.result.outputs[0].toFixed(2)}; ${p.model.labels[1]} at 0.5 or more, else ${p.model.labels[0]}`
-      : fired === 0 ? "No output reached 0.5, so the highest one wins."
-      : fired === 1 ? `Output ${p.result.prediction} fired.` : `${fired} outputs fired; the highest wins.`)
+  $(".pred-cap", p.el).textContent = p.error ? "Stopped." :
+    done ? (binary ? `p ${pr(p.result.outputs[0])}; ${p.model.labels[1]} at 0.5 or more, else ${p.model.labels[0]}`
+      : fired === 0 ? "No output reached 0.5; highest wins."
+      : fired === 1 ? `Output ${p.result.prediction} fired.` : `${fired} outputs fired; highest wins.`)
     : inFlight ? `waiting on ${inFlight} call${inFlight > 1 ? "s" : ""}` : S.input ? (autorun() ? "" : "Press Run to send it.")
     : "Waiting for a digit.";
   const dis = ev.filter((e) => e.disagree).length;
@@ -545,31 +545,47 @@ function renderPanel(p) {
   note.hidden = !p.error && !p.notice && !(p.source === "replay" && sim);
   const only = !mixed && [...kinds][0];  // "recorded answer" | "simulated answer" when every answer is one fallback
   const key = mixed ? ` Tiles marked <span class="fbk">R</span> show a recorded Jev answer to this exact request, <span class="fbk">S</span> a simulated one.`
-    : only === "recorded answer" ? ` All ${p.events.length} turned out to be recorded Jev answers to this exact request.`
-    : only === "simulated answer" ? ` None of these requests were recorded, so all ${p.events.length} are simulated.` : "";
-  note.innerHTML = p.error ? `This run stopped: ${p.error} Draw again or press Run to retry.`
+    : only === "recorded answer" ? ` All ${p.events.length} answers are recorded.`
+    : only === "simulated answer" ? ` All ${p.events.length} answers are simulated.` : "";
+  note.innerHTML = p.error ? `Stopped: ${p.error} Press Run to retry.`
     : p.notice ? p.notice + key
-    : only ? `This exact request was never recorded, so every answer here is simulated.`
-    : `<span class="fbk">S</span> This exact request was never recorded, so ${sim === 1 ? "one answer is" : sim + " answers are"} simulated.`;
+    : only ? `Never recorded: all ${p.events.length} answers are simulated.`
+    : `<span class="fbk">S</span> ${sim} ${sim === 1 ? "answer" : "answers"} simulated: never recorded.`;
   renderSummary();
 }
 
-const neuronLabel = (name, e, flight, fb) => name + (e ? `, ${e.p.toFixed(2)}, ${e.p >= 0.5 ? "fires" : "silent"}` +
+const neuronLabel = (name, e, flight, fb) => name + (e ? `, ${pr(e.p)}, ${e.p >= 0.5 ? "fires" : "silent"}` +
   (e.disagree ? ", disagrees with the sum" : "") + (fb ? `, ${fb}` : "") : flight ? ", waiting on Jev" : "");
 
-// Two panels: one line saying what each read and how often Jev disagreed with the sum.
+// Two networks: the verdict leads, big and plain, one column per network above its panel.
+let diffs = {};  // model name -> recorded test digits it and its twin read differently (from /api/disagree)
 function renderSummary() {
-  const el = $("#summary"), both = S.panels.length > 1 && S.panels.every((p) => p.result);
-  el.hidden = !both;
-  if (!both) return;
+  const el = $("#summary"), more = $("#summary-more"), on = S.panels.length > 1;
+  el.hidden = more.hidden = !on;
+  document.body.classList.toggle("cmp", on && !FILM);  // film keeps its own layout
+  if (!on) return;
+  const [a, b] = S.panels, done = a.result && b.result;
   const dis = (p) => p.events.filter((e) => e.disagree).length;
-  const n = (p) => `<span class="${dis(p) ? "dis" : ""}">${dis(p)} disagree</span>`;
-  const [a, b] = S.panels;
-  el.innerHTML = a.result.prediction === b.result.prediction
-    ? `Both read <b>${a.result.prediction}</b>. ${cap(panelKey(a))}: ${n(a)} · ${panelKey(b)}: ${n(b)}.`
-    : `${cap(panelKey(a))} reads <b>${a.result.prediction}</b> (${n(a)}) · ${panelKey(b)} reads <b>${b.result.prediction}</b> (${n(b)}).`;
+  const col = (p) => `<div class="v-col"><span class="v-tag">${panelKey(p)}</span>
+    <span class="v-digit ${p.result ? "" : "pending"}">${p.result ? p.result.prediction : "·"}</span>
+    <span class="v-dis">${p.events.length ? `<span class="${dis(p) ? "dis" : ""}">${dis(p)} <span class="v-of">of ${p.events.length} answers </span>disagree</span>` : p.error ? "stopped" : "not run"}</span></div>`;
+  const line = !done ? (S.input ? (a.ctrl || b.ctrl ? "Both networks are reading the same drawing…" : "Press Run to read it with both.") : "Draw a digit to compare the two.")
+    : a.result.prediction === b.result.prediction ? `Both read ${a.result.prediction}.`
+    : `They disagree: A reads ${a.result.prediction}, B reads ${b.result.prediction}.`;
+  const d = diffs[a.model.name];
+  const why = S.compare === "neuron" ? "Same weights: A on exact math, B on Jev."
+    : "Same drawing, same kind of Jev neurons. B was trained with perfect math, so it never saw Jev's mistakes." +
+      (d?.length ? " On this network they agree on most digits; stage 7 shows a bigger gap." : "");
+  const html = `<p class="v-line">${line}</p>${col(a)}${col(b)}`;
+  if (el.innerHTML !== html) el.innerHTML = html;
+  const extra = `<p class="v-why">${why}</p>` + (d?.length ? `<button class="btn small" id="find-diff" type="button">Show a test digit they read differently</button>` : "");
+  if (more.dataset.html !== extra) { more.innerHTML = extra; more.dataset.html = extra; }  // don't steal focus from the button mid-run
 }
-const cap = (s) => s[0].toUpperCase() + s.slice(1);
+ $("#summary-more").addEventListener("click", (e) => {
+  if (!e.target.closest("#find-diff")) return;
+  const d = diffs[S.panels[0].model.name].filter((i) => i !== S.real?.index);
+  loadReal(d[Math.floor(Math.random() * d.length)]);
+});
 
 // ---------- running ----------
 
@@ -608,7 +624,7 @@ async function runPanel(p, seed) {
   } catch (e) {
     if (e.name === "AbortError") return;
     // a dropped connection reads as a TypeError; say what it means rather than "Failed to fetch"
-    p.error = e instanceof TypeError && /fetch|network|load/i.test(e.message) ? "the connection to the demo server dropped." : String(e.message || e).replace(/\.?$/, ".");
+    p.error = e instanceof TypeError && /fetch|network|load/i.test(e.message) ? "lost the connection to the demo server." : String(e.message || e).replace(/\.?$/, ".");
   }
   p.ctrl = null;
   renderPanel(p); renderCalls(); renderBill();
@@ -734,9 +750,9 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.sel) {
 function answerRows(e) {
   if (e.backend === "local step") return "";
   return Object.entries(e.answers).map(([k, a]) => typeof a === "object"
-    ? `<dt>choice: above zero</dt><dd>${a.above.toFixed(2)}</dd>`
-    : `<dt>${k === "v1" || k === "fires" ? "yes/no: greater than zero" : "yes/no"}</dt><dd>${a.toFixed(2)}</dd>`).join("") +
-    (Object.keys(e.answers).length > 1 ? `<dt>activation, their mean</dt><dd class="${e.disagree ? "dis" : ""}">${e.p.toFixed(2)}</dd>` : "");
+    ? `<dt>choice: above zero</dt><dd>${pr(a.above)}</dd>`
+    : `<dt>${k === "v1" || k === "fires" ? "yes/no: greater than zero" : "yes/no"}</dt><dd>${pr(a)}</dd>`).join("") +
+    (Object.keys(e.answers).length > 1 ? `<dt>activation, their mean</dt><dd class="${e.disagree ? "dis" : ""}">${pr(e.p)}</dd>` : "");
 }
 
 function renderInspector() {
@@ -749,20 +765,20 @@ function renderInspector() {
   const body = $("#i-body"), sub = `<p class="i-sub">${panelTitle(p)}</p>`;
   if (!e) {
     body.innerHTML = sub + `<p class="i-verdict">${sent(p, layer) ? "Asked. Waiting for Jev." : "Not asked yet."}</p>` +
-      (layer === 0 ? mapsHTML() : "") + `<p class="cap">Run the network to see what this neuron sends and what comes back.</p>`;
+      (layer === 0 ? mapsHTML(p) : "");
     if (layer === 0) paintMaps(p, j);
     return;
   }
   const fires = e.p >= 0.5, jevish = e.backend !== "local step";
   const verdict = !jevish ? `${fires ? "Fires" : "Silent"}: the sum is ${fmt(e.z)}.`
     : e.disagree ? `Jev says ${fires ? "fire" : "stay silent"}, but the sum is ${fmt(e.z)}.`
-    : `Jev ${fires ? "fires" : "stays silent"}, and the sum is ${fmt(e.z)}. They agree.`;
+    : `Jev ${fires ? "fires" : "stays silent"}; the sum is ${fmt(e.z)}. They agree.`;
   const sw = e.terms.length > 1;
   const request = `{"state": ${JSON.stringify(sw ? { products: e.terms } : { z: e.terms[0] }).replaceAll(",", ", ")},\n "questions": ` +
     JSON.stringify(e.questions, null, 2).replaceAll("\n", "\n ") + "}";
   body.innerHTML = sub + `
     <p class="i-verdict ${e.disagree ? "dis" : ""}">${verdict}</p>
-    ${layer === 0 ? mapsHTML() : ""}
+    ${layer === 0 ? mapsHTML(p) : ""}
     <dl class="facts">
       <dt>numbers sent</dt><dd>${e.n_terms}</dd>
       <dt>their true sum</dt><dd>${fmt(e.z)}</dd>
@@ -774,7 +790,7 @@ function renderInspector() {
       <dt>cost</dt><dd>${e.billed ? "$" + (e.tokens * USD_PER_TOKEN).toFixed(6) : "not billed"}</dd>
     </dl>
     ${sw ? `<div><svg class="walk ${e.disagree ? "dis" : ""}" viewBox="0 0 400 110" preserveAspectRatio="none"></svg>
-      <p class="cap">Running total over the ${e.terms.length} numbers, in the order Jev reads them. Jev gets only the list and has to add it up itself.</p></div>` : ""}
+      <p class="cap">Running total of the ${e.terms.length} numbers sent, in order.</p></div>` : ""}
     <div><div class="req-head"><p class="cap">The request, as sent</p><button class="btn small" id="i-copy" type="button">Copy</button></div>
       <pre class="state" id="i-req">${request}</pre></div>`;
   if (layer === 0) paintMaps(p, j);
@@ -788,10 +804,41 @@ $("#i-body").addEventListener("click", async (ev) => {
   setTimeout(() => { if (b.isConnected) { b.textContent = "Copy"; b.classList.remove("done"); } }, 1200);
 });
 
-const mapsHTML = () => `<div class="i-maps">
+// Dense neurons: the weight map and pixels × weights. Sparse neurons: the receptive field as its tile draws it, and
+// which of its pixels this draw actually sent (filled) against the ones it didn't (outlined), over the digit's ghost.
+const mapsHTML = (p) => sparse(p.model) ? `<div class="i-maps">
+  <figure><canvas id="i-w" width="28" height="28"></canvas><figcaption>its ${p.model.fields} pixels: ink +, gray −</figcaption></figure>
+  <figure><canvas id="i-x" class="fine" width="560" height="560"></canvas><figcaption id="i-x-cap"></figcaption></figure></div>`
+  : `<div class="i-maps">
   <figure><canvas id="i-w" width="28" height="28"></canvas><figcaption>weights: ink +, gray −</figcaption></figure>
   <figure><canvas id="i-x" width="28" height="28"></canvas><figcaption>pixels × weights, sent to Jev</figcaption></figure></div>`;
-function paintMaps(p, j) { paintSigned($("#i-w"), p.w.W1[j]); paintSigned($("#i-x"), products(p.w.W1[j])); }
+function paintMaps(p, j) {
+  const w = p.w.W1[j];
+  if (!sparse(p.model)) { paintSigned($("#i-w"), w); paintSigned($("#i-x"), products(w)); return; }
+  paintField($("#i-w"), w);
+  const n = paintSent($("#i-x"), w), total = w.filter((v) => v !== 0).length;
+  $("#i-x-cap").textContent = S.input ? `sent: ${n} of ${total} (filled)` : "sent: none yet";
+}
+// the pixels a sparse call sends are exactly those whose input and weight are both nonzero at two decimals
+function paintSent(canvas, w) {
+  const ctx = canvas.getContext("2d"), c = canvas.width / 28, px = products(w);
+  const mp = Math.max(1e-6, ...px.map(Math.abs)), ink = css("--ink"), neg = css("--mute-2"), ghost = css("--faint");
+  ctx.globalAlpha = 1; ctx.fillStyle = css("--paper"); ctx.fillRect(0, 0, canvas.width, canvas.height);
+  let n = 0;
+  for (let i = 0; i < 784; i++) {
+    const x = (i % 28) * c, y = Math.floor(i / 28) * c, inked = S.input && kept(S.input[i]);
+    if (inked) { ctx.globalAlpha = 0.7 * S.input[i]; ctx.fillStyle = ghost; ctx.fillRect(x, y, c, c); }
+    if (w[i] === 0) continue;
+    const col = w[i] > 0 ? ink : neg;
+    if (inked && kept(w[i])) {
+      n++; ctx.globalAlpha = 0.45 + 0.55 * Math.abs(px[i] / mp) ** 0.6; ctx.fillStyle = col; ctx.fillRect(x + 1, y + 1, c - 2, c - 2);
+    } else {
+      ctx.globalAlpha = 1; ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.strokeRect(x + 2.5, y + 2.5, c - 5, c - 5);
+    }
+  }
+  ctx.globalAlpha = 1;
+  return n;
+}
 
 function drawWalk(svg, terms) {
   let s = 0; const pts = [0, ...terms.map((v) => (s += v))];

@@ -26,11 +26,15 @@ value below is a CSS variable in `web/style.css`, so a number that isn't on this
 ## Type
 
 - Sans (`Inter Tight`, then system) for prose: the intro, verdicts, the compare switch label. Mono (`JetBrains Mono`)
-  for labels, data and controls.
+  for labels, data and controls. Both are self-hosted from `web/fonts/` (OFL, licences alongside): the variable latin
+  cuts, with Google Fonts' unicode-range, so → ≈ ← still fall back to the system font as before.
 - Scale: `--fs-cap` 11px (mono captions and badges), `--fs-ui` 13px (controls and data), `--fs-body` 15px (prose),
-  and the prediction digit (`--fs-digit`, 176px, 112px narrow, 96px phone). Nothing smaller than 11px except the 9px
+  `--fs-lead` 20px (the compare verdict line), the verdict digits (`--fs-v`, 96px, 56px phone) and the prediction
+  digit (`--fs-digit`, 176px, 112px narrow, 96px phone). Nothing smaller than 11px except the 9px
   R/S badge letters.
 - `font-variant-numeric: tabular-nums` on the body, so every number lines up.
+- Probabilities (activations, answers, the 0 / .5 / 1 axis) drop the leading zero: ".27", "1.00". Sums, seconds and
+  dollars keep it, since they can be negative or above 1. Prose keeps "0.5".
 - Prose stops at 64ch. Line height 1.5 for prose, 1.4 for mono.
 
 ## Space and shape
@@ -66,6 +70,17 @@ All controls are native elements (`button`, `select`, `input[type=range]`), with
   exploring and the inspector follows. Escape or close shuts it and puts focus back on that tile. The request JSON
   has a Copy button that confirms for 1.2 s.
 - Badges (R, S) are 9px mono on an ink square: a single letter, explained in the panel notice and the tile's tooltip.
+
+## Compare
+
+- Off by default. The switch says what it does ("Also run a network trained with perfect math"); the price is on Run.
+- The two networks have one name everywhere: "A · trained through Jev", "B · trained with perfect math" (verdict,
+  panel titles, calls, inspector).
+- The verdict leads: one plain line ("Both read 7." / "They disagree: A reads 4, B reads 5."), then each network's
+  digit and disagreement count in a column above its panel. On a phone it's pinned while the panels scroll.
+- The panels stay, but quieter: side by side from 901px, no wires, no big digit, smaller tiles.
+- "Show a test digit they read differently" loads one of the recorded test digits the twins disagree on
+  (`/api/disagree`), for networks where both twins were recorded.
 
 ## Motion
 

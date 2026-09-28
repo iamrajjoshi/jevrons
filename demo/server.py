@@ -237,6 +237,33 @@ def recorded_digits(path: str) -> list[int]:
     return sorted({r["mnist"] for r in records(ROOT / path)})
 
 
+@cache
+def recorded_predictions(name: str) -> dict[int, str]:
+    """What the model predicts on each of its recorded test digits, on the recorded answers (no waiting): the same
+    requests and lookup as replay_source, layer by layer."""
+    m, index, x = model(name), replay_index(name), test_set()[0]
+    out = {}
+    for i in recorded_digits(m["replay"]) if "replay" in m else ():
+        a = x[i]
+        for W, b in params(m["weights"]):
+            recs = [index.get(_key(*neuron_request(m["format"], a, W[:, j], b[j])[:2])) for j in range(W.shape[1])]
+            if None in recs:
+                break
+            a = np.array([activation(r["answers"]) for r in recs])
+        else:
+            out[i] = m["labels"][int(decide(a[None])[0])]
+    return out
+
+
+def disagreements(name: str) -> list[int]:
+    """Recorded test digits that the model reads right and its twin reads wrong, both on recorded answers
+    (falls back to any digit they read differently if there are none)."""
+    mine, theirs = recorded_predictions(name), recorded_predictions(model(name)["twin"])
+    y = test_set()[1]
+    both = sorted(i for i in mine.keys() & theirs.keys() if mine[i] != theirs[i])
+    return [i for i in both if mine[i] == str(y[i])] or both
+
+
 _captured = threading.local()
 _jev = None
 _jev_lock = threading.Lock()
@@ -357,6 +384,9 @@ class Handler(SimpleHTTPRequestHandler):
                 (W1, b1), (W2, b2) = params(model(q.get("name", ""))["weights"])
                 return self.send_json({"W1": np.round(W1.T, 3).tolist(), "b1": b1.round(3).tolist(),
                                        "W2": np.round(W2, 3).tolist(), "b2": b2.round(3).tolist()})
+            if url.path == "/api/disagree":  # recorded test digits this model and its twin read differently
+                name = q.get("model", "")
+                return self.send_json({"model": name, "twin": model(name)["twin"], "digits": disagreements(name)})
             if url.path == "/api/digit":
                 x, y = test_set()
                 labels = [int(v) for v in q.get("labels", "").split(",") if v != ""] or list(range(10))
