@@ -78,9 +78,9 @@ kbd { font: 500 var(--fs-cap)/1 var(--mono); border: 1px solid currentColor; pad
 }
 
 /* ---------- header ---------- */
-.top { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr) auto; gap: var(--gap); align-items: baseline;
+.top { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); gap: var(--gap); align-items: baseline;
   max-width: var(--max); margin: 0 auto; padding: 28px var(--s7) 0; }
-.brand { display: flex; flex-direction: column; gap: 2px; }
+.brand { display: flex; flex-direction: column; gap: var(--s3); }
 h1 { font: 400 40px/0.95 var(--display); letter-spacing: -0.01em; margin: 0; }
 .by { margin: 0; font: var(--fs-cap)/1.5 var(--mono); color: var(--mute); }
 .by a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px;

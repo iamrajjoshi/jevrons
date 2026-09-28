@@ -298,11 +298,11 @@ function sourceHelp() {
 }
 
 function renderLede(m) {
-  const hidden = sparse(m) ? 64 : 32, n = hidden + m.labels.length;
-  $("#lede").innerHTML = `A digit reader with ${n} neurons, each one an API call. ` + (sparse(m)
-    ? `A hidden neuron multiplies its ${m.fields} pixels by its weights, sends Jev the products and asks if they sum to more than zero.`
-    : `A neuron multiplies its pixels by its weights, sends Jev the products and asks if they sum to more than zero.`) +
-    ` Jev's answer is the neuron's output. The page also does the sum, and <span class="dis-key">pink</span> marks every answer that disagrees with it.`;
+  $("#lede").innerHTML = `This is a small neural network where every neuron is an API call to Jev, an AI model. ` +
+    `Each ${sparse(m) ? "hidden neuron looks at its own " + m.fields + " pixels" : "neuron looks at the pixels"}, multiplies them by its weights, ` +
+    `and asks Jev one question: do these numbers add up to more than zero? Jev's answer becomes the neuron's output. ` +
+    `Jev is not great at arithmetic, so the page also does the sum itself and marks every answer Jev got wrong in ` +
+    `<span class="dis-key">pink</span>. The weights were trained through those mistakes, and it still reads most digits right. Draw one and watch it work.`;
 }
 
 async function configure() {
@@ -351,16 +351,8 @@ function estimate(p) {
 }
 
 function renderStatus() {
-  const live = S.panels.some((p) => p.source === "live"), el = $("#status");
-  const per = S.panels.map(estimate), one = per[0] || { calls: 0, tokens: 0 };
+  const live = S.panels.some((p) => p.source === "live"), per = S.panels.map(estimate);
   const all = per.reduce((a, e) => ({ calls: a.calls + e.calls, tokens: a.tokens + e.tokens }), { calls: 0, tokens: 0 });
-  const both = S.panels.length > 1 ? `, ${usd(all.tokens * USD_PER_TOKEN)} with the comparison` : "";
-  el.className = "status" + (live ? " live" : "");
-  const fell = live && S.panels.some((p) => p.notice);
-  el.innerHTML = `<i aria-hidden="true"></i>` + (fell ? "live Jev · this draw fell back, not billed"
-    : live ? `live Jev · billed · ≈ ${usd(one.tokens * USD_PER_TOKEN)} a draw${both}`
-    : { exact: S.live ? "exact math · free, no calls" : "live off · exact math, free", mock: "simulated Jev · free, no calls",
-        replay: "recorded Jev · free, no calls" }[S.source]);
   $("#b-live").textContent = `Live: ${all.calls} calls, ≈ ${(Math.round(all.tokens / 100) * 100).toLocaleString()} input tokens, ≈ ${usd(all.tokens * USD_PER_TOKEN)}` +
     (S.panels.length > 1 ? " (two networks)." : ".");
   // Run: its price when live, its progress while running, disabled with nothing to read
