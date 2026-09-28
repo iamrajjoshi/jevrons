@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Jevrons</title>
+<meta name="description" content="Draw a digit and watch a neural network read it, one Jev API call per neuron.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -14,83 +15,94 @@
 <header class="top">
   <h1>Jevrons</h1>
   <p class="lede" id="lede"></p>
-  <p class="status" id="status"></p>
+  <p class="status" id="status" aria-live="polite"></p>
 </header>
 
 <main class="layout">
-  <aside class="rail">
-    <section class="win pad-win">
+  <div class="rail">
+    <section class="win pad-win" aria-label="Input">
       <div class="bar"><span>input</span><span id="pad-note">28 × 28 after preprocessing</span></div>
       <div class="pad-wrap">
-        <canvas id="pad" width="560" height="560" aria-label="Drawing pad"></canvas>
-        <p class="pad-empty" id="pad-empty">Draw a digit</p>
+        <canvas id="pad" width="560" height="560" role="img" aria-label="Drawing pad, empty"></canvas>
+        <p class="pad-empty" id="pad-empty" aria-hidden="true">Draw a digit here</p>
       </div>
       <div class="row">
-        <button class="btn" id="clear">Clear</button>
-        <button class="btn" id="real">Test digit</button>
-        <select id="real-label" class="btn" aria-label="Which test digit"></select>
+        <button class="btn" id="clear" type="button">Clear</button>
+        <button class="btn" id="real" type="button">Test digit</button>
+        <span class="select sm-w"><select id="real-label" aria-label="Which test digit"></select></span>
       </div>
     </section>
 
-    <div class="seen">
-      <canvas id="seen" width="28" height="28"></canvas>
-      <p id="seen-note"></p>
-    </div>
+    <figure class="seen">
+      <canvas id="seen" width="28" height="28" role="img" aria-label="What the network sees, 28 by 28 pixels"></canvas>
+      <figcaption id="seen-note"></figcaption>
+    </figure>
 
-    <section class="bill" aria-live="polite">
+    <section class="bill" aria-live="polite" aria-label="This draw">
       <div class="bill-head"><span>this draw</span><span id="bill-kind">nothing run</span></div>
       <dl>
         <dt>calls</dt><dd id="b-calls">0</dd>
         <dt>input tokens</dt><dd id="b-tokens">0</dd>
-        <dt>cost</dt><dd id="b-usd">$0.0000</dd>
+        <dt>billed</dt><dd id="b-usd">$0.0000</dd>
         <dt>elapsed</dt><dd id="b-time">0.0 s</dd>
       </dl>
       <p id="b-live"></p>
     </section>
-  </aside>
+  </div>
 
-  <section class="stage">
+  <div class="stage">
     <div class="controls">
-      <label class="field"><span>network</span><select id="task"></select></label>
-      <div class="field"><span>neurons</span>
-        <div class="seg" id="source">
-          <button data-v="live">live Jev</button>
-          <button data-v="exact">exact math</button>
+      <div class="field">
+        <label class="lab" for="task">network</label>
+        <span class="select"><select id="task"></select></span>
+      </div>
+      <div class="field">
+        <span class="lab" id="source-lab">neurons</span>
+        <div class="seg" id="source" role="radiogroup" aria-labelledby="source-lab">
+          <button type="button" role="radio" data-v="live">live Jev</button>
+          <button type="button" role="radio" data-v="exact">exact math</button>
         </div>
       </div>
-      <button class="toggle" id="compare" role="switch" aria-checked="false">
-        <i></i><span>Compare with the network trained on perfect math<small id="compare-cost"></small></span></button>
-      <button class="btn primary run" id="run">Run</button>
+      <div class="field">
+        <span class="lab"><span id="compare-lab">compare</span><span class="cost" id="compare-cost"></span></span>
+        <button class="toggle" id="compare" type="button" role="switch" aria-checked="false" aria-labelledby="compare-lab compare-text"
+          aria-describedby="compare-cost"><i aria-hidden="true"></i><span id="compare-text">with the network trained on perfect math</span></button>
+      </div>
+      <div class="field run-field">
+        <span class="lab" aria-hidden="true">&nbsp;</span>
+        <button class="btn primary run" id="run" type="button">Run</button>
+      </div>
       <p class="help" id="source-help"></p>
     </div>
 
+    <p class="summary" id="summary" aria-live="polite" hidden></p>
     <div class="panels" id="panels"></div>
 
-    <section class="calls" id="calls" hidden>
-      <div class="calls-head"><span>calls, sent → answered</span><button class="btn small" id="replay-anim">Replay</button></div>
+    <section class="calls" id="calls" aria-label="Calls timeline" hidden>
+      <div class="calls-head"><span>calls, sent → answered</span><button class="btn small" id="replay-anim" type="button">Replay</button></div>
       <div class="calls-track">
-        <svg id="calls-svg"></svg>
+        <svg id="calls-svg" aria-hidden="true"></svg>
         <input type="range" id="calls-range" min="0" max="1000" value="1000" aria-label="Scrub through the run">
       </div>
-      <div class="calls-foot"><span>0 s</span><span id="calls-t"></span><span id="calls-end"></span></div>
+      <div class="calls-foot"><span id="calls-t"></span><span id="calls-end"></span></div>
     </section>
-  </section>
+  </div>
 </main>
 
-<aside class="drawer win" id="inspector" hidden>
-  <div class="bar"><span id="i-title">neuron</span><button class="x" id="i-close" aria-label="Close">close</button></div>
+<aside class="drawer win" id="inspector" role="dialog" aria-modal="false" aria-labelledby="i-title" hidden>
+  <div class="bar"><span id="i-title">neuron</span><button class="x" id="i-close" type="button" aria-label="Close inspector">close <kbd>esc</kbd></button></div>
   <div class="i-body" id="i-body"></div>
 </aside>
 
 <template id="panel-tpl">
   <article class="panel win">
     <div class="bar"><span class="p-title"></span><span class="p-arch"></span></div>
-    <p class="p-notice" hidden></p>
+    <p class="p-notice" role="status" hidden></p>
     <div class="net">
-      <svg class="wires"></svg>
-      <div class="hidden-grid"></div>
-      <div class="outs"></div>
-      <div class="pred"><span class="pred-big"></span><span class="pred-cap"></span></div>
+      <svg class="wires" aria-hidden="true"></svg>
+      <div class="hidden-grid" role="group" aria-label="Hidden neurons"></div>
+      <div class="outs" role="group" aria-label="Output neurons"></div>
+      <div class="pred" aria-live="polite"><span class="pred-big"></span><span class="pred-cap"></span></div>
     </div>
     <div class="p-foot"><span class="p-stats"></span><span class="p-note"></span></div>
   </article>
