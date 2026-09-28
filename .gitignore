@@ -42,3 +42,9 @@ node_modules/
 .dev.vars
 demo/runs/spend.json
 docs/blog/STYLE.md
+# Raw Jev call journals stay out of the public repo (TypeSafe MCA 2.3(b)); they live in iamrajjoshi/jevrons-archive.
+# stage9c's journals are laya's answers, not Jev's, and stay tracked.
+runs/**/*.jsonl.gz
+!runs/stage9c/*.jsonl.gz
+runs/stage10/eval-jev.*
+runs/stage10/jev.log
