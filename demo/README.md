@@ -92,10 +92,13 @@ test set, `runs/stage8a/weights-*.npz`, `runs/stage7/weights-*.npz` and `runs/ma
 lets only those in). It runs `--live --daily-usd 9 --max-live 16` on Vercel and writes nothing but the spend counter.
 
 ```bash
-fly launch --no-deploy --copy-config --config demo/fly.toml --dockerfile demo/Dockerfile
-fly secrets set VERCEL_API_KEY=... --config demo/fly.toml
-fly deploy --config demo/fly.toml --dockerfile demo/Dockerfile
+fly apps create jevrons-demo
+fly secrets set VERCEL_API_KEY="$(pbpaste)" -a jevrons-demo   # key copied to the clipboard, kept out of shell history
+fly deploy . --config demo/fly.toml --dockerfile demo/Dockerfile --ha=false
 ```
+
+`--ha=false` keeps it to one machine (Fly otherwise starts two on the first deploy). If an app already has two,
+`fly scale count 1 -a jevrons-demo` brings it back to one.
 
 On a 512 MB machine the server idles at about 24 MB, holds about 90 MB once the test set is loaded, and peaked at
 220 MB over 16 concurrent draws on recorded answers (the fallback path, which also loads the replay files).

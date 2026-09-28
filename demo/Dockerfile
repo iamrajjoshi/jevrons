@@ -1,8 +1,8 @@
 # Jevrons demo, live mode. Build from the repo root (the data/ and runs/ files are gitignored or large, so
 # deploy from a local checkout that has them):
-#   fly launch --no-deploy --copy-config --config demo/fly.toml --dockerfile demo/Dockerfile
-#   fly secrets set VERCEL_API_KEY=... --config demo/fly.toml
-#   fly deploy --config demo/fly.toml --dockerfile demo/Dockerfile
+#   fly apps create jevrons-demo
+#   fly secrets set VERCEL_API_KEY="$(pbpaste)" -a jevrons-demo
+#   fly deploy . --config demo/fly.toml --dockerfile demo/Dockerfile --ha=false
 FROM python:3.12-slim
 WORKDIR /app
 RUN pip install --no-cache-dir "numpy>=2.2,<3"

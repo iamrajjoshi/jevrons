@@ -1,4 +1,6 @@
-# Fly.io config for the live demo. One small machine; it sleeps when idle and wakes on the next visit.
+# Fly.io config for the live demo. Exactly one small machine; it sleeps when idle and wakes on the next visit.
+# Fly starts two machines on a first deploy unless told not to, so deploy with --ha=false (see demo/README.md).
+# One machine also matters for the budget: the daily spend counter lives on the machine, so two would each allow $9.
 app = "jevrons-demo"
 primary_region = "sjc"
 
@@ -11,6 +13,9 @@ primary_region = "sjc"
   auto_stop_machines = "stop"
   auto_start_machines = true
   min_machines_running = 0
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 64
 
 [[vm]]
   size = "shared-cpu-1x"
