@@ -124,7 +124,7 @@ def noul(instructions: str, true: str, false: str) -> dict:
 
 
 class Jev:
-    def __init__(self, journal: Path, max_usd: float | None = None, backends: list[str] | None = None,
+    def __init__(self, journal: Path | None, max_usd: float | None = None, backends: list[str] | None = None,
                  wait_rounds: int = 6):
         """wait_rounds: how many times to retry when every backend is rate-limited or down (a minute more each
         time). Training runs wait it out; the demo passes 1 and reports the rate limit instead."""
@@ -141,9 +141,12 @@ class Jev:
         self.calls = 0
         self.by_backend: dict[str, int] = {}
         self._lock = threading.Lock()
-        journal.parent.mkdir(parents=True, exist_ok=True)
+        if journal is not None:  # None: keep nothing on disk (the hosted demo)
+            journal.parent.mkdir(parents=True, exist_ok=True)
 
     def _log_failure(self, backend: str, error: str, tag: dict | None):
+        if self.journal is None:
+            return
         with self._lock, self.journal.with_name(self.journal.stem + "-failures.jsonl").open("a") as f:
             f.write(json.dumps({"t": time.time(), "backend": backend, "error": error, "tag": tag}) + "\n")
 
@@ -188,8 +191,9 @@ class Jev:
             self.tokens += tokens
             self.usd += tokens * backend.usd_per_token
             self.by_backend[backend.name] = self.by_backend.get(backend.name, 0) + 1
-            with self.journal.open("a") as f:
-                f.write(json.dumps(record) + "\n")
+            if self.journal is not None:
+                with self.journal.open("a") as f:
+                    f.write(json.dumps(record) + "\n")
         return answers
 
 
