@@ -34,7 +34,7 @@ DEMO = Path(__file__).resolve().parent
 ROOT = DEMO.parent
 JOURNAL = DEMO / "runs" / "journal.jsonl"
 SOURCES = ("exact", "mock", "replay", "live")
-ARGS = argparse.Namespace(live=False, daily_usd=2.0, per_ip_hour=20, max_live=4)
+ARGS = argparse.Namespace(live=False, daily_usd=9.0, per_ip_hour=0, max_live=0)
 DRAW_USD = 0.0025  # a stage 7 draw bills about $0.0017; budget a little more so the daily cap isn't overshot
 
 
@@ -46,7 +46,7 @@ class LiveRefused(Exception):
 
 SPEND = DEMO / "runs" / "spend.json"
 _budget_lock = threading.Lock()
-_live_slots = threading.BoundedSemaphore(ARGS.max_live)
+_live_slots = None  # set at startup when --max-live is on
 _ip_draws: dict[str, list[float]] = {}
 
 
@@ -68,9 +68,9 @@ def reserve_live(ip: str):
             raise LiveRefused("Today's live budget is used up. Replay shows real recorded Jev answers.")
         now = time.time()
         recent = [t for t in _ip_draws.get(ip, []) if now - t < 3600]
-        if len(recent) >= ARGS.per_ip_hour:
+        if ARGS.per_ip_hour and len(recent) >= ARGS.per_ip_hour:
             raise LiveRefused(f"That's {ARGS.per_ip_hour} live draws this hour, the limit per visitor. Replay still works.")
-        if not _live_slots.acquire(blocking=False):
+        if _live_slots and not _live_slots.acquire(blocking=False):
             raise LiveRefused("Too many live draws are running right now. Try again in a few seconds.")
         _ip_draws[ip] = recent + [now]
         return today
@@ -387,7 +387,8 @@ class Handler(SimpleHTTPRequestHandler):
             if live:
                 # a failed or abandoned draw can still bill calls that were in flight: charge it a full draw
                 charge_live(usd if done else max(usd, DRAW_USD))
-                _live_slots.release()
+                if _live_slots:
+                    _live_slots.release()
 
 
 def check():
@@ -478,15 +479,15 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--live", action="store_true", help="allow the live source (real Jev calls, billed)")
-    ap.add_argument("--daily-usd", type=float, default=2.0, help="live spend cap per UTC day (demo/runs/spend.json)")
-    ap.add_argument("--per-ip-hour", type=int, default=20, help="live draws per visitor per hour")
-    ap.add_argument("--max-live", type=int, default=4, help="live draws running at once")
+    ap.add_argument("--daily-usd", type=float, default=2.0, help="live spend cap per UTC day, about 5,000 draws at $9 (demo/runs/spend.json)")
+    ap.add_argument("--per-ip-hour", type=int, default=0, help="live draws per visitor per hour (0 = no limit)")
+    ap.add_argument("--max-live", type=int, default=0, help="live draws running at once (0 = no limit)")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--check", action="store_true")
     ARGS = ap.parse_args()
     if ARGS.check:
         check()
     else:
-        _live_slots = threading.BoundedSemaphore(ARGS.max_live)
+        _live_slots = threading.BoundedSemaphore(ARGS.max_live) if ARGS.max_live else None
         print(f"http://{ARGS.host}:{ARGS.port}  live={'on' if ARGS.live else 'off'}  daily cap ${ARGS.daily_usd}", flush=True)
         ThreadingHTTPServer((ARGS.host, ARGS.port), Handler).serve_forever()

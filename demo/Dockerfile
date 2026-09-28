@@ -18,4 +18,4 @@ COPY demo ./demo
 ENV PYTHONPATH=/app/src JEVRONS_BACKENDS=vercel PYTHONUNBUFFERED=1
 EXPOSE 8080
 CMD ["python", "demo/server.py", "--live", "--host", "0.0.0.0", "--port", "8080", \
-     "--daily-usd", "2", "--per-ip-hour", "20", "--max-live", "4"]
+     "--daily-usd", "9"]
