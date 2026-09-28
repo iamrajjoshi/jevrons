@@ -35,7 +35,9 @@ Inspiration: [Mustafa Akın's NAND-gate ALU made of Jev calls](https://x.com/mus
 | 6c. Weights as a probe of Jev | Done | [stage6c-weights-probe.md](results/stage6c-weights-probe.md) |
 | 7. Scale (5,000 images, arm E neuron) | Done: 84.6% test on Jev, swap 52.6% | [stage7-more-data.md](results/stage7-more-data.md) |
 | 8g. A Jevron that behaves like a neuron | Done | [stage8g-neuron-fixes.md](results/stage8g-neuron-fixes.md) |
-| 8. Improvements | Planned | |
+| 8a. Sparse neurons (784-64-10, 96 pixels each) | Done: 85.3% on Jev at 1,000 images, swap gap 6.8 | [stage8a-sparse.md](results/stage8a-sparse.md) |
+| 8c. Pretrain on a simulated Jev | Done: 83.8% with no Jev training | [stage8c-mock-pretrain.md](results/stage8c-mock-pretrain.md) |
+| 8b, 8d, 8e. Margin, voting, learned stand-in | Not run (voting ruled out: Jev repeats its mistakes) | |
 | 9. Open-weight neurons (Ollaya) | Done (local probes, XOR on decider) | |
 | 9c. Laya as a scalar neuron | Done | [stage9c-laya-scalar.md](results/stage9c-laya-scalar.md) |
 | 10. Teaching laya to add | Done | [stage10-teaching-laya.md](results/stage10-teaching-laya.md) |

@@ -11,7 +11,7 @@ Jev is TypeSafe AI's System-1 model. You send it a JSON state and a yes/no quest
 
 Training uses a straight-through estimator. The forward pass is the real Jev answer and the backward pass pretends Jev was a sigmoid of the sum it was asked about. Trained that way on 5,000 MNIST images, the network gets **84.6%** on 2,000 test digits with every neuron a Jev call. The control is the interesting part: the same network trained with exact arithmetic scores 83.9% on an exact neuron and falls to **52.6%** when Jev replaces it. Weights trained through Jev learn to work around the neuron's quirks, and weights trained without it don't.
 
-The rest of the repo is the trail that led there, one experiment per stage, with every paid call journaled: probing a single Jev neuron, logic gates, a circle, two digits, ten digits, what the trained weights reveal about Jev, and teaching an open-weight model (laya) to be a better neuron than Jev. Total spend on Jev so far is about $200.
+The rest of the repo is the trail that led there, one experiment per stage, with every paid call journaled: probing a single Jev neuron, logic gates, a circle, two digits, ten digits, what the trained weights reveal about Jev, and teaching an open-weight model (laya) to be a better neuron than Jev. Total spend on Jev so far is about $230.
 
 | Network (784-32-10, ten digits) | Exact neuron | Live Jev |
 | --- | --- | --- |
@@ -81,7 +81,7 @@ Each stage script resumes from the result files already in `runs/stageN/`, so a 
 | 6c. [Weights as a probe](docs/results/stage6c-weights-probe.md) | Do the weights read out the neuron's bias? | Only at the extremes; Jev repeats its own misfires | $0 |
 | 7. [More data](docs/results/stage7-more-data.md) | What do 5,000 images and the two-question neuron give? | 84.6% on Jev; swap 52.6% | $84.71 |
 | 8g. [Neuron fixes](docs/results/stage8g-neuron-fixes.md) | Can a Jev neuron behave like the neuron we meant? | Two averaged questions cut the 3 vs 8 swap gap from 25.0 to 4.6 points | $28.99 |
-| 8a / 8c. Sparse neurons, mock pretraining | Do shorter sums or local pretraining cut cost without losing accuracy? | *Running; results to come* | TBD |
+| 8a / 8c. Sparse neurons, mock pretraining | Do shorter sums or local pretraining cut cost without losing accuracy? | Each of 64 hidden neurons sees 96 pixels (about 37 numbers per call): 85.3% on Jev with 1,000 training images, swap gap 6.8 points. Pretraining on a simulated Jev alone gets 83.8% with no Jev training calls ([8a](docs/results/stage8a-sparse.md), [8c](docs/results/stage8c-mock-pretrain.md)) | $29 |
 | 9. [Open-weight neurons](docs/PLAN.md#stage-9-open-weight-neurons-planned) | Can a local System-1 model via [Ollaya](https://ollaya.dev) stand in for Jev? | Probed laya, von and decider locally; decider learns XOR | $0 |
 | 9c. [Laya as a scalar](docs/results/stage9c-laya-scalar.md) | Can a neuron that answers wrong still be trained through? | 52% sign accuracy, yet 96.0% on 3 vs 8 trained through it; swap 50.0% | $0 |
 | 10. [Teaching laya](docs/results/stage10-teaching-laya.md) | Can a 421M open model be fine-tuned into a better neuron than Jev? | 97-99% sign accuracy; swap gap 1 point | $0 (local GPU) |

@@ -1,0 +1,14 @@
+{
+ "accuracy": 0.866,
+ "fires_as_intended": {
+  "hidden": 0.89875,
+  "output": 0.904
+ },
+ "exact_step": 0.912,
+ "hidden_terms": 28.4744375,
+ "spend": {
+  "calls": 16500,
+  "tokens": 8806200,
+  "usd": 0.3699
+ }
+}

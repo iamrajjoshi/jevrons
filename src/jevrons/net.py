@@ -172,8 +172,10 @@ if __name__ == "__main__":
 
 
 def fit(params, X, Y, neuron, epochs, batch=32, lr=0.01, tau=1.0, seed=0, log=None, tag=None, output="logit",
-        on_epoch=None, checkpoint=None, slope=None):
+        on_epoch=None, checkpoint=None, slope=None, mask=None):
     """Minibatch straight-through training; one Jev forward pass per batch.
+
+    mask (same shape as the first layer's W) holds that layer's absent connections at zero after every step.
 
     on_epoch(epoch, params) runs after each epoch. With a checkpoint path, params, optimizer state
     and log are saved after every epoch, and a rerun resumes from the last finished epoch.
@@ -195,6 +197,8 @@ def fit(params, X, Y, neuron, epochs, batch=32, lr=0.01, tau=1.0, seed=0, log=No
                 log.append({"epoch": epoch, "step": step, "loss": bce(acts[-1], Y[i]),
                             "acc": float(np.mean(decide(acts[-1]) == (np.argmax(Y[i], 1) if Y.shape[1] > 1 else Y[i, 0])))})
             params = opt.step(params, ste_grads(params, acts, zs, Y[i], tau, output, slope))
+            if mask is not None:
+                params[0] = (params[0][0] * mask, params[0][1])
             step += 1
         if checkpoint is not None:
             Path(checkpoint).write_bytes(pickle.dumps({"params": params, "m": opt.m, "v": opt.v, "t": opt.t,
