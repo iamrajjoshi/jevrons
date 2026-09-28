@@ -56,7 +56,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: ./scripts/fetch_mnist.sh  # the image copies the MNIST test set
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - name: flyctl deploy (skipped until the FLY_API_TOKEN secret exists)
+      - name: flyctl deploy (one machine; skipped if FLY_API_TOKEN is missing)
         run: |
           if [ -z "$FLY_API_TOKEN" ]; then echo "FLY_API_TOKEN not set; skipping deploy"; exit 0; fi
           flyctl deploy . --config demo/fly.toml --dockerfile demo/Dockerfile --ha=false --remote-only
