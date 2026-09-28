@@ -18,7 +18,7 @@ import math
 import threading
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, as_completed, wait
 from functools import cache
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -278,6 +278,9 @@ def live_jev() -> Jev:
             # the daily cap is enforced per draw in reserve_live; without --journal nothing is written to disk
             _jev = Jev(JOURNAL if ARGS.journal else None, max_usd=None, wait_rounds=1)
             for b in _jev.backends:
+                # Training paces calls at 3,000/min; a draw is one burst of 64, and bursts of 64 at once drew no 429s
+                # (2026-09-28). Pacing here only delays the last calls of the burst and trips the hedges.
+                b.per_min = max(b.per_min, 30000)
                 def post(state, questions, _orig=b.post, _name=b.name):
                     t0 = time.monotonic()
                     resp, attempts = _orig(state, questions)
@@ -287,12 +290,41 @@ def live_jev() -> Jev:
         return _jev
 
 
+# Jev's latency has a long tail: in 64-call bursts the median call took 0.3-0.5 s, but a few per draw hung for
+# 15-25 s or came back 504, and a layer waits for its slowest call. So a call that isn't back by each HEDGE_S mark
+# is sent again and the first answer wins; after GIVE_UP_S that one neuron uses a recorded or simulated answer.
+HEDGE_S, GIVE_UP_S = (1.5, 4.0), 20.0
+# ponytail: a losing attempt keeps its thread until the gateway answers or times out; fine at --max-live 16.
+_attempts = ThreadPoolExecutor(256)
+
+
+class SlowCall(Exception):
+    """A live call that didn't answer within GIVE_UP_S, hedges included."""
+
+
 def live_source(state, questions, z, tag, rng):
-    answers = live_jev().ask(state, questions, tag)
-    name, resp, latency = _captured.last
-    served = resp.get("model", "?")
-    return {"answers": answers, "backend": f"{name} {served}", "latency_ms": round(latency * 1000),
-            "tokens": (resp.get("usage") or {}).get("input_tokens", 0), "billed": True}
+    def attempt():
+        answers = live_jev().ask(state, questions, tag)
+        return answers, _captured.last  # read on the thread that made the call
+
+    t0, futs = time.monotonic(), [_attempts.submit(attempt)]
+    while True:
+        limit = HEDGE_S[len(futs) - 1] if len(futs) <= len(HEDGE_S) else GIVE_UP_S
+        wait([f for f in futs if not f.done()] or futs, timeout=max(0.0, limit - (time.monotonic() - t0)),
+             return_when=FIRST_COMPLETED)
+        won = next((f for f in futs if f.done() and f.exception() is None), None)
+        if won:
+            answers, (name, resp, latency) = won.result()
+            tokens = (resp.get("usage") or {}).get("input_tokens", 0)
+            return {"answers": answers, "backend": f"{name} {resp.get('model', '?')}",
+                    "latency_ms": round((time.monotonic() - t0) * 1000), "hedged": len(futs) - 1,
+                    "tokens": tokens * len(futs), "billed": True}  # every attempt sent is billed
+        if all(f.done() for f in futs):
+            raise futs[-1].exception()
+        if time.monotonic() - t0 >= limit:
+            if len(futs) > len(HEDGE_S):
+                raise SlowCall(f"no answer in {GIVE_UP_S:.0f} s")
+            futs.append(_attempts.submit(attempt))
 
 
 # ---------- inference ----------
@@ -312,6 +344,8 @@ def run(name: str, source: str, pixels, seed: int = 0, refused: str | None = Non
         if failed["why"] is None:
             try:
                 return live_source(*a)
+            except SlowCall:  # only this neuron falls back; the rest of the draw stays live
+                return fallback(*a)
             except Exception as e:  # rate limit, billing or backend failure: finish the draw without live calls
                 if failed["why"] is None:
                     print(f"live call failed, finishing on fallbacks: {e!r}", flush=True)

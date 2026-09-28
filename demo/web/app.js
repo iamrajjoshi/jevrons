@@ -526,13 +526,10 @@ function renderPanel(p) {
   pred.classList.toggle("pending", !done);
   const text = done ? p.result.prediction : "";
   if (big.textContent !== text) { big.textContent = text; big.classList.remove("in"); if (text) { void big.offsetWidth; big.classList.add("in"); } }
-  const fired = outs.filter((e) => e.p >= 0.5).length;
   $(".pred-cap", p.el).classList.toggle("err", !!p.error);
   $(".pred-cap", p.el).textContent = p.error ? "Stopped." :
-    done ? (binary ? `p ${pr(p.result.outputs[0])}; ${p.model.labels[1]} at 0.5 or more, else ${p.model.labels[0]}`
-      : fired === 0 ? "No output reached 0.5; highest wins."
-      : fired === 1 ? `Output ${p.result.prediction} fired.` : `${fired} outputs fired; highest wins.`)
-    : inFlight ? `waiting on ${inFlight} call${inFlight > 1 ? "s" : ""}` : S.input ? (autorun() ? "" : "Press Run to send it.")
+    done ? (binary ? `p ${pr(p.result.outputs[0])}; ${p.model.labels[1]} at 0.5 or more, else ${p.model.labels[0]}` : "")
+    : inFlight ? "" : S.input ? (autorun() ? "" : "Press Run to send it.")
     : "Waiting for a digit.";
   const dis = ev.filter((e) => e.disagree).length;
   const fbs = ev.map((e) => fallbackOf(p, e)), rec = fbs.filter((f) => f === "recorded answer").length,
@@ -540,7 +537,8 @@ function renderPanel(p) {
   $(".p-stats", p.el).innerHTML = !ev.length && !inFlight ? "no calls yet" :
     `hidden ${hiddenEv.length}/${p.tiles.length} · output ${outs.length}/${p.outs.length} · ` +
     `<span class="${dis ? "dis" : ""}">${dis} disagree</span>` +
-    (rec ? ` · <span class="fbk">R</span> ${rec} recorded` : "") + (sim ? ` · <span class="fbk">S</span> ${sim} simulated` : "");
+    (rec ? ` · <span class="fbk">R</span> ${rec} recorded` : "") + (sim ? ` · <span class="fbk">S</span> ${sim} simulated` : "") +
+    (inFlight && !done ? ` · waiting on ${inFlight}` : "");
   const note = $(".p-notice", p.el);
   note.hidden = !p.error && !p.notice && !(p.source === "replay" && sim);
   const only = !mixed && [...kinds][0];  // "recorded answer" | "simulated answer" when every answer is one fallback
