@@ -292,14 +292,10 @@ def live_jev() -> Jev:
 
 # Jev's latency has a long tail: in 64-call bursts the median call took 0.3-0.5 s, but a few per draw hung for
 # 15-25 s or came back 504, and a layer waits for its slowest call. So a call that isn't back by each HEDGE_S mark
-# is sent again and the first answer wins; after GIVE_UP_S that one neuron uses a recorded or simulated answer.
-HEDGE_S, GIVE_UP_S = (1.5, 4.0), 20.0
+# is sent again and the first answer wins. Past the last mark it waits: a slow neuron stays live, never simulated.
+HEDGE_S = (1.5, 4.0, 10.0)
 # ponytail: a losing attempt keeps its thread until the gateway answers or times out; fine at --max-live 16.
 _attempts = ThreadPoolExecutor(256)
-
-
-class SlowCall(Exception):
-    """A live call that didn't answer within GIVE_UP_S, hedges included."""
 
 
 def live_source(state, questions, z, tag, rng):
@@ -309,9 +305,9 @@ def live_source(state, questions, z, tag, rng):
 
     t0, futs = time.monotonic(), [_attempts.submit(attempt)]
     while True:
-        limit = HEDGE_S[len(futs) - 1] if len(futs) <= len(HEDGE_S) else GIVE_UP_S
-        wait([f for f in futs if not f.done()] or futs, timeout=max(0.0, limit - (time.monotonic() - t0)),
-             return_when=FIRST_COMPLETED)
+        limit = HEDGE_S[len(futs) - 1] if len(futs) <= len(HEDGE_S) else None
+        wait([f for f in futs if not f.done()] or futs,
+             timeout=None if limit is None else max(0.0, limit - (time.monotonic() - t0)), return_when=FIRST_COMPLETED)
         won = next((f for f in futs if f.done() and f.exception() is None), None)
         if won:
             answers, (name, resp, latency) = won.result()
@@ -321,9 +317,7 @@ def live_source(state, questions, z, tag, rng):
                     "tokens": tokens * len(futs), "billed": True}  # every attempt sent is billed
         if all(f.done() for f in futs):
             raise futs[-1].exception()
-        if time.monotonic() - t0 >= limit:
-            if len(futs) > len(HEDGE_S):
-                raise SlowCall(f"no answer in {GIVE_UP_S:.0f} s")
+        if limit is not None and time.monotonic() - t0 >= limit:
             futs.append(_attempts.submit(attempt))
 
 
@@ -344,8 +338,6 @@ def run(name: str, source: str, pixels, seed: int = 0, refused: str | None = Non
         if failed["why"] is None:
             try:
                 return live_source(*a)
-            except SlowCall:  # only this neuron falls back; the rest of the draw stays live
-                return fallback(*a)
             except Exception as e:  # rate limit, billing or backend failure: finish the draw without live calls
                 if failed["why"] is None:
                     print(f"live call failed, finishing on fallbacks: {e!r}", flush=True)
