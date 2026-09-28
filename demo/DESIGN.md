@@ -25,6 +25,7 @@ value below is a CSS variable in `web/style.css`, so a number that isn't on this
 
 ## Type
 
+- Display serif (`Instrument Serif`, 40px) for the "Jevrons" title only. Nothing else uses it.
 - Sans (`Inter Tight`, then system) for prose: the intro, verdicts, the compare switch label. Mono (`JetBrains Mono`)
   for labels, data and controls. Both are self-hosted from `web/fonts/` (OFL, licences alongside): the variable latin
   cuts, with Google Fonts' unicode-range, so → ≈ ← still fall back to the system font as before.

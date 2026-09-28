@@ -6,8 +6,13 @@
   src: url(fonts/InterTight-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400 500; font-display: swap;
   src: url(fonts/JetBrainsMono-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Instrument Serif"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url(fonts/InstrumentSerif-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Instrument Serif"; font-style: italic; font-weight: 400; font-display: swap;
+  src: url(fonts/InstrumentSerif-Italic-latin.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 
 :root {
+  --display: "Instrument Serif", Georgia, serif;  /* the title only */
   --paper: #f6f6f3;
   --ink: #141414;
   --ink-2: #4d4d4a;
@@ -75,7 +80,14 @@ kbd { font: 500 var(--fs-cap)/1 var(--mono); border: 1px solid currentColor; pad
 /* ---------- header ---------- */
 .top { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr) auto; gap: var(--gap); align-items: baseline;
   max-width: var(--max); margin: 0 auto; padding: 28px var(--s7) 0; }
-h1 { font-size: var(--fs-body); line-height: 1.5; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+.brand { display: flex; flex-direction: column; gap: 2px; }
+h1 { font: 400 40px/0.95 var(--display); letter-spacing: -0.01em; margin: 0; }
+.by { margin: 0; font: var(--fs-cap)/1.5 var(--mono); color: var(--mute); }
+.by a, .foot a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px;
+  transition: color var(--dur-1) ease-out, text-decoration-color var(--dur-1) ease-out; }
+.by a:hover, .foot a:hover { color: var(--ink); text-decoration-color: currentColor; }
+.foot { max-width: var(--max); margin: 0 auto; padding: var(--s7) var(--s7) 40px; text-align: center;
+  font: var(--fs-cap)/1.5 var(--mono); color: var(--mute); }
 .lede { margin: 0; max-width: 64ch; color: var(--ink-2); text-wrap: pretty; }
 .status { margin: 0; white-space: nowrap; color: var(--ink-2); display: flex; align-items: center; gap: var(--s2); }
 .status i { flex: 0 0 auto; width: 7px; height: 7px; border: 1px solid var(--mute); }
@@ -324,7 +336,7 @@ pre.state { background: var(--faint); padding: 10px; margin: 0; white-space: pre
 /* ---------- film: ?film ---------- */
 body.film { --rail: 500px; --tile: 54px; }
 body.film .lede, body.film .controls, body.film .bill, body.film .seen, body.film .row, body.film .pad-empty,
-body.film .calls-head .btn, body.film .p-note, body.film .verdict, body.film .verdict-more, body.film .out-axis { display: none !important; }
+body.film .calls-head .btn, body.film .by, body.film .foot, body.film .p-note, body.film .verdict, body.film .verdict-more, body.film .out-axis { display: none !important; }
 body.film .top, body.film .layout { max-width: 1800px; padding-left: 56px; padding-right: 56px; }
 body.film .top { padding-top: 48px; grid-template-columns: var(--rail) 1fr; }
 body.film .top .status { justify-self: end; }
