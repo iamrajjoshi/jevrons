@@ -45,7 +45,7 @@ button, select { font: inherit; color: inherit; }
 h1 { font-size: 15px; line-height: 1.5; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
 .lede { margin: 0; max-width: 74ch; color: var(--ink-2); }
 .status { margin: 0; white-space: nowrap; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
-.status i { width: 7px; height: 7px; background: var(--mute); display: inline-block; }
+.status i { flex: 0 0 auto; width: 7px; height: 7px; background: var(--mute); display: inline-block; }
 .status.live { color: var(--ink); }
 .status.live i { background: var(--ink); animation: blink 1.2s steps(2, jump-none) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
@@ -72,7 +72,7 @@ h1 { font-size: 15px; line-height: 1.5; font-weight: 700; letter-spacing: -0.01e
 
 .btn { border: 1px solid var(--ink); background: var(--paper); padding: 7px 10px; cursor: pointer; border-radius: 0; font-weight: 500; }
 .btn:hover { background: var(--faint); }
-.btn:focus-visible, .seg button:focus-visible, .tile:focus-visible, .out:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.btn:focus-visible, .seg button:focus-visible, .toggle:focus-visible, .tile:focus-visible, .out:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .btn.primary { background: var(--ink); color: var(--paper); }
 .btn.primary:hover { opacity: 0.85; }
 .btn:disabled { opacity: 0.35; cursor: default; }
@@ -103,6 +103,18 @@ select.btn { padding: 6px 4px; }
 .seg button:disabled { color: var(--mute); cursor: not-allowed; }
 .run { margin-left: auto; min-width: 120px; padding: 8px 14px; }
 .help { flex-basis: 100%; margin: 0; color: var(--ink-2); max-width: 96ch; }
+/* the compare switch: the one control that changes what the page shows, so it's bigger than the rest */
+.toggle { display: flex; align-items: center; gap: 10px; border: 1px solid var(--ink); background: var(--paper); padding: 6px 12px 6px 9px;
+  cursor: pointer; text-align: left; font: 500 13px/1.35 var(--sans); border-radius: 0; }
+.toggle:hover { background: var(--faint); }
+.toggle:disabled { opacity: 0.35; cursor: default; }
+.toggle i { flex: 0 0 auto; position: relative; width: 30px; height: 16px; border: 1px solid var(--ink); background: var(--paper); }
+.toggle i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; background: var(--mute);
+  transition: transform 160ms cubic-bezier(.2,.7,.2,1), background 160ms; }
+.toggle[aria-checked="true"] i { background: var(--ink); }
+.toggle[aria-checked="true"] i::after { transform: translateX(14px); background: var(--paper); }
+.toggle small { display: block; font: 400 11px/1.5 var(--mono); color: var(--mute); }
+.toggle small:empty { display: none; }
 
 /* ---------- network panel ---------- */
 .panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
@@ -133,6 +145,12 @@ select.btn { padding: 6px 4px; }
 .tile.dis canvas { outline: 2px solid var(--accent); }
 .tile.dis .act i { background: var(--accent); }
 .tile.dis .lbl { color: var(--accent); }
+/* an answer that isn't live (the live call was refused or failed): dashed, with R (recorded) or S (simulated) */
+.tile.fb:not(.dis) canvas { outline: 1px dashed var(--ink-2); }
+.tile.fb::after, .out.fb::after, .fbk { font: 500 9px/1 var(--mono); background: var(--ink); color: var(--paper); padding: 2px 3px; }
+.tile.fb::after { content: attr(data-fb); position: absolute; top: 0; right: 0; pointer-events: none; }
+.out.fb::after { content: attr(data-fb); position: absolute; left: -15px; top: 50%; transform: translateY(-50%); }
+.fbk { display: inline-block; vertical-align: 1px; }
 .tile.sel canvas { outline: 2px solid var(--ink); outline-offset: 2px; }
 .tile.dis.sel canvas { outline-color: var(--accent); }
 
@@ -161,6 +179,8 @@ select.btn { padding: 6px 4px; }
 .pred.pending .pred-big { color: var(--rule); }
 .pred-cap { color: var(--mute); margin-top: 14px; max-width: 26ch; }
 
+.p-notice { margin: 0; padding: 7px 10px; border-bottom: 1px solid var(--ink); background: var(--faint); color: var(--ink);
+  font: 11px/1.6 var(--mono); }
 .p-foot { display: flex; justify-content: space-between; gap: 16px; padding: 7px 10px 8px; border-top: 1px solid var(--rule); color: var(--mute); }
 .p-stats { color: var(--ink-2); white-space: nowrap; }
 .p-stats .dis { color: var(--accent); }
@@ -252,6 +272,9 @@ body.film .calls-track { pointer-events: none; }
   .out.done .bar-track i { transform: scaleY(var(--p, 0)); }
   .out .bar-track b { left: -2px; right: -2px; top: 50%; bottom: auto; width: auto; height: 1px; }
   .out .v { text-align: center; font-size: 10px; }
+  .out.fb::after { left: 0; top: 0; transform: none; }
+  .status, .p-stats { white-space: normal; }
+  .top { align-items: start; }
   .outs.binary .out { grid-template-columns: 14px 1fr 34px; grid-template-rows: auto; }
   .outs.binary .out .bar-track { height: 14px; grid-row: auto; }
   .outs.binary .out .bar-track i { transform-origin: left; transform: scaleX(0); }

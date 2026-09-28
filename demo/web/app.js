@@ -4,11 +4,12 @@
    URL flags (all optional, combine freely):
      ?film              presentation state for recording: no copy or controls, bigger pad, fixed seed
      &stroke=3          draw a stored stroke (0-9) after `delay` ms, then run; see STROKES
-     &digit=4203        load MNIST test digit #4203 instead (under stage 7 + replay, use a recorded one:
-                        GET /api/digit?recorded=s7-jev lists one at random)
-     &source=mock       exact | mock | replay | live   (live also needs `server.py --live`)
-     &model=s7-jev      any name in demo/models.json
-     &compare=training  one | training | neuron
+     &digit=4203        load MNIST test digit #4203 instead (with replay, use a recorded one:
+                        GET /api/digit?recorded=s8a-jev picks one at random)
+     &source=replay     live | exact (the two visitors see) | replay | mock (URL only; not in the UI).
+                        Default: live when the server runs with --live, else exact; mock in film mode
+     &model=s7-jev      any name in demo/models.json (default s8a-jev; s7-jev in film mode, which the video's takes use)
+     &compare=training  one | training | neuron (neuron: URL only)
      &seed=7            mock/replay randomness; film defaults to 7 so a take repeats exactly
      &delay=900         ms before the stroke starts (default 900)
      &theme=dark        light | dark (default follows the system)
@@ -20,13 +21,19 @@ const $ = (s, el = document) => el.querySelector(s);
 const USD_PER_TOKEN = 0.042 / 1e6;
 const Q = new URLSearchParams(location.search);
 const FILM = Q.has("film");
-const TOKENS = { e: [381, 5.37], folded: [310, 5.3], scalar: [310, 0] };  // input tokens ≈ a + b · numbers sent
-const SOURCE_NAME = { exact: "exact arithmetic", mock: "mock Jev", replay: "recorded Jev", live: "live Jev" };
+const TOKENS = [381, 5.37];  // input tokens per arm E call ≈ a + b · numbers sent (fit to the stage 7 journal)
+const SOURCE_NAME = { exact: "exact math", mock: "simulated Jev", replay: "recorded Jev", live: "live Jev" };
+// what answered a neuron, as the visitor should read it
+const answeredBy = (e) => e.backend === "simulated" ? "simulated answer" : e.backend.startsWith("recorded") ? "recorded answer"
+  : e.backend === "local step" ? "exact math" : "live Jev";
+const NATIVE = { exact: "exact math", mock: "simulated answer", replay: "recorded answer", live: "live Jev" };
+const fallbackOf = (p, e) => answeredBy(e) !== NATIVE[p.source] ? answeredBy(e) : null;  // "recorded answer" | "simulated answer" | null
+const MARK = { "recorded answer": "R", "simulated answer": "S" };
 
 const S = {
   models: [], live: false, weights: {},
   input: null, real: null,            // processed 784 input; {index, label} when it is an unmodified test digit
-  compare: "one", trained: "jev", source: "mock", task: null,
+  compare: "one", trained: "jev", source: "exact", task: null,
   panels: [], t: Infinity, sel: null, // t: scrub position in ms (Infinity = now); sel: {panel, layer, j}
 };
 
@@ -186,8 +193,28 @@ function paintSigned(canvas, vals, faint = null) {
   ctx.putImageData(img, 0, 0);
 }
 
+// A sparse neuron's receptive field: each of its connected pixels is a square (ink +, gray −), the rest is paper.
+// With a digit in, the pixels it actually sends light up at full strength, the rest of the field recedes, and the
+// digit shows as a faint ghost so you can see which dots it hits.
+function paintField(canvas, w) {
+  const ctx = canvas.getContext("2d"), img = ctx.createImageData(28, 28);
+  const ink = rgb(css("--ink")), neg = rgb(css("--mute")), paper = rgb(css("--paper")), ghost = rgb(css("--faint"));
+  const pr = products(w), mw = Math.max(1e-6, ...w.map(Math.abs)), mp = Math.max(1e-6, ...pr.map(Math.abs));
+  for (let i = 0; i < 784; i++) {
+    let col = paper, a = 1;
+    if (w[i] !== 0) {
+      col = w[i] > 0 ? ink : neg;
+      a = !S.input ? 0.3 + 0.7 * Math.abs(w[i] / mw) ** 0.6 : pr[i] !== 0 ? 0.45 + 0.55 * Math.abs(pr[i] / mp) ** 0.6 : 0.16;
+    } else if (S.input && kept(S.input[i])) { col = ghost; a = 0.7 * S.input[i]; }
+    for (let c = 0; c < 3; c++) img.data[i * 4 + c] = paper[c] + (col[c] - paper[c]) * a;
+    img.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
 const kept = (x) => Math.round(x * 100) / 100 !== 0;  // the server drops inputs that round to zero
 const products = (w) => S.input ? w.map((wi, i) => kept(S.input[i]) ? S.input[i] * wi : 0) : w.map(() => 0);
+const sparse = (m) => m.format === "sparse-e";
 
 function renderInput() {
   paintGray($("#seen"), S.input || new Float32Array(784));
@@ -222,54 +249,78 @@ function bindSeg(id, key) {
   });
 }
 
-function sourceHelp(fmt) {
+function sourceHelp() {
   return {
-    exact: "Local step neurons that fire exactly when the sum is positive: what these weights do on a perfect neuron. Free.",
-    mock: fmt === "e" ? "Each call draws a recorded stage 7 answer from a neuron with a similar sum, so Jev's quirks come along. Local and free."
-      : "A local stand-in fitted to Jev's measured error curve, with made-up latency. Free.",
-    replay: "Jev's recorded answers, in their recorded order (waits over 1.5 s, which are rate-limit retries, are squeezed). Stage 7's test digits were recorded call for call; anything else falls back to the mock and is labeled so.",
-    live: "Real calls to Jev from this server, journaled to demo/runs/journal.jsonl. Nothing is sent until you press Run.",
+    exact: S.live ? "Each neuron fires exactly when its sum is positive, computed here. Free, and what these weights would do on a perfect neuron."
+      : "Live is off: this server was started without --live, so no calls go to Jev. Each neuron fires exactly when its sum is positive, computed here.",
+    mock: "Simulated answers: each call draws a recorded answer from a neuron with a similar sum. Nothing is sent to Jev.",
+    replay: "Recorded answers from real Jev calls, in their recorded order. Where this exact request was never recorded the answer is simulated, and labeled so.",
+    live: "Real calls to Jev, sent when you press Run. If Jev is busy or today's budget is spent, the draw finishes on recorded or simulated answers and says so.",
   }[S.source];
+}
+
+function renderLede(m) {
+  const hidden = sparse(m) ? 64 : 32, n = hidden + m.labels.length;
+  $("#lede").innerHTML = (sparse(m)
+    ? `A digit reader built from ${n} neurons, each one an API call. A hidden neuron looks at ${m.fields} fixed pixels: it sends Jev those pixels times its weights and asks whether they add up to more than zero, and Jev's answer is its activation.`
+    : `A digit reader built from ${n} neurons, each one an API call. A neuron sends Jev its pixels times its weights and asks whether they add up to more than zero, and Jev's answer is its activation.`) +
+    ` The sum is also done here, so <span class="dis-key">pink</span> marks each answer that disagrees with the arithmetic.`;
 }
 
 async function configure() {
   const hasTwin = pick(S.task, "jev") && pick(S.task, "exact");
-  $("#compare [data-v=training]").disabled = !hasTwin;
-  if (!hasTwin && S.compare === "training") { S.compare = "one"; setSeg("#compare", "one"); }
-  $("#trained-field").hidden = S.compare === "training" || !hasTwin;
+  if (!hasTwin && S.compare === "training") S.compare = "one";
+  $("#compare").disabled = !hasTwin;
+  $("#compare").setAttribute("aria-checked", String(S.compare === "training"));
+  setSeg("#source", S.source);
   $("#source [data-v=live]").disabled = !S.live;
-  $("#source [data-v=live]").title = S.live ? "" : "Start the server with --live";
+  $("#source [data-v=live]").textContent = S.live ? "live Jev" : "live Jev · off";
+  $("#source [data-v=live]").title = S.live ? "" : "This server was started without --live";
   const cfg = plan(), m = cfg[0].model;
   const COMPARE_HELP = {
-    training: "Top: trained through Jev. Bottom: same start, trained on exact neurons, then run on the same neurons.",
-    neuron: "Same weights twice. Top: exact arithmetic. Bottom: Jev.", one: "" };
-  $("#source-help").textContent = [COMPARE_HELP[S.compare], sourceHelp(m.format)].filter(Boolean).join(" ");
-  $("#n-neurons").textContent = 32 + (m.labels.length > 2 ? m.labels.length : 1);
+    training: "Top: trained through Jev. Bottom: the same network from the same start, trained on perfect math, then run on the same neurons.",
+    neuron: "Same weights twice. Top: exact math. Bottom: Jev.", one: "" };
+  $("#source-help").textContent = [COMPARE_HELP[S.compare], sourceHelp()].filter(Boolean).join(" ");
+  renderLede(m);
   const labels = `<option value="">any</option>` + m.labels.map((d) => `<option>${d}</option>`).join("");
   if ($("#real-label").innerHTML !== labels) $("#real-label").innerHTML = labels;
   await buildPanels(cfg);
+  const twin = pick(S.task, "exact");  // so the compare switch can price its second draw
+  if (twin) { await weightsFor(twin.name); renderStatus(); }
 }
 
-// A live draw's cost before it happens, from the token fit for this neuron format and the pixels drawn.
-// Counts the panels that would call Jev (all of them when the source is exact).
-function estimate() {
-  const nnz = S.input ? S.input.filter(kept).length : 150;
-  const calling = S.panels.filter((p) => p.source !== "exact");
-  return (calling.length ? calling : S.panels).reduce((acc, p) => {
-    const [a, b] = TOKENS[p.model.format], outs = p.model.labels.length > 2 ? p.model.labels.length : 1;
-    const hiddenT = p.model.format === "scalar" ? a : a + b * (nnz + 1), outT = p.model.format === "scalar" ? a : a + b * 33;
-    return { calls: acc.calls + 32 + outs, tokens: acc.tokens + 32 * hiddenT + outs * outT };
-  }, { calls: 0, tokens: 0 });
+// A live draw's cost before it happens: the numbers each call would send for this input (connected, nonzero
+// terms for a sparse network), priced with the token fit. Without a digit yet, a typical one (150 inked pixels).
+function estimate(p) {
+  if (!p.w) return { calls: 0, tokens: 0 };
+  const inked = S.input ? [...S.input].map(kept) : null;
+  const hidden = p.w.W1.map((w) => 1 + (inked ? w.filter((wi, i) => inked[i] && (!sparse(p.model) || kept(wi))).length
+    : sparse(p.model) ? p.model.fields * 0.39 : 150));
+  const outs = p.outs.map((_, k) => 1 + p.w.W2.filter((row) => !sparse(p.model) || kept(row[k])).length);
+  const tokens = [...hidden, ...outs].reduce((a, n) => a + TOKENS[0] + TOKENS[1] * n, 0);
+  return { calls: hidden.length + outs.length, tokens };
 }
 
 function renderStatus() {
   const live = S.panels.some((p) => p.source === "live"), el = $("#status");
-  const e = estimate();
+  const per = S.panels.map(estimate), one = per[0] || { calls: 0, tokens: 0 };
+  const all = per.reduce((a, e) => ({ calls: a.calls + e.calls, tokens: a.tokens + e.tokens }), { calls: 0, tokens: 0 });
+  const both = S.panels.length > 1 ? `, ${usd(all.tokens * USD_PER_TOKEN)} with the comparison` : "";
   el.className = "status" + (live ? " live" : "");
-  el.innerHTML = `<i></i>` + (live ? `live Jev · billed · ≈ ${usd(e.tokens * USD_PER_TOKEN)} a draw`
-    : { exact: "exact arithmetic · no calls", mock: "mock Jev · local, not billed", replay: "recorded Jev · not billed" }[S.source]);
-  $("#b-live").textContent = `Live, this draw would be ${e.calls} calls, ≈ ${(Math.round(e.tokens / 100) * 100).toLocaleString()} input tokens, ≈ ${usd(e.tokens * USD_PER_TOKEN)}.`;
-  $("#run").textContent = live ? `Run live · ≈ ${usd(e.tokens * USD_PER_TOKEN)}` : "Run";
+  const fell = live && S.panels.some((p) => p.notice);
+  el.innerHTML = `<i></i>` + (fell ? "live Jev · this draw fell back to recorded and simulated answers"
+    : live ? `live Jev · billed · ≈ ${usd(one.tokens * USD_PER_TOKEN)} a draw${both}`
+    : { exact: S.live ? "exact math · no calls" : "live is off · exact math, no calls", mock: "mock Jev · local, not billed",
+        replay: "recorded Jev · not billed" }[S.source]);
+  // what turning the comparison on costs live: the twin's draw on top of this one
+  const twin = pick(S.task, "exact"), p0 = S.panels[0];
+  const extra = S.panels.length > 1 ? per[1] : twin && p0 && S.weights[twin.name] ? estimate({ ...p0, model: twin, w: S.weights[twin.name] }) : null;
+  $("#compare-cost").textContent = !extra ? "" : S.panels.length > 1
+    ? (live ? `two draws, ≈ ${usd(all.tokens * USD_PER_TOKEN)} live` : "two networks, same neurons")
+    : (live ? `a second draw, ≈ ${usd((one.tokens + extra.tokens) * USD_PER_TOKEN)} live for both` : "runs both side by side");
+  $("#b-live").textContent = `Live, this draw would be ${all.calls} calls, ≈ ${(Math.round(all.tokens / 100) * 100).toLocaleString()} input tokens, ≈ ${usd(all.tokens * USD_PER_TOKEN)}` +
+    (S.panels.length > 1 ? ": two networks, so twice a single draw." : ".");
+  $("#run").textContent = live ? `Run live · ≈ ${usd(all.tokens * USD_PER_TOKEN)}` : "Run";
 }
 
 // ---------- panels ----------
@@ -280,24 +331,26 @@ async function weightsFor(name) {
 }
 
 function panelTitle(p) {
-  const trained = p.model.trained === "jev" ? "trained through Jev" : "trained exact";
+  const trained = p.model.trained === "jev" ? "trained through Jev" : "trained on perfect math";
   return `${p.model.title} · ${trained} · ${p.source === "exact" ? "run exact" : "on " + SOURCE_NAME[p.source]}`;
 }
 
 async function buildPanels(cfg) {
   for (const p of S.panels) p.ctrl?.abort();
   const root = $("#panels");
-  S.panels = cfg.map((c, k) => ({ id: k, ...c, events: [], layers: [], result: null, error: null }));
+  S.panels = cfg.map((c, k) => ({ id: k, ...c, events: [], layers: [], result: null, error: null, notice: null }));
   closeInspector();
   const els = [];
   for (const p of S.panels) {
     const el = $("#panel-tpl").content.firstElementChild.cloneNode(true);
     p.el = el; els.push(el);
     const binary = p.model.labels.length === 2;
-    $(".p-title", el).textContent = panelTitle(p);
-    $(".p-arch", el).textContent = `784 → 32 → ${binary ? 1 : p.model.labels.length}`;
-    $(".p-note", el).textContent = p.model.note;
     p.w = await weightsFor(p.model.name);
+    $(".p-title", el).textContent = panelTitle(p);
+    $(".p-arch", el).textContent = `784 → ${p.w.W1.length} → ${binary ? 1 : p.model.labels.length}` +
+      (sparse(p.model) ? `, ${p.model.fields} pixels each` : "");
+    el.classList.toggle("sparse", sparse(p.model));
+    $(".p-note", el).textContent = p.model.note;
     const grid = $(".hidden-grid", el);
     p.tiles = p.w.W1.map((_, j) => {
       const t = document.createElement("button");
@@ -324,7 +377,9 @@ async function buildPanels(cfg) {
 }
 
 function paintTiles(p) {
-  if (p.tiles) p.tiles.forEach((t, j) => paintSigned($("canvas", t), products(p.w.W1[j]), p.w.W1[j]));
+  if (!p.tiles) return;
+  p.tiles.forEach((t, j) => sparse(p.model) ? paintField($("canvas", t), p.w.W1[j])
+    : paintSigned($("canvas", t), products(p.w.W1[j]), p.w.W1[j]));
 }
 
 // One line per hidden→output weight, built when the layout changes; renders only change their opacity.
@@ -362,8 +417,11 @@ function renderPanel(p) {
   const binary = p.model.labels.length === 2;
   p.tiles.forEach((t, j) => {
     const e = byKey.get(`0:${j}`), flight = !e && sent(p, 0) && !p.error;
-    t.className = "tile" + (e ? " done" : flight ? " flight" : " idle") + (e?.disagree ? " dis" : "") +
+    const fb = e && fallbackOf(p, e);
+    t.className = "tile" + (e ? " done" : flight ? " flight" : " idle") + (e?.disagree ? " dis" : "") + (fb ? " fb" : "") +
       (isSel(p, 0, j) ? " sel" : "") + (t._land ? " land" : "");
+    t.dataset.fb = fb ? MARK[fb] : "";
+    t.title = fb ? `${hid(j)}: ${fb}, not live` : "";
     t.style.setProperty("--p", e ? e.p : 0);
     $(".lbl", t).textContent = e ? e.p.toFixed(2) : hid(j);
   });
@@ -372,8 +430,10 @@ function renderPanel(p) {
   const top = done ? p.result.prediction : null;
   p.outs.forEach((o, k) => {
     const e = outEv[k], flight = !e && sent(p, 1) && !p.error;
-    o.className = "out" + (e ? " done" : flight ? " flight" : "") + (e?.disagree ? " dis" : "") +
+    const fb = e && fallbackOf(p, e);
+    o.className = "out" + (e ? " done" : flight ? " flight" : "") + (e?.disagree ? " dis" : "") + (fb ? " fb" : "") +
       (!binary && top === p.model.labels[k] ? " top1" : "") + (isSel(p, 1, k) ? " sel" : "");
+    o.dataset.fb = fb ? MARK[fb] : "";
     o.style.setProperty("--p", e ? e.p : 0);
     $(".v", o).textContent = e ? e.p.toFixed(2) : "";
   });
@@ -397,10 +457,17 @@ function renderPanel(p) {
       : fired === 0 ? "No output reached 0.5, so the highest one wins."
       : fired === 1 ? `Output ${p.result.prediction} fired.` : `${fired} outputs fired; the highest wins.`)
     : inFlight ? `waiting on ${inFlight} call${inFlight > 1 ? "s" : ""}` : S.input ? "" : "Draw a digit, or load a test digit.";
-  const dis = ev.filter((e) => e.disagree).length, unrec = ev.filter((e) => e.backend === "mock (not recorded)").length;
+  const dis = ev.filter((e) => e.disagree).length;
+  const fbs = ev.map((e) => fallbackOf(p, e)), rec = fbs.filter((f) => f === "recorded answer").length,
+    sim = fbs.filter((f) => f === "simulated answer").length;
   $(".p-stats", p.el).innerHTML = !ev.length && !inFlight ? "no calls yet" :
     `hidden ${hiddenEv.length}/${p.tiles.length} · output ${outs.length}/${p.outs.length} · ` +
-    `<span class="${dis ? "dis" : ""}">${dis} disagree</span>` + (unrec ? ` · ${unrec} not recorded, mocked` : "");
+    `<span class="${dis ? "dis" : ""}">${dis} disagree</span>` +
+    (rec ? ` · <span class="fbk">R</span> ${rec} recorded` : "") + (sim ? ` · <span class="fbk">S</span> ${sim} simulated` : "");
+  const note = $(".p-notice", p.el);
+  note.hidden = !p.notice && !(p.source === "replay" && sim);
+  note.innerHTML = p.notice ? `${p.notice} Tiles marked <span class="fbk">R</span> show a recorded Jev answer to this exact request, <span class="fbk">S</span> a simulated one.`
+    : `<span class="fbk">S</span> This exact request was never recorded, so ${sim === 1 ? "one answer is" : sim + " answers are"} simulated.`;
 }
 
 // ---------- running ----------
@@ -418,7 +485,7 @@ async function runAll() {
 
 async function runPanel(p, seed) {
   p.ctrl?.abort(); p.ctrl = new AbortController();
-  Object.assign(p, { events: [], layers: [], result: null, error: null, t0: performance.now() });
+  Object.assign(p, { events: [], layers: [], result: null, error: null, notice: null, t0: performance.now() });
   renderPanel(p); renderBill();
   const body = { model: p.model.name, source: p.source, seed,
     ...(S.real ? { mnist: S.real.index } : { pixels: Array.from(S.input, (v) => Math.round(v * 1000) / 1000) }) };
@@ -455,6 +522,7 @@ function onEvent(p, e) {
     if (S.sel && S.sel.panel === p && S.sel.layer === e.layer && S.sel.j === e.j) renderInspector();
   } else if (e.type === "result") p.result = e;
   else if (e.type === "error") p.error = e.message;
+  else if (e.type === "notice") p.notice = e.message;
   renderPanel(p); renderBill();
 }
 
@@ -464,14 +532,18 @@ function tick() {  // keeps in-flight bars and the clock moving while any panel 
 }
 
 function renderBill() {
-  const ps = S.panels.filter((p) => p.source !== "exact"), ev = ps.flatMap((p) => p.events), tokens = ev.reduce((a, e) => a + e.tokens, 0);
-  const live = ps.some((p) => p.source === "live");
+  const ps = S.panels.filter((p) => p.source !== "exact"), ev = ps.flatMap((p) => p.events);
+  const tokens = ps.reduce((a, p) => a + p.events.reduce((b, e) => b + (p.source !== "live" || e.billed ? e.tokens : 0), 0), 0);
+  const live = ps.some((p) => p.source === "live" && p.events.some((e) => e.billed));
   const elapsed = Math.max(0, ...S.panels.map((p) => p.result ? p.result.elapsed_ms : p.ctrl ? now(p) : p.events.at(-1)?.t_ms || 0));
   $("#b-calls").textContent = ev.length.toLocaleString();
   $("#b-tokens").textContent = tokens.toLocaleString();
   $("#b-usd").textContent = usd(tokens * USD_PER_TOKEN);
   $("#b-time").textContent = (elapsed / 1000).toFixed(1) + " s";
-  $("#bill-kind").textContent = !S.panels.some((p) => p.events.length) ? "nothing run" : live ? "billed" : ps.length ? "simulated, not billed" : "local, free";
+  const fell = ps.some((p) => p.source === "live" && p.events.some((e) => !e.billed));
+  $("#bill-kind").textContent = !S.panels.some((p) => p.events.length) ? "nothing run" : live ? (fell ? "billed, part recorded or simulated" : "billed")
+    : ps.length ? (ps.some((p) => p.source === "live") ? "recorded or simulated, not billed"
+      : ps.every((p) => p.source === "replay") ? "recorded, not billed" : "simulated, not billed") : "local, free";
   renderStatus();
 }
 
@@ -570,9 +642,10 @@ function renderInspector() {
       <dt>their true sum</dt><dd>${fmt(e.z)}</dd>
       ${answerRows(e)}
       <dt>answered after</dt><dd>${(e.latency_ms / 1000).toFixed(2)} s</dd>
-      <dt>by</dt><dd>${e.backend}</dd>
+      <dt>answered by</dt><dd>${answeredBy(e)}${fallbackOf(p, e) && p.source === "live" ? ", not live" : ""}</dd>
+      <dt>source</dt><dd>${e.backend}</dd>
       <dt>input tokens</dt><dd>${e.tokens.toLocaleString()}</dd>
-      <dt>cost</dt><dd>$${(e.tokens * USD_PER_TOKEN).toFixed(6)}${p.source === "live" ? "" : ", not billed"}</dd>
+      <dt>cost</dt><dd>$${(e.tokens * USD_PER_TOKEN).toFixed(6)}${e.billed ? "" : ", not billed"}</dd>
     </dl>
     ${sw ? `<div><svg class="walk ${e.disagree ? "dis" : ""}" viewBox="0 0 400 110" preserveAspectRatio="none"></svg>
       <p class="cap">Running total over the ${e.terms.length} numbers, in the order Jev reads them. Jev gets only the list and has to add it up itself.</p></div>` : ""}
@@ -609,15 +682,16 @@ async function boot() {
   const r = await (await fetch("/api/models")).json();
   S.models = r.models; S.live = r.live;
   const avail = S.models.filter((m) => m.available), tasks = [...new Set(avail.map((m) => m.title))];
-  const want = avail.find((m) => m.name === Q.get("model"));
+  const want = avail.find((m) => m.name === (Q.get("model") ?? (FILM ? "s7-jev" : "s8a-jev")));
   $("#task").innerHTML = tasks.map((t) => `<option>${t}</option>`).join("");
   S.task = want ? want.title : tasks[0]; $("#task").value = S.task;
   if (want) S.trained = want.trained;
-  if (["exact", "mock", "replay", "live"].includes(Q.get("source"))) S.source = Q.get("source");
+  S.source = ["exact", "mock", "replay", "live"].includes(Q.get("source")) ? Q.get("source") : FILM ? "mock" : S.live ? "live" : "exact";
   if (["one", "training", "neuron"].includes(Q.get("compare"))) S.compare = Q.get("compare");
-  setSeg("#source", S.source); setSeg("#compare", S.compare); setSeg("#trained", S.trained);
-  $("#task").addEventListener("change", (e) => { S.task = e.target.value; configure().then(() => S.input && autorun() && runAll()); });
-  bindSeg("#compare", "compare"); bindSeg("#trained", "trained"); bindSeg("#source", "source");
+  const rerun = () => configure().then(() => S.input && autorun() && runAll());
+  $("#task").addEventListener("change", (e) => { S.task = e.target.value; rerun(); });
+  $("#compare").addEventListener("click", () => { S.compare = S.compare === "training" ? "one" : "training"; rerun(); });
+  bindSeg("#source", "source");
   $("#clear").addEventListener("click", clear);
   $("#real").addEventListener("click", () => loadReal());
   $("#run").addEventListener("click", runAll);

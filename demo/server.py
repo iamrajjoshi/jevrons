@@ -1,12 +1,14 @@
 """Jevrons demo server: runs a drawn digit through a trained net and streams every neuron as it resolves.
 
-  uv run python demo/server.py              # exact, mock and replay sources; http://127.0.0.1:8765
-  uv run python demo/server.py --live       # also allow live Jev calls (journaled to demo/runs/journal.jsonl)
-  uv run python demo/server.py --check      # self-check: streamed exact inference == jevrons.net.forward
+  uv run python demo/server.py              # exact (visitors), mock and replay (URL flags); http://127.0.0.1:8765
+  uv run python demo/server.py --live       # also allow live Jev calls (add --journal to keep them in demo/runs/journal.jsonl)
+  uv run python demo/server.py --check      # self-check: exact == jevrons.net.forward, replay == journals, live limits
 
 Live calls go to whatever backends jevrons.jev picks; set JEVRONS_BACKENDS=vercel to pin one.
 Models come from demo/models.json; an entry whose weights file is missing is listed as unavailable.
-Stage 7's replay and mock data are cut from its training journal by demo/make_replay.py.
+Replay and mock data are cut from the stage 7 and 8a training journals by demo/make_replay.py.
+A live draw that is refused (budget, limits) or fails mid-run finishes on recorded answers where the exact
+state was recorded and simulated ones elsewhere, and says so per neuron.
 """
 
 import argparse
@@ -34,8 +36,8 @@ DEMO = Path(__file__).resolve().parent
 ROOT = DEMO.parent
 JOURNAL = DEMO / "runs" / "journal.jsonl"
 SOURCES = ("exact", "mock", "replay", "live")
-ARGS = argparse.Namespace(live=False, daily_usd=9.0, per_ip_hour=0, max_live=0)
-DRAW_USD = 0.0025  # a stage 7 draw bills about $0.0017; budget a little more so the daily cap isn't overshot
+ARGS = argparse.Namespace(live=False, daily_usd=9.0, per_ip_hour=0, max_live=0, journal=False)
+DRAW_USD = 0.0025  # a stage 7 or 8a draw bills about $0.0017-0.0019; budget a little more so the daily cap isn't overshot
 
 
 # ---------- live budget and limits ----------
@@ -65,14 +67,20 @@ def reserve_live(ip: str):
     with _budget_lock:
         today, spent = _spent_today()
         if spent + DRAW_USD > ARGS.daily_usd:
-            raise LiveRefused("Today's live budget is used up. Replay shows real recorded Jev answers.")
+            raise LiveRefused("Today's live budget is used up, so this draw uses recorded and simulated answers.")
         now = time.time()
-        recent = [t for t in _ip_draws.get(ip, []) if now - t < 3600]
-        if ARGS.per_ip_hour and len(recent) >= ARGS.per_ip_hour:
-            raise LiveRefused(f"That's {ARGS.per_ip_hour} live draws this hour, the limit per visitor. Replay still works.")
+        if ARGS.per_ip_hour:  # visitors are only tracked when the limit is on, and only for the last hour
+            for k in list(_ip_draws):
+                if not (kept := [t for t in _ip_draws[k] if now - t < 3600]):
+                    del _ip_draws[k]
+                else:
+                    _ip_draws[k] = kept
+            if len(_ip_draws.get(ip, [])) >= ARGS.per_ip_hour:
+                raise LiveRefused(f"That's {ARGS.per_ip_hour} live draws this hour, the limit per visitor, so this one uses recorded and simulated answers.")
         if _live_slots and not _live_slots.acquire(blocking=False):
-            raise LiveRefused("Too many live draws are running right now. Try again in a few seconds.")
-        _ip_draws[ip] = recent + [now]
+            raise LiveRefused("Too many live draws are running right now, so this one uses recorded and simulated answers.")
+        if ARGS.per_ip_hour:
+            _ip_draws.setdefault(ip, []).append(now)
         return today
 
 
@@ -84,7 +92,7 @@ def charge_live(usd: float):
         except (OSError, ValueError):
             d = {}
         d[today] = round(spent + usd, 6)
-        SPEND.write_text(json.dumps(d))
+        SPEND.write_text(json.dumps(dict(sorted(d.items())[-7:])))  # the last 7 UTC days; the cap only reads today
 
 
 def public_error(e: Exception) -> str:
@@ -94,8 +102,8 @@ def public_error(e: Exception) -> str:
     if isinstance(e, LiveRefused):
         return msg
     if "429" in msg:
-        return "Jev is rate-limiting the demo right now. Try again in a minute, or use replay."
-    return "Something went wrong with the live call. Replay still works."
+        return "Jev is rate-limiting the demo right now; the rest of this draw uses recorded and simulated answers."
+    return "Something went wrong with the live calls; the rest of this draw uses recorded and simulated answers."
 
 
 # ---------- models ----------
@@ -136,6 +144,10 @@ def neuron_request(fmt: str, x: np.ndarray, w: np.ndarray, b: float):
         z = r2(x @ w + b)
         return {"z": z}, SCALAR_Q_ALT, z
     keep = np.round(x, 2) != 0  # zero inputs are dropped, as in JevNeuron
+    if fmt == "sparse-e":  # stage 8a's SparseENeuron: arm E, sending only terms whose input and weight are both nonzero
+        keep &= np.round(w, 2) != 0
+        products = [r2(v) for v in x[keep] * w[keep]] + [r2(b)]
+        return {"products": products}, E_QUESTIONS, sum(products)
     if fmt == "e":  # stage 8g arm E, as CalibratedJevNeuron sends it: yes/no and a choice on one folded state
         products = [r2(v) for v in x[keep] * w[keep]] + [r2(b)]
         return {"products": products}, E_QUESTIONS, sum(products)
@@ -160,19 +172,19 @@ def exact_source(state, questions, z, tag, rng):
 
 
 @cache
-def e_table() -> dict:
-    return json.loads((DEMO / "runs/stage7-mock.json").read_text())
+def e_table(path: str) -> dict:
+    return json.loads((ROOT / path).read_text())
 
 
 def mock_source(state, questions, z, tag, rng):
-    """Arm E neurons: resample a recorded stage 7 test call with the same layer and a similar z / spread,
-    so the mock inherits Jev's real leans and grading. Token count from a fit to that journal
-    (381 + 5.37 per number). Other neurons: MockJevNeuron (stage 1 fit: z + 0.77 * spread * N(0,1) > 0),
+    """Arm E neurons: resample a recorded test call of the same network family (stage 7 or 8a) with the same layer
+    and a similar z / spread, so the mock inherits Jev's real leans and grading. Token count from a fit to the
+    stage 7 journal (381 + 5.37 per number). Other neurons: MockJevNeuron (stage 1 fit: z + 0.77 * spread * N(0,1) > 0),
     latency and tokens fitted to the stage 5 journal (median 0.25 s, ~310 + 5.3 tokens per term)."""
     t = terms(state)
     spread = 0.0 if "z" in state else math.sqrt(sum(v * v for v in t))  # scalar Jev is a near-perfect step
     if "choice" in questions:
-        tab = e_table()
+        tab = e_table(model(tag["model"])["mock"])
         b = int(np.digitize(z / (spread + 1e-6), tab["bins"]))
         have = [int(k.split(":")[1]) for k in tab["samples"] if k.startswith(f"{tag['layer']}:")]
         pool = tab["samples"][f"{tag['layer']}:{min(have, key=lambda h: abs(h - b))}"]
@@ -184,7 +196,7 @@ def mock_source(state, questions, z, tag, rng):
         fires = z + 0.77 * spread * rng.standard_normal() > 0
         answers, tokens = {k: 0.97 if fires else 0.03 for k in questions}, 310 + 5.3 * len(t)
     time.sleep(latency)
-    return {"answers": answers, "backend": "mock", "latency_ms": round(latency * 1000), "tokens": round(tokens)}
+    return {"answers": answers, "backend": "simulated", "latency_ms": round(latency * 1000), "tokens": round(tokens)}
 
 
 def _key(state, questions) -> str:
@@ -195,23 +207,27 @@ def records(path: Path):
     return (json.loads(line) for line in path.read_text().splitlines() if line.strip()) if path.exists() else ()
 
 
-def replay_index(m: dict) -> dict[str, dict]:
-    """Demo live runs, plus the model's cut of its training journal. Later records win, so a state asked
-    twice replays the answer the rest of that run was built on."""
-    index = {_key(r["state"], r["questions"]): r for r in records(JOURNAL)}
+@cache
+def replay_index(name: str) -> dict[str, dict]:
+    """The committed demo live runs (demo/runs/journal.jsonl), plus the model's cut of its training journal, read once
+    per model: draws journaled with --journal replay after a restart. Later records win, so a state asked twice
+    replays the answer the rest of that run was built on."""
+    m = model(name)
+    slim = lambda r: {k: r[k] for k in ("answers", "served", "latency_s")} | {"usage": {"input_tokens": r["usage"].get("input_tokens", 0)}}
+    index = {_key(r["state"], r["questions"]): slim(r) for r in records(DEMO / "runs" / "journal.jsonl") if r["tag"].get("model", name) == name}
     if "replay" in m:
-        index.update((r["key"], r) for r in records(ROOT / m["replay"]))
-    return index
+        index.update((r["key"], slim(r)) for r in records(ROOT / m["replay"]))
+    return index  # only what replay_source reads: the states themselves stay out of memory
 
 
 def replay_source(index):
     def source(state, questions, z, tag, rng):
         r = index.get(_key(state, questions))
-        if r is None:  # never asked live: fall back to the mock, and say so
-            return {**mock_source(state, questions, z, tag, rng), "backend": "mock (not recorded)"}
+        if r is None:  # never asked: fall back to the mock, which labels itself "simulated"
+            return mock_source(state, questions, z, tag, rng)
         wait = r["latency_s"]  # keep the recorded arrival order, but squeeze rate-limit retries (15 s -> 2.9 s)
         time.sleep(wait if wait < 1.5 else 1.5 + 0.1 * (wait - 1.5))
-        return {"answers": r["answers"], "backend": f"replay {r['served']}",
+        return {"answers": r["answers"], "backend": f"recorded {r['served']}",
                 "latency_ms": round(r["latency_s"] * 1000), "tokens": r["usage"].get("input_tokens", 0)}
     return source
 
@@ -232,7 +248,8 @@ def live_jev() -> Jev:
     global _jev
     with _jev_lock:
         if _jev is None:
-            _jev = Jev(JOURNAL, max_usd=None, wait_rounds=1)  # the daily cap is enforced per draw in reserve_live
+            # the daily cap is enforced per draw in reserve_live; without --journal nothing is written to disk
+            _jev = Jev(JOURNAL if ARGS.journal else None, max_usd=None, wait_rounds=1)
             for b in _jev.backends:
                 def post(state, questions, _orig=b.post, _name=b.name):
                     t0 = time.monotonic()
@@ -248,23 +265,42 @@ def live_source(state, questions, z, tag, rng):
     name, resp, latency = _captured.last
     served = resp.get("model", "?")
     return {"answers": answers, "backend": f"{name} {served}", "latency_ms": round(latency * 1000),
-            "tokens": (resp.get("usage") or {}).get("input_tokens", 0)}
+            "tokens": (resp.get("usage") or {}).get("input_tokens", 0), "billed": True}
 
 
 # ---------- inference ----------
 
-def run(name: str, source: str, pixels, seed: int = 0):
-    """Yield one event per neuron in the order answers arrive, layer by layer, then the result."""
+def run(name: str, source: str, pixels, seed: int = 0, refused: str | None = None):
+    """Yield one event per neuron in the order answers arrive, layer by layer, then the result. A live draw that
+    was refused (`refused` is the reason) or whose calls fail runs the rest on replay, which falls back to the mock."""
     m = model(name)
     if source == "live" and not ARGS.live:
         raise ValueError("live source is off; start the server with --live")
-    ask = {"exact": exact_source, "mock": mock_source, "live": live_source}.get(source) or replay_source(replay_index(m))
+    def fallback(*a):  # the replay index is read on first use, so exact-only servers never load it
+        return replay_source(replay_index(name))(*a)
+
+    failed = {"why": refused, "told": False}
+
+    def live_or_fallback(*a):
+        if failed["why"] is None:
+            try:
+                return live_source(*a)
+            except Exception as e:  # rate limit, billing or backend failure: finish the draw without live calls
+                if failed["why"] is None:
+                    print(f"live call failed, finishing on fallbacks: {e!r}", flush=True)
+                failed["why"] = failed["why"] or public_error(e)
+        return fallback(*a)
+
+    ask = {"exact": exact_source, "mock": mock_source, "live": live_or_fallback}.get(source) or fallback
     run_id = uuid.uuid4().hex[:8]
     a = np.clip(np.asarray(pixels, float), 0, 1)
     t0 = time.monotonic()
     calls = tokens = 0
     yield {"type": "start", "run": run_id, "model": name, "source": source, "labels": m["labels"],
            "layers": [W.shape[1] for W, _ in params(m["weights"])]}
+    if refused:
+        failed["told"] = True
+        yield {"type": "notice", "message": refused}
     for layer, (W, b) in enumerate(params(m["weights"])):
         def one(j, x=a, W=W, b=b, layer=layer):
             state, questions, z = neuron_request(m["format"], x, W[:, j], b[j])
@@ -276,17 +312,21 @@ def run(name: str, source: str, pixels, seed: int = 0):
 
         yield {"type": "layer", "layer": layer, "n": W.shape[1], "t_ms": round((time.monotonic() - t0) * 1000)}
         acts = np.zeros(W.shape[1])
-        with ThreadPoolExecutor(64) as ex:
+        # one thread per neuron at most; exact answers are instant, so they need none of their own
+        with ThreadPoolExecutor(1 if source == "exact" else W.shape[1]) as ex:
             for f in as_completed([ex.submit(one, j) for j in range(W.shape[1])]):
                 ev = f.result()
+                if failed["why"] and not failed["told"]:
+                    failed["told"] = True
+                    yield {"type": "notice", "message": failed["why"]}
                 acts[ev["j"]] = ev["p"]
                 calls += 1
-                tokens += ev["tokens"]
+                tokens += ev["tokens"] if ev.get("billed") or source != "live" else 0
                 yield {**ev, "t_ms": round((time.monotonic() - t0) * 1000)}
         a = acts
     yield {"type": "result", "outputs": a.tolist(), "prediction": m["labels"][int(decide(a[None])[0])],
            "no_fire": bool((a < 0.5).all()) if len(a) > 1 else False, "calls": calls, "tokens": tokens,
-           "usd": tokens * USD_PER_INPUT_TOKEN, "billed": source == "live",
+           "usd": tokens * USD_PER_INPUT_TOKEN, "billed": source == "live" and tokens > 0,
            "elapsed_ms": round((time.monotonic() - t0) * 1000)}
 
 
@@ -346,18 +386,19 @@ class Handler(SimpleHTTPRequestHandler):
             pixels = test_set()[0][int(req["mnist"])] if "mnist" in req else [float(v) for v in req["pixels"]]
             if len(pixels) != 784 or req.get("source") not in SOURCES:
                 raise ValueError("need 784 pixels and a known source")
-            live = req["source"] == "live"
+            live, refused = req["source"] == "live", None
             if live and not ARGS.live:
                 raise ValueError("live source is off; start the server with --live")
             if live:
-                reserve_live(self.client_ip())
-        except LiveRefused as e:
-            return self.send_json({"error": str(e)}, 429)
+                try:
+                    reserve_live(self.client_ip())
+                except LiveRefused as e:
+                    live, refused = False, str(e)  # nothing reserved, nothing billed: the draw runs on fallbacks
         except (ValueError, KeyError, TypeError, json.JSONDecodeError) as e:
             return self.send_json({"error": str(e)}, 400)
         usd, done = 0.0, False
         try:
-            events = run(str(req["model"]), req["source"], pixels, int(req.get("seed", 0)))
+            events = run(str(req["model"]), req["source"], pixels, int(req.get("seed", 0)), refused)
             try:
                 first = next(events)  # validation errors surface here, before the stream starts
             except ValueError as e:
@@ -370,14 +411,14 @@ class Handler(SimpleHTTPRequestHandler):
                 self.wfile.write(f"data: {json.dumps(first)}\n\n".encode())
                 try:
                     for ev in events:
-                        if ev["type"] == "neuron":
+                        if ev["type"] == "neuron" and ev.get("billed"):
                             usd += ev["tokens"] * USD_PER_INPUT_TOKEN
                         done = ev["type"] == "result"
                         self.wfile.write(f"data: {json.dumps(ev)}\n\n".encode())
                         self.wfile.flush()
                 except (BrokenPipeError, ConnectionResetError):
                     raise
-                except Exception as e:  # rate limit, billing or backend failure mid-run
+                except Exception as e:  # anything the per-call fallback didn't catch
                     print(f"run failed: {e!r}", flush=True)
                     msg = public_error(e) if live else str(e)
                     self.wfile.write(f"data: {json.dumps({'type': 'error', 'message': msg})}\n\n".encode())
@@ -395,7 +436,7 @@ def check():
     """Streamed exact inference must match jevrons.net.forward with StepNeuron on real test digits. Compared on
     output activations (predictions can differ on random tie breaks). The demo's true z uses the two-decimal
     values actually sent, so a sum within rounding of zero may flip: allow 4% of digits to differ (exact-trained
-    swap networks keep output sums close to zero; stage 6's seed 0 control differs on 3%)."""
+    swap networks keep output sums close to zero)."""
     x, y = test_set()
     for m in registry():
         if not m["available"]:
@@ -408,22 +449,45 @@ def check():
         acc = np.mean([r["prediction"] == str(t) for r, t in zip(res, y[idx])])
         print(f"{m['name']:>14}: outputs match forward on {same:.1%} of {len(idx)} test digits, exact-neuron accuracy {acc:.3f}")
         assert same >= 0.96, m["name"]
-    # Replay of a recorded stage 7 test digit must hit the journal on every call and land on its recorded outputs.
+    check_sparse_mask()
+    # Replay of recorded test digits must hit the training journal on every call and land on its recorded outputs:
+    # the demo builds each state (which terms, which rounding) exactly as the training run did.
     time.sleep = lambda s: None
     from jevrons.digits import test_subset
-    te = list(test_subset(y, 2000, seed=7))
-    recorded = json.loads((ROOT / "runs/stage7/result-jev.json").read_text())["test"]["outputs"]
-    for i in recorded_digits(model("s7-jev")["replay"])[:12]:
-        evs = list(run("s7-jev", "replay", x[i]))
-        assert all(e["backend"].startswith("replay") for e in evs if e["type"] == "neuron"), i
-        assert np.allclose(np.round(evs[-1]["outputs"], 2), recorded[te.index(i)], atol=0.006), i
-    print("        s7-jev: replay of 12 recorded test digits matches the stage 7 journal call for call")
+    for name, result, n, seed in (("s7-jev", "runs/stage7/result-jev.json", 2000, 7),
+                                  ("s8a-jev", "runs/stage8a/result-jev.json", 1000, 0),
+                                  ("s8a-swap", "runs/stage8a/result-swap.json", 1000, 0)):
+        te = list(test_subset(y, n, seed=seed))
+        recorded = json.loads((ROOT / result).read_text())["test"]["outputs"]
+        digits = recorded_digits(model(name)["replay"])
+        for i in digits:
+            evs = list(run(name, "replay", x[i]))
+            assert all(e["backend"].startswith("recorded") for e in evs if e["type"] == "neuron"), (name, i)
+            assert np.allclose(np.round(evs[-1]["outputs"], 2), recorded[te.index(i)], atol=0.006), (name, i)
+        print(f"{name:>14}: replay of {len(digits)} recorded test digits matches its training journal call for call")
     check_live_limits(x[0])
 
 
+def check_sparse_mask():
+    """Stage 8a's connections are the weights' zero pattern (net.fit holds absent weights at 0), and a hidden call
+    sends exactly the connected, nonzero-weight terms whose pixel is nonzero, plus the bias."""
+    from jevrons.stage8a import KIND, K, H, active_pixels, connections, data
+    mask = connections(KIND, K, H, active_pixels(data()[0])) == 1
+    x = test_set()[0][0]
+    for name in ("s8a-jev", "s8a-swap"):
+        (W1, b1), _ = params(model(name)["weights"])
+        assert np.array_equal(W1 != 0, mask), name
+        for j in range(H):
+            state, _, _ = neuron_request("sparse-e", x, W1[:, j], b1[j])
+            want = (np.round(x, 2) != 0) & mask[:, j] & (np.round(W1[:, j], 2) != 0)
+            assert len(state["products"]) == want.sum() + 1, (name, j)
+    print(f"      s8a mask: W1 != 0 is stage8a.connections() for both arms; hidden calls send connected, nonzero terms only")
+
+
 def check_live_limits(pixels):
-    """Live path against a local stub backend (nothing billed): a 429 tells the visitor it's a rate limit, a 402
-    shows only a generic error, and the daily cap and per-visitor limit refuse the draw before any call."""
+    """Live path against a local stub backend (nothing billed): a 429 is told to the visitor as a rate limit, a 402
+    as a generic error, and the draw finishes on recorded or simulated answers; the per-visitor limit and the daily
+    cap refuse live before any call and the draw runs on those fallbacks, unbilled."""
     global JOURNAL, SPEND
     import tempfile
     import urllib.request
@@ -449,39 +513,46 @@ def check_live_limits(pixels):
     ARGS.live, ARGS.daily_usd, ARGS.per_ip_hour = True, 1.0, 3
 
     def draw():
-        body = json.dumps({"model": "s7-jev", "source": "live", "pixels": list(map(float, pixels))}).encode()
+        body = json.dumps({"model": "s8a-jev", "source": "live", "pixels": list(map(float, pixels))}).encode()
         req = urllib.request.Request(f"http://127.0.0.1:{servers[1].server_port}/api/run", body)
-        try:
-            text = urllib.request.urlopen(req).read().decode()
-        except urllib.error.HTTPError as e:
-            return e.code, json.loads(e.read())["error"]
-        err = [json.loads(line[6:]) for line in text.splitlines() if line.startswith("data: ")][-1]
-        return 200, err.get("message", "")
+        evs = [json.loads(line[6:]) for line in urllib.request.urlopen(req).read().decode().splitlines() if line.startswith("data: ")]
+        neurons = [e for e in evs if e["type"] == "neuron"]
+        assert len(neurons) == 74 and evs[-1]["type"] == "result" and not evs[-1]["billed"]
+        assert all(e["backend"] == "simulated" or e["backend"].startswith("recorded") for e in neurons)
+        return next(e["message"] for e in evs if e["type"] == "notice")
 
-    status, msg = draw()
-    assert status == 200 and "rate-limiting" in msg, msg
+    msg = draw()
+    assert "rate-limiting" in msg, msg
     code["v"] = 402
-    status, msg = draw()
-    assert status == 200 and msg.startswith("Something went wrong") and "402" not in msg and "credit" not in msg, msg
-    status, msg = draw()  # third draw this hour from this visitor: still allowed
-    status, msg = draw()
-    assert status == 429 and "per visitor" in msg, msg
+    msg = draw()
+    assert msg.startswith("Something went wrong") and "402" not in msg and "credit" not in msg, msg
+    _ip_draws["203.0.113.9"] = [time.time() - 7200]  # a visitor from two hours ago is forgotten at the next draw
+    draw()  # third draw this hour from this visitor: still allowed live
+    assert "203.0.113.9" not in _ip_draws and list(_ip_draws) == ["127.0.0.1"], _ip_draws
+    msg = draw()
+    assert "per visitor" in msg, msg
+    assert not JOURNAL.exists() and not list(tmp.glob("*failures*")), "live calls were journaled without --journal"
+    SPEND.write_text(json.dumps({f"2026-01-{d:02d}": 1.0 for d in range(1, 11)}))
+    charge_live(0.0)
+    assert len(json.loads(SPEND.read_text())) == 7, SPEND.read_text()
     ARGS.per_ip_hour = 100
     SPEND.write_text(json.dumps({time.strftime("%Y-%m-%d", time.gmtime()): 1.0}))
-    status, msg = draw()
-    assert status == 429 and "budget" in msg, msg
+    msg = draw()
+    assert "budget" in msg and _spent_today()[1] == 1.0, msg
     for srv in servers:
         srv.shutdown()
-    print("          live: rate limit, payment failure, per-visitor limit and daily cap all handled")
+    print("          live: rate limit, payment failure, per-visitor limit and daily cap fall back to recorded/simulated answers, unbilled;\n"
+          "                nothing journaled without --journal, stale visitors pruned, spend.json keeps 7 days")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--live", action="store_true", help="allow the live source (real Jev calls, billed)")
-    ap.add_argument("--daily-usd", type=float, default=2.0, help="live spend cap per UTC day, about 5,000 draws at $9 (demo/runs/spend.json)")
+    ap.add_argument("--daily-usd", type=float, default=9.0, help="live spend cap per UTC day, about 5,000 draws at $9 (demo/runs/spend.json)")
     ap.add_argument("--per-ip-hour", type=int, default=0, help="live draws per visitor per hour (0 = no limit)")
     ap.add_argument("--max-live", type=int, default=0, help="live draws running at once (0 = no limit)")
+    ap.add_argument("--journal", action="store_true", help="keep live calls in demo/runs/journal.jsonl (off: nothing written)")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--check", action="store_true")
     ARGS = ap.parse_args()
@@ -490,4 +561,5 @@ if __name__ == "__main__":
     else:
         _live_slots = threading.BoundedSemaphore(ARGS.max_live) if ARGS.max_live else None
         print(f"http://{ARGS.host}:{ARGS.port}  live={'on' if ARGS.live else 'off'}  daily cap ${ARGS.daily_usd}", flush=True)
+        ThreadingHTTPServer.request_queue_size = 128  # the default backlog of 5 drops connections in a burst of draws
         ThreadingHTTPServer((ARGS.host, ARGS.port), Handler).serve_forever()

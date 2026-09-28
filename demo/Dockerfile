@@ -8,14 +8,13 @@ WORKDIR /app
 RUN pip install --no-cache-dir "numpy>=2.2,<3"
 COPY src/jevrons ./src/jevrons
 COPY data/t10k-images-idx3-ubyte.gz data/t10k-labels-idx1-ubyte.gz ./data/
-COPY runs/stage4/weights.npz ./runs/stage4/
-COPY runs/stage5/weights-*.npz ./runs/stage5/
-COPY runs/stage6/weights-seed0-*.npz ./runs/stage6/
+COPY runs/stage8a/weights-*.npz ./runs/stage8a/
 COPY runs/stage7/weights-*.npz ./runs/stage7/
-COPY runs/stage7/result-jev.json ./runs/stage7/
 COPY runs/margin/summary.json ./runs/margin/
 COPY demo ./demo
 ENV PYTHONPATH=/app/src JEVRONS_BACKENDS=vercel PYTHONUNBUFFERED=1
 EXPOSE 8080
+# No --journal: the hosted demo keeps nothing on disk but the spend counter. --max-live 16 bounds the threads a
+# burst of live draws can start (about 74 each) on a 512 MB machine.
 CMD ["python", "demo/server.py", "--live", "--host", "0.0.0.0", "--port", "8080", \
-     "--daily-usd", "9"]
+     "--daily-usd", "9", "--max-live", "16"]

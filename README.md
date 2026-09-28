@@ -5,7 +5,7 @@ A handwritten-digit classifier where every neuron is a live API call to [Jev](ht
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](.python-version)
 
-![The Jevrons demo after a replayed live run: a hand-drawn 3 on the left, the 32 hidden Jev neurons and 10 outputs in the middle with output 3 firing, and a timeline of the 42 calls below.](demo/screenshots/05-film-replay-of-live-done.png)
+![The Jevrons demo after a live run on the sparse network: a hand-drawn 3 on the left; 64 hidden Jev neurons, each tile showing its 96-pixel receptive field, with three answers that disagree with the arithmetic outlined in pink; output 3 firing at 0.89; and a timeline of the 74 calls below.](demo/screenshots/03-desktop-live-draw-3.png)
 
 Jev is TypeSafe AI's System-1 model. You send it a JSON state and a yes/no question, and it returns a probability. It has no gradient, no logits and no fine-tuning. Jevrons treats that probability as a neuron's activation: the code computes each weighted sum, sends Jev the pieces, and asks whether the total is positive. A 784-32-10 network of these neurons costs 42 calls per digit.
 

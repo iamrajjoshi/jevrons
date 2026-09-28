@@ -13,10 +13,7 @@
 <body data-state="idle">
 <header class="top">
   <h1>Jevrons</h1>
-  <p class="lede">A digit reader built from <span id="n-neurons">42</span> neurons, each one an API call.
-    A neuron sends Jev its pixels times its weights and asks whether they add up to more than zero, and
-    Jev's answer is its activation. The sum is also done here, so <span class="dis-key">pink</span> marks
-    each answer that disagrees with the arithmetic.</p>
+  <p class="lede" id="lede"></p>
   <p class="status" id="status"></p>
 </header>
 
@@ -57,25 +54,12 @@
       <label class="field"><span>network</span><select id="task"></select></label>
       <div class="field"><span>neurons</span>
         <div class="seg" id="source">
-          <button data-v="exact">exact</button>
-          <button data-v="mock" aria-pressed="true">mock</button>
-          <button data-v="replay">replay</button>
-          <button data-v="live">live</button>
+          <button data-v="live">live Jev</button>
+          <button data-v="exact">exact math</button>
         </div>
       </div>
-      <div class="field"><span>compare</span>
-        <div class="seg" id="compare">
-          <button data-v="one" aria-pressed="true">off</button>
-          <button data-v="training">training</button>
-          <button data-v="neuron">neuron</button>
-        </div>
-      </div>
-      <div class="field" id="trained-field"><span>trained</span>
-        <div class="seg" id="trained">
-          <button data-v="jev" aria-pressed="true">through Jev</button>
-          <button data-v="exact">exact</button>
-        </div>
-      </div>
+      <button class="toggle" id="compare" role="switch" aria-checked="false">
+        <i></i><span>Compare with the network trained on perfect math<small id="compare-cost"></small></span></button>
       <button class="btn primary run" id="run">Run</button>
       <p class="help" id="source-help"></p>
     </div>
@@ -101,6 +85,7 @@
 <template id="panel-tpl">
   <article class="panel win">
     <div class="bar"><span class="p-title"></span><span class="p-arch"></span></div>
+    <p class="p-notice" hidden></p>
     <div class="net">
       <svg class="wires"></svg>
       <div class="hidden-grid"></div>
