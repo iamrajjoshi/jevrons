@@ -502,6 +502,55 @@ def stage7():
     S.save(fig, "stage7-swap.png")
 
 
+def stage8_sparse():
+    """Dense (stage 7) against sparse (stage 8a/8c) on the scoreboard, and misfires by margin band."""
+    r7 = {a: js(f"stage7/result-{a}.json")["test"] for a in ("jev", "swap")}
+    r8 = {a: js(f"stage8a/result-{a}.json")["test"] for a in ("jev", "swap")}
+    pre, ft = js("stage8c/result-pretrained-test.json"), js("stage8c/result.json")["test"]
+    rows = [("dense, trained through Jev", S.JEV, r7["jev"]), ("dense, trained exact", S.INK, r7["swap"]),
+            ("sparse, trained through Jev", S.JEV, r8["jev"]), ("sparse, trained exact", S.INK, r8["swap"]),
+            ("sparse, pretrained on simulated Jev", S.JEV_LIGHT, pre), ("sparse, pretrained, then trained on Jev", S.JEV, ft)]
+    cited = (("84.6%", "70.0%"), ("52.6%", "83.9%"), ("85.3%", "75.7%"), ("65.8%", "72.6%"), ("83.8%", "57.1%"),
+             ("83.8%", "79.0%"))  # (on Jev, exact neuron) per row
+    for (_, _, r), (on_jev, exact) in zip(rows, cited):
+        check(r["accuracy"], on_jev, "{:.1%}")
+        check(r["exact_step"], exact, "{:.1%}")
+    bt = js("stage8a/by-terms.json")
+    fig = S.figure(6.2)[0]
+    fig.clf()
+    gs = fig.add_gridspec(2, 1, height_ratios=[1.5, 1])
+    ax = fig.add_subplot(gs[0])
+    dumbbell(ax, [(label, color, r["exact_step"], r["accuracy"]) for label, color, r in rows], 0.45, 0.95)
+    for y in (-1.5, -3.5):
+        ax.axhline(y, color=S.RULE, lw=0.8)
+    ax.set_xlabel("test accuracy (dense 784-32-10: 2,000 images; sparse 784-64-10, 96 pixels per neuron: 1,000)",
+                  fontsize=9.5)
+    dumbbell_key(ax)
+    ax2 = fig.add_subplot(gs[1])
+    bands = list(bt["jev"]["by_abs_m"])
+    x = np.arange(len(bands))
+
+    def pooled(keys):
+        n = np.array([[bt[k]["by_abs_m"][b][0] for b in bands] for k in keys], float)
+        rate = np.array([[bt[k]["by_abs_m"][b][1] for b in bands] for k in keys])
+        terms = np.average([bt[k]["mean_terms"] for k in keys], weights=n.sum(1))
+        return (n * rate).sum(0) / n.sum(0), terms
+
+    for keys, shade in ((["stage 7 dense (both arms)"], 0.92), (["jev", "swap"], 0.45)):
+        rate, terms = pooled(keys)
+        color = S.SEQ_JEV(shade)
+        name = "dense" if len(keys) == 1 else "sparse"
+        ax2.plot(x, rate, "o-", color=color, ms=5, lw=2, label=f"{name}, about {terms:.0f} numbers per call")
+    ax2.legend(loc="upper right", fontsize=9, handlelength=1.6)
+    ax2.set_xticks(x, [b.replace("3-99", "3+").replace("-", "\u2013") for b in bands])
+    ax2.set_xlabel("hidden margin band  |m| = |z| / spread  (both arms pooled)")
+    ax2.set_ylabel("hidden misfires")
+    ax2.set_ylim(0, 0.42)
+    S.pct(ax2)
+    S.ygrid(ax2)
+    S.save(fig, "stage8-sparse.png")
+
+
 # ---------------------------------------------------------------- Two ways the weights adapt
 
 def margin_dynamics():
@@ -907,7 +956,7 @@ def pixels():
 FIGURES = {
     "margin_by_terms": margin_by_terms, "bias": bias, "wording": wording, "xor": xor, "stage3": stage3_boundary,
     "stage5": stage5_swap, "stage5_training": stage5_training, "stage5_margins": stage5_margins,
-    "stage6": stage6_swap, "stage6_digits": stage6_digits, "stage7": stage7,
+    "stage6": stage6_swap, "stage6_digits": stage6_digits, "stage7": stage7, "stage8_sparse": stage8_sparse,
     "dynamics": margin_dynamics, "weights": weights_3v8, "traps": traps, "stage10": stage10_curves,
     "stage10_accuracy": stage10_accuracy, "stage10_training": stage10_training, "stage10_traps": stage10_traps,
     "bend": bend, "pixels": pixels,

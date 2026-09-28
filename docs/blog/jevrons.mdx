@@ -382,13 +382,46 @@ That's 84.6% on Jev, up from 68.5%, and above the 77-79% an exact neuron reached
 
 The swap gap didn't shrink, and that breaks the rule I'd drawn from laya. On 3 vs 8, a more faithful neuron cut the gap from 25 to 4.6 points. On ten digits, the swapped network's hidden neurons are even more faithful than the Jev-trained ones (93.5% against 90.8% fire as intended), and the gap still grew, from 28.8 at 1,000 images to 31.3, because the failure moved to the output. No output neuron fires on 97.8% of its images, which makes every prediction a ranking of ten "no" answers, and Jev's graded "no" doesn't keep the order of small differences between sums. The Jev-trained network gets an output to actually fire on about 40% of images. 0 and 3 still collapse in the swapped network (6% and 17%).
 
-## About $200 of API calls
+## Ninety-six pixels per neuron
 
-Everything through the two-digit runs came to $17.40 over about 532,000 calls. The ten-digit run added about $70 over about 1.7 million, the two-question neurons $29 over 561,000, and the 5,000-image run $84.71 over 1.94 million. The weight analysis and the laya work were free. Jev bills $0.042 per million input tokens, so the two-digit networks, at 330.5 million input tokens, cost $13.88. The call count was the real limit. At 42 requests per image, one pass over 1,000 images is 42,000 of them.
+The swapped networks kept failing on the same digits. 0 and 3 collapsed at 1,000 images and again at 5,000, and 8 collapsed at 1,000: they're the digits with the most ink, so they have the longest lists. In a dense network that's something training can't fix one neuron at a time. Every hidden neuron sees every nonzero pixel, so the length of its sum belongs to the image, not the neuron. A 0 hands all 32 hidden neurons about 190 numbers, whatever their weights are. Looking back at the dense networks, nothing in the Jev-trained weights was tuned to image length either: their false fires rise with length as steeply as their exact twins'.
+
+So I stopped sending Jev long lists. Each hidden neuron in a 784-64-10 network connects to 96 pixels, drawn at random from the 379 that are on in at least 5% of training images, and the other weights are held at zero. Only connected pixels that are on in the image get sent, so a hidden call carries about 37 numbers (10th to 90th percentile 23-50), a length where Jev's curve is sharp. I picked random fields over local patches in a free local comparison. The two were within a point or two on accuracy, but a random field gives every neuron a similar share of the ink, while a patch at the edge of the digit sends almost nothing and one at the center sends 60 or more. The hidden layer doubled to 64 to make up for each neuron's narrower view, and the neuron is the two-question one.
+
+I trained it through Jev on 1,000 images for 6 epochs, one seed, with an exact-trained twin from the same start, and tested both on 1,000 images:
+
+| Test, 1,000 images | On Jev | Same weights, exact neuron |
+| --- | --- | --- |
+| Trained through Jev | 85.3% | 75.7% |
+| Trained exact, swapped | 65.8% | 72.6% |
+
+![Top, test accuracy for six networks, each drawn as a line from its exact-neuron score to its live-Jev score. Dense, trained through Jev: 70.0% exact, 84.6% on Jev. Dense, trained exact: 83.9% exact, 52.6% on Jev. Sparse, trained through Jev: 75.7% exact, 85.3% on Jev. Sparse, trained exact: 72.6% exact, 65.8% on Jev. Sparse, pretrained on simulated Jev: 57.1% exact, 83.8% on Jev. Sparse, pretrained then trained on Jev: 79.0% exact, 83.8% on Jev. Bottom, hidden misfire rate by margin band for dense calls of about 153 numbers and sparse calls of about 37: the sparse curve sits well below the dense one at every margin, about 7% against 20% between 0.5 and 1 spreads and 1% against 10% between 1 and 1.5.](../figures/stage8-sparse.png)
+
+85.3% is the best result in the project, from a fifth of the training data stage 7 used to reach 84.6%. The swap gap is 6.8 points, down from 31.3. The swapped network no longer loses 0 (99%, its best digit). It loses 8 and 6 instead (29% and 38%).
+
+Sparsity didn't help the way I expected. Shorter sums are sharper: at the same margin, a 37-number call misfires far less often than a 153-number one. Pooling both arms of each, it's 7.0% against 20.1% between 0.5 and 1 spreads from zero, and 0.7% against 9.7% between 1 and 1.5. But the sparse networks' sums sit closer to zero, at about half stage 7's median margin, so their hidden neurons fire as intended about as often as before (90.7-91.6%). What changed is where the misfires land. Nearly all of them are within one spread of zero, where a flipped answer moves the next layer's sum very little. The output layer changed too. Stage 7's swapped network had no output firing on 97.8% of test images, and the sparse one on 81.0%. Its output neurons now add 64 hidden answers instead of 32, and I didn't separate whether the sparse fields or the wider layer made the difference.
+
+Each call is 43% cheaper (593 input tokens against stage 7's 1,037), but with twice as many hidden neurons an image costs about the same, $1.85 per 1,000 forward passes. The whole run was $18.80.
+
+I can't say which change bought the result. Sparse fields, 64 hidden neurons and the two-question neuron all differ from the 1,000-image dense run, which got 68.5%, and I didn't run a dense 784-64-10 network to separate them. It's one seed, and stage 6's three seeds spread 6.6 points on Jev. Stage 7 also used a different test sample, so 85.3% against 84.6% compares across samples.
+
+## Training on a fake Jev
+
+Stage 7 left me 192,000 recorded answers from the two-question neuron. I fitted a simulated neuron to them: Jev's margin curve, blurred and shifted per layer, with its output squeezed into 0.04-0.96 the way Jev's `p` is. It's deterministic, which matches Jev's habit of repeating its own mistakes. Then I trained the sparse network entirely through the simulator. Six epochs took about a minute and made no Jev calls.
+
+On real Jev it gets 83.8% on the same 1,000 test images. The only Jev spend was the $1.86 test pass. The exact-trained twin keeps 65.8%, so the simulator recovers 18 of the 19.5 points that training through Jev bought. Two epochs of fine-tuning on real Jev ($3.69) raised validation from 81.0% to 83.4% and left test at 83.8%. At the same training spend, the pretrained network leads training from scratch on Jev by 5 points on validation (83.4% against 78.4%). On one seed, neither the fine-tuning gain nor the 1.5 points separating 83.8% from 85.3% is established. The simulator isn't free data either, since it was fitted to calls I'd paid for in stage 7.
+
+It also isn't a model of Jev in general. For weights trained through it, the simulator predicts Jev well: 84.8% on the simulator against 83.8% on Jev. For the exact-trained network, it predicts 35.0% on validation, and Jev gives 66.4%. My reading is that Jev's errors and the simulator's are both fixed functions of the input, but different functions. A network trained through the simulator ends up with sums where the two mostly agree, and one that never saw a graded neuron doesn't. The simulator captures what matters for the networks trained through it, and not much more.
+
+The same repeat-mistakes result is why I dropped the other planned fix, voting over several live passes per image. If Jev gives the same wrong answer on a repeat 86-88% of the time, extra votes mostly repeat it.
+
+## About $230 of API calls
+
+Everything through the two-digit runs came to $17.40 over about 532,000 calls. The ten-digit run added about $70 over about 1.7 million, the two-question neurons $29 over 561,000, the 5,000-image run $84.71 over 1.94 million, and the sparse and simulator runs $29 over about 1.16 million. The weight analysis, the laya work and the simulator training were free. Jev bills $0.042 per million input tokens, so the two-digit networks, at 330.5 million input tokens, cost $13.88. The call count was the real limit. At 42 requests per image, one pass over 1,000 images is 42,000 of them.
 
 ## One seed, 500 images
 
-The two-digit results are one seed per network on 500 validation images, with no test set, so the 8- and 26-point gaps are single runs. The 1,000-image ten-digit result is the one with three seeds and a test set behind it. The 5,000-image run is one seed, with two changes at once.
+The two-digit results are one seed per network on 500 validation images, with no test set, so the 8- and 26-point gaps are single runs. The 1,000-image ten-digit result is the one with three seeds and a test set behind it. The 5,000-image run is one seed with two changes at once, and the sparse run is one seed with three.
 
 The circle networks weren't converged (150 steps of batch 16), and their exact-trained versions varied from 47% to 86% across 10 local seeds, so the circle's swap gap points the same way on every seed but its size is noisy.
 
