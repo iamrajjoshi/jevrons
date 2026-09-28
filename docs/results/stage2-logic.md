@@ -2,7 +2,7 @@
 
 2026-09-26 · 33,183 calls · $0.46 · model `jev-1.13.0`
 
-A two-layer network of Jev neurons learns XOR, on 3 of 3 seeds, but only when the bias travels inside the products list. With the bias as a separate field, the same training fails on every seed. Straight-through training beats SPSA at an equal call budget on every task.
+A two-layer network of Jev neurons learns XOR, on 3 of 3 seeds, but only when the bias travels inside the products list. With the bias as a separate field, the same training fails on every seed. At an equal call budget, SPSA (which used the separate-bias format) lost to straight-through with the same format on AND, tied on OR and beat it on XOR (3/15 fully correct passes vs 0/15). Folded-bias straight-through beat both.
 
 Code: `src/jevrons/stage2.py`, `src/jevrons/net.py`. Per-run results, weights and loss curves: `runs/stage2/`. Journal: `runs/stage2/journal.jsonl.gz`.
 

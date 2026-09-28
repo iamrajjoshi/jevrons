@@ -42,7 +42,7 @@ Closing: no recap, no moral. End on the next concrete thing (the demo, stage 7) 
 
 Tell the story as a chain of experiments, each one raising the question the next answers: one neuron, does it add, the bias trick, XOR, a circle, digits with the sum in code, digits with Jev summing, all ten digits. Name each experiment by what it is. Never "stage N" in prose or headings (figure filenames are fine).
 
-Don't narrate the planning. No "I wrote a proposal", no audit, no "what the plan got wrong". When something didn't work, say what it was and why, directly: SPSA's update noise grows with parameter count and it lost to straight-through at equal call budgets; Jev isn't deterministic, so no lookup tables or caching; packing neurons into one request flips answers; the statement-style wording said yes to everything; a separate bias field gets over-trusted.
+Don't narrate the planning. No "I wrote a proposal", no audit, no "what the plan got wrong". When something didn't work, say what it was and why, directly: SPSA's update noise grows with parameter count, so it can't scale to digits (on the logic gates it was mixed against separate-bias straight-through and lost to folded); Jev isn't deterministic, so no lookup tables or caching; packing neurons into one request flips answers; the statement-style wording said yes to everything; a separate bias field gets over-trusted.
 
 Focus on the experiments, not execution. No project-management narrative, rate-limit logistics, backend routing, commit history or agents. Keep code and infrastructure only where they're part of the story: the neuron state JSON, the straight-through snippet, and the fact that every neuron is its own paid API call. Cost is one short, concrete aside.
 
