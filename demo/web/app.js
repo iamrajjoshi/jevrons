@@ -574,11 +574,10 @@ function renderSummary() {
     : `They disagree: A reads ${a.result.prediction}, B reads ${b.result.prediction}.`;
   const d = diffs[a.model.name];
   const why = S.compare === "neuron" ? "Same weights: A on exact math, B on Jev."
-    : "Same drawing, same kind of Jev neurons. B was trained with perfect math, so it never saw Jev's mistakes." +
-      (d?.length ? " On this network they agree on most digits; stage 7 shows a bigger gap." : "");
+    : `B was trained without Jev. On the test set, running on Jev: A ${a.model.on_jev}, B ${b.model.on_jev}.`;
   const html = `<p class="v-line">${line}</p>${col(a)}${col(b)}`;
   if (el.innerHTML !== html) el.innerHTML = html;
-  const extra = `<p class="v-why">${why}</p>` + (d?.length ? `<button class="btn small" id="find-diff" type="button">Show a test digit they read differently</button>` : "");
+  const extra = `<p class="v-why">${why}</p>` + (d?.length && S.source !== "exact" ? `<button class="btn small" id="find-diff" type="button">Show a test digit they read differently</button>` : "");
   if (more.dataset.html !== extra) { more.innerHTML = extra; more.dataset.html = extra; }  // don't steal focus from the button mid-run
 }
  $("#summary-more").addEventListener("click", (e) => {
