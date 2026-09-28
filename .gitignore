@@ -48,3 +48,4 @@ runs/**/*.jsonl.gz
 !runs/stage9c/*.jsonl.gz
 runs/stage10/eval-jev.*
 runs/stage10/jev.log
+video/hybrid/score.wav
