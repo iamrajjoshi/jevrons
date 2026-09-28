@@ -34,3 +34,5 @@ runs/stage8c/journal*
 runs/stage8c/checkpoint*
 runs/stage8c/partial*
 video/score.wav
+video/nolan/score.wav
+video/explainer/score.wav
