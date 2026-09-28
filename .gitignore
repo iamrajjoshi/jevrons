@@ -25,3 +25,12 @@ laya/.venv/
 __pycache__/
 runs/stage7-baseline-aborted/
 runs/stage8g/journal*
+video/build/
+runs/stage8a/journal*
+runs/stage8a/checkpoint-*
+runs/stage8a/partial-*
+runs/stage8a/e-calls.npz
+runs/stage8c/journal*
+runs/stage8c/checkpoint*
+runs/stage8c/partial*
+video/score.wav

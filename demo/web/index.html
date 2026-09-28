@@ -6,86 +6,90 @@
 <title>Jevrons</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-state="idle">
 <header class="top">
   <h1>Jevrons</h1>
-  <p class="lede">A small network in which every neuron is a live call to Jev. A hidden neuron sends Jev the
-    products x·w of its nonzero pixels, plus its bias, and asks whether they add up to more than zero. Jev's
-    probability is the activation. The sum is also computed here, so every answer can be checked:
-    <span class="pink">pink</span> marks a neuron where Jev and the arithmetic disagree.</p>
+  <p class="lede">A digit reader built from <span id="n-neurons">42</span> neurons, each one an API call.
+    A neuron sends Jev its pixels times its weights and asks whether they add up to more than zero, and
+    Jev's answer is its activation. The sum is also done here, so <span class="dis-key">pink</span> marks
+    each answer that disagrees with the arithmetic.</p>
+  <p class="status" id="status"></p>
 </header>
 
 <main class="layout">
   <aside class="rail">
-    <section class="win">
-      <div class="bar"><span>input</span><span id="pad-note">draw a digit</span></div>
-      <canvas id="pad" width="560" height="560" aria-label="Drawing pad"></canvas>
+    <section class="win pad-win">
+      <div class="bar"><span>input</span><span id="pad-note">28 × 28 after preprocessing</span></div>
+      <div class="pad-wrap">
+        <canvas id="pad" width="560" height="560" aria-label="Drawing pad"></canvas>
+        <p class="pad-empty" id="pad-empty">Draw a digit</p>
+      </div>
       <div class="row">
         <button class="btn" id="clear">Clear</button>
-        <button class="btn" id="real">Real test digit</button>
-        <select id="real-label" class="btn" aria-label="Test digit label">
-          <option value="">any in task</option>
-        </select>
+        <button class="btn" id="real">Test digit</button>
+        <select id="real-label" class="btn" aria-label="Which test digit"></select>
       </div>
     </section>
 
     <div class="seen">
       <canvas id="seen" width="28" height="28"></canvas>
-      <p class="mono small" id="seen-note">What the network sees: 28×28, digit fit into a 20×20 box and centered by mass, as in MNIST.</p>
+      <p id="seen-note"></p>
     </div>
 
-    <section class="bill mono" aria-live="polite">
-      <div class="bill-head small"><span>bill</span><span id="bill-kind">no run yet</span></div>
+    <section class="bill" aria-live="polite">
+      <div class="bill-head"><span>this draw</span><span id="bill-kind">nothing run</span></div>
       <dl>
-        <dt>Jev calls</dt><dd id="b-calls">0</dd>
-        <dt>tokens</dt><dd id="b-tokens">0</dd>
-        <dt>dollars</dt><dd id="b-usd">$0.000000</dd>
-        <dt>elapsed</dt><dd id="b-time">0.00 s</dd>
+        <dt>calls</dt><dd id="b-calls">0</dd>
+        <dt>input tokens</dt><dd id="b-tokens">0</dd>
+        <dt>cost</dt><dd id="b-usd">$0.0000</dd>
+        <dt>elapsed</dt><dd id="b-time">0.0 s</dd>
       </dl>
-      <p class="small mute" id="b-session"></p>
+      <p id="b-live"></p>
     </section>
   </aside>
 
   <section class="stage">
-    <section class="controls">
-        <label class="field"><span class="mono small">task</span><select id="task"></select></label>
-        <div class="field"><span class="mono small">compare</span>
-          <div class="seg" id="compare">
-            <button data-v="training" aria-pressed="true">training</button>
-            <button data-v="neuron">neuron</button>
-            <button data-v="one">off</button>
-          </div>
+    <div class="controls">
+      <label class="field"><span>network</span><select id="task"></select></label>
+      <div class="field"><span>neurons</span>
+        <div class="seg" id="source">
+          <button data-v="exact">exact</button>
+          <button data-v="mock" aria-pressed="true">mock</button>
+          <button data-v="replay">replay</button>
+          <button data-v="live">live</button>
         </div>
-        <div class="field" id="trained-field"><span class="mono small">trained</span>
-          <div class="seg" id="trained">
-            <button data-v="jev" aria-pressed="true">through Jev</button>
-            <button data-v="exact">exact</button>
-          </div>
+      </div>
+      <div class="field"><span>compare</span>
+        <div class="seg" id="compare">
+          <button data-v="one" aria-pressed="true">off</button>
+          <button data-v="training">training</button>
+          <button data-v="neuron">neuron</button>
         </div>
-        <div class="field"><span class="mono small">neurons</span>
-          <div class="seg" id="source">
-            <button data-v="exact">exact</button>
-            <button data-v="mock" aria-pressed="true">mock</button>
-            <button data-v="replay">replay</button>
-            <button data-v="live">live</button>
-          </div>
+      </div>
+      <div class="field" id="trained-field"><span>trained</span>
+        <div class="seg" id="trained">
+          <button data-v="jev" aria-pressed="true">through Jev</button>
+          <button data-v="exact">exact</button>
         </div>
-        <p class="mono small help" id="source-help"></p>
-        <button class="btn primary run" id="run">Run</button>
-      </section>
+      </div>
+      <button class="btn primary run" id="run">Run</button>
+      <p class="help" id="source-help"></p>
+    </div>
 
     <div class="panels" id="panels"></div>
-    <div class="timeline" id="timeline" hidden>
-      <div class="tl-head mono small"><span>arrival order</span><button class="btn small-btn" id="replay-anim">Replay</button></div>
-      <div class="tl-track">
-        <svg id="tl-svg" preserveAspectRatio="none"></svg>
-        <input type="range" id="tl-range" min="0" max="1000" value="1000" aria-label="Timeline">
+
+    <section class="calls" id="calls" hidden>
+      <div class="calls-head"><span>calls, sent → answered</span><button class="btn small" id="replay-anim">Replay</button></div>
+      <div class="calls-track">
+        <svg id="calls-svg"></svg>
+        <input type="range" id="calls-range" min="0" max="1000" value="1000" aria-label="Scrub through the run">
       </div>
-      <div class="tl-foot mono small"><span>0 s</span><span id="tl-t"></span><span id="tl-end"></span></div>
-    </div>
+      <div class="calls-foot"><span>0 s</span><span id="calls-t"></span><span id="calls-end"></span></div>
+    </section>
   </section>
 </main>
 
@@ -96,18 +100,14 @@
 
 <template id="panel-tpl">
   <article class="panel win">
-    <div class="bar"><span class="p-title"></span><span class="p-source"></span></div>
-    <div class="p-head">
-      <div class="pred"><span class="pred-big">·</span><span class="mono small pred-cap">prediction</span></div>
-      <p class="p-stats mono small"></p>
-    </div>
+    <div class="bar"><span class="p-title"></span><span class="p-arch"></span></div>
     <div class="net">
       <svg class="wires"></svg>
-      <canvas class="in-img" width="28" height="28"></canvas>
       <div class="hidden-grid"></div>
       <div class="outs"></div>
+      <div class="pred"><span class="pred-big"></span><span class="pred-cap"></span></div>
     </div>
-    <p class="p-note mono small"></p>
+    <div class="p-foot"><span class="p-stats"></span><span class="p-note"></span></div>
   </article>
 </template>
 
