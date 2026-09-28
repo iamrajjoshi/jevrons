@@ -34,7 +34,7 @@ value below is a CSS variable in `web/style.css`, so a number that isn't on this
   digit (`--fs-digit`, 176px, 112px narrow, 96px phone). Nothing smaller than 11px except the 9px
   R/S badge letters.
 - `font-variant-numeric: tabular-nums` on the body, so every number lines up.
-- Probabilities (activations, answers, the 0 / .5 / 1 axis) drop the leading zero: ".27", "1.00". Sums, seconds and
+- Probabilities (Jev's answers, neuron outputs, the 0 / .5 / 1 axis) drop the leading zero: ".27", "1.00". Sums, seconds and
   dollars keep it, since they can be negative or above 1. Prose keeps "0.5".
 - Prose stops at 64ch. Line height 1.5 for prose, 1.4 for mono.
 
@@ -58,7 +58,7 @@ All controls are native elements (`button`, `select`, `input[type=range]`), with
 | active | fill held, 1px down (`translateY(1px)`), no scale |
 | focus-visible | 2px ink outline, 2px offset, on every focusable thing, the range and tiles included. Never pink |
 | disabled | 40% opacity, `not-allowed` cursor, and a reason in text nearby |
-| loading | the Run button says what it's waiting on (`Running · 41 / 74`), gets `aria-busy` and ignores clicks |
+| loading | the panel footer says what it's waiting on (`running · 41 / 74`) and the panel gets `aria-busy` |
 
 - The network select is a native `<select>` (appearance off) with a drawn chevron. It has a visible label.
 - The source toggle group is a `radiogroup`: one tab stop, arrow keys move and select, and a disabled option is
@@ -74,7 +74,7 @@ All controls are native elements (`button`, `select`, `input[type=range]`), with
 
 ## Compare
 
-- Off by default. The switch says what it does ("Also run a network trained with perfect math"); the price is on Run.
+- Off by default. The switch says what it does ("Also run a network trained with perfect math"). No prices up front.
 - The two networks have one name everywhere: "A · trained through Jev", "B · trained with perfect math" (verdict,
   panel titles, calls, inspector).
 - The verdict leads: one plain line ("Both read 7." / "They disagree: A reads 4, B reads 5."), then each network's
@@ -99,7 +99,7 @@ for anything entering or changing value, and plain `ease-out` for exits. No boun
 ## Accessibility
 
 - Text meets AA (4.5:1) in both themes, pink included (`--accent-text`). Non-text marks meet 3:1.
-- Every control has a visible label or an `aria-label`. Status changes (the bill, the summary, the Run state) sit in
+- Every control has a visible label or an `aria-label`. Status changes (the bill, the summary, the panel's progress) sit in
   `aria-live="polite"` regions.
 - The drawing canvas is `role="img"`, and its label says what's on it ("empty", "your drawing", "test digit 3490,
   labelled 4"). Test digit is the keyboard route to input.
@@ -110,5 +110,5 @@ for anything entering or changing value, and plain `ease-out` for exits. No boun
 
 The ones I checked for: pulsing dots, a glow or gradient anywhere, card-in-card nesting, status-chip soup (R/S are
 the only badges), text below 11px, grey text on a coloured fill, a line length over 75ch, content hidden behind an
-entrance animation, layout-shifting animation, em dashes in the copy, and vague buttons ("Run live · ≈ $0.0018" says
-what it does and what it costs).
+entrance animation, layout-shifting animation, em dashes in the copy, and vague buttons (each one names its action;
+there's no Run button, since drawing is the action).

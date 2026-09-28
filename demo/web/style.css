@@ -92,7 +92,7 @@ h1 { font: 400 40px/0.95 var(--display); letter-spacing: -0.01em; margin: 0; }
 .status.live { color: var(--ink); }
 .status.live i { background: var(--ink); border-color: var(--ink); }
 
-.layout { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); gap: var(--gap); align-items: start;
+.layout { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); gap: var(--s5) var(--gap); align-items: start;
   max-width: var(--max); margin: 0 auto; padding: var(--s6) var(--s7) 64px; }
 
 /* ---------- windows, after TypeSafe's one-bit panels ---------- */
@@ -128,13 +128,11 @@ h1 { font: 400 40px/0.95 var(--display); letter-spacing: -0.01em; margin: 0; }
 .select.sm-w select { padding-right: 28px; }
 .select.sm-w::after { right: 11px; }
 
-.controls { display: flex; flex-wrap: wrap; gap: var(--s4); align-items: end; margin-bottom: var(--s5); }
+/* the controls span both columns, so the input card and the network panel start on the same line */
+.controls { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--s4); align-items: end; }
 .field { display: grid; gap: var(--s1); min-width: 0; }
 .field .lab { display: flex; justify-content: space-between; gap: var(--s3); color: var(--mute); }
 .field .cost { color: var(--ink-2); }
-.run-field { margin-left: auto; }
-.run { min-width: 168px; }
-.help { flex-basis: 100%; margin: 0; color: var(--ink-2); padding-right: calc(100% - 96ch); }
 
 
 /* toggle group: a radiogroup, one tab stop, arrow keys */
@@ -169,6 +167,7 @@ h1 { font: 400 40px/0.95 var(--display); letter-spacing: -0.01em; margin: 0; }
   background-image: radial-gradient(var(--rule) 1px, transparent 1px); background-size: 10px 10px; }
 .pad-empty { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--mute);
   font-size: var(--fs-ui); pointer-events: none; transition: opacity var(--dur-2) ease-out; }
+#pad:focus-visible { outline-offset: -2px; }
 .row { display: flex; gap: var(--s2); padding: var(--s2); border-top: var(--line); }
 .row #real { flex: 1; }
 
@@ -271,6 +270,7 @@ h1 { font: 400 40px/0.95 var(--display); letter-spacing: -0.01em; margin: 0; }
 
 .p-notice { margin: 0; padding: 7px 10px; border-bottom: var(--line); background: var(--faint); color: var(--ink);
   font: var(--fs-cap)/1.6 var(--mono); }
+.p-hint { margin: 0; padding: 0 10px var(--s2); color: var(--mute); font: var(--fs-cap)/1.5 var(--mono); }
 .p-foot { display: flex; justify-content: space-between; gap: var(--s4); padding: 7px 10px var(--s2); border-top: var(--hair); color: var(--mute); }
 .p-stats { color: var(--ink-2); white-space: nowrap; }
 .p-stats .dis { color: var(--accent-text); }
@@ -386,9 +386,6 @@ body.film .calls-track { pointer-events: none; }
   .calls { order: 7; }
   .controls .field { flex: 1 1 100%; }
   .controls .select, .toggle { width: 100%; }
-  .run-field { margin-left: 0; }
-  .run-field .lab { display: none; }
-  .run { width: 100%; }
   .net { grid-template-columns: minmax(0, 1fr); grid-template-areas: "pred" "hidden" "outs"; gap: 22px; padding: var(--s4) var(--s3); }
   .hidden-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--s2) 5px; }
   .wires { display: none; }  /* no room for a legible fan on a phone */

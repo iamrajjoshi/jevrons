@@ -21,7 +21,7 @@ The other network is stage 7 (`s7-jev`, 84.6% on 2,000 test digits): 784-32-10, 
 exact-trained twin (`s8a-swap`, `s7-swap`): same start, trained on a perfect step neuron, then run on Jev.
 
 Every neuron is stage 8g's arm E: one call carrying the folded-bias products and two questions (the v1 yes/no and
-the above/below choice), averaged into the activation. Stage 4-6, 3 vs 8 and 0 vs 1 are out of `models.json`; their
+the above/below choice), averaged into the neuron's output. Stage 4-6, 3 vs 8 and 0 vs 1 are out of `models.json`; their
 weights stay in `runs/`.
 
 ## Sources
@@ -29,7 +29,8 @@ weights stay in `runs/`.
 Visitors pick between two:
 
 - `live` makes real Jev calls and is billed: 74 calls, about 43,000 input tokens, $0.0018 a draw for stage 8a
-  ($0.0017 for stage 7). It's the default when the server runs with `--live`. The page prices each draw before Run.
+  ($0.0017 for stage 7). It's the default when the server runs with `--live`. There's no Run button: a draw starts 800 ms after the
+  last stroke (Enter on the pad starts it now), and drawing again mid-draw cancels it. The "this draw" box shows what it cost.
 - `exact` is a local step neuron, free. It's the default without `--live`, and the page says live is off.
 
 "Also run a network trained with perfect math" runs the twin next to it, so a live compare is two draws (about

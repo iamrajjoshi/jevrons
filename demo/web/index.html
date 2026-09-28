@@ -21,11 +21,30 @@
 </header>
 
 <main class="layout">
+  <div class="controls">
+    <div class="field">
+      <label class="lab" for="task">network</label>
+      <span class="select"><select id="task"></select></span>
+    </div>
+    <div class="field">
+      <span class="lab" id="source-lab">neurons</span>
+      <div class="seg" id="source" role="radiogroup" aria-labelledby="source-lab">
+        <button type="button" role="radio" data-v="live">live Jev</button>
+        <button type="button" role="radio" data-v="exact">exact math</button>
+      </div>
+    </div>
+    <div class="field">
+      <span class="lab" id="compare-lab">compare</span>
+      <button class="toggle" id="compare" type="button" role="switch" aria-checked="false" aria-labelledby="compare-text"><i
+        aria-hidden="true"></i><span id="compare-text">Also run a network trained with perfect math</span></button>
+    </div>
+  </div>
+
   <div class="rail">
     <section class="win pad-win" aria-label="Input">
       <div class="bar"><span>input</span><span id="pad-note">28 × 28 after preprocessing</span></div>
       <div class="pad-wrap">
-        <canvas id="pad" width="560" height="560" role="img" aria-label="Drawing pad, empty"></canvas>
+        <canvas id="pad" width="560" height="560" role="img" tabindex="0" aria-label="Drawing pad, empty"></canvas>
         <p class="pad-empty" id="pad-empty" aria-hidden="true">Draw a digit here</p>
       </div>
       <div class="row">
@@ -45,37 +64,13 @@
       <dl>
         <dt>calls</dt><dd id="b-calls">0</dd>
         <dt>input tokens</dt><dd id="b-tokens">0</dd>
-        <dt>billed</dt><dd id="b-usd">$0.0000</dd>
+        <dt>cost</dt><dd id="b-usd">$0.0000</dd>
         <dt>elapsed</dt><dd id="b-time">0.0 s</dd>
       </dl>
-      <p id="b-live"></p>
     </section>
   </div>
 
   <div class="stage">
-    <div class="controls">
-      <div class="field">
-        <label class="lab" for="task">network</label>
-        <span class="select"><select id="task"></select></span>
-      </div>
-      <div class="field">
-        <span class="lab" id="source-lab">neurons</span>
-        <div class="seg" id="source" role="radiogroup" aria-labelledby="source-lab">
-          <button type="button" role="radio" data-v="live">live Jev</button>
-          <button type="button" role="radio" data-v="exact">exact math</button>
-        </div>
-      </div>
-      <div class="field">
-        <span class="lab" id="compare-lab">compare</span>
-        <button class="toggle" id="compare" type="button" role="switch" aria-checked="false" aria-labelledby="compare-text"><i
-          aria-hidden="true"></i><span id="compare-text">Also run a network trained with perfect math</span></button>
-      </div>
-      <div class="field run-field">
-        <span class="lab" aria-hidden="true">&nbsp;</span>
-        <button class="btn primary run" id="run" type="button">Run</button>
-      </div>
-      <p class="help" id="source-help"></p>
-    </div>
 
     <section class="verdict" id="summary" aria-live="polite" aria-label="Comparison" hidden></section>
     <div class="verdict-more" id="summary-more" hidden></div>
@@ -107,6 +102,7 @@
       <div class="outs" role="group" aria-label="Output neurons"></div>
       <div class="pred" aria-live="polite"><span class="pred-big"></span><span class="pred-cap"></span></div>
     </div>
+    <p class="p-hint" hidden>Click any neuron to see the exact call it sent Jev.</p>
     <div class="p-foot"><span class="p-stats"></span><span class="p-note"></span></div>
   </article>
 </template>

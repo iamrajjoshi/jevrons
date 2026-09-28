@@ -21,7 +21,6 @@ const $ = (s, el = document) => el.querySelector(s);
 const USD_PER_TOKEN = 0.042 / 1e6;
 const Q = new URLSearchParams(location.search);
 const FILM = Q.has("film");
-const TOKENS = [381, 5.37];  // input tokens per arm E call ≈ a + b · numbers sent (fit to the stage 7 journal)
 const SOURCE_NAME = { exact: "exact math", mock: "simulated Jev", replay: "recorded Jev", live: "live Jev" };
 // what answered a neuron, as the visitor should read it
 const answeredBy = (e) => e.backend === "simulated" ? "simulated answer" : e.backend.startsWith("recorded") ? "recorded answer"
@@ -59,6 +58,7 @@ function padPoint(e) {
 pad.addEventListener("pointerdown", (e) => {
   if (playing || e.button > 0) return;
   pad.setPointerCapture(e.pointerId);
+  clearTimeout(pending); stopRuns();  // drawing again: drop the draw in flight, it reruns after the next pause
   if (S.real) { clearPad(); S.real = null; }
   drawing = true; last = lastMid = padPoint(e); stroke(last, last); $("#pad-empty").style.opacity = 0;
   setState("drawing");
@@ -71,14 +71,19 @@ pad.addEventListener("pointermove", (e) => {
     curve(lastMid, last, mid); last = p; lastMid = mid;
   }
 });
+// No Run button: a draw starts PAUSE ms after the last stroke ends, so a two-stroke 4 or 7 is one draw, not two.
+const PAUSE = 800;
+let pending = null;
 const end = () => {
   if (!drawing) return;
   drawing = false; stroke(lastMid, last); updateInput(); setState("idle");
-  if (autorun()) runAll();
+  clearTimeout(pending); pending = setTimeout(runAll, PAUSE);
 };
 pad.addEventListener("pointerup", end);
 pad.addEventListener("pointercancel", end);
-const autorun = () => S.source !== "live" || FILM;  // live spends money: only on Run, or a scripted film take
+// Enter on the focused pad runs now, without waiting for the pause
+pad.addEventListener("keydown", (e) => { if (e.key === "Enter" && S.input) { e.preventDefault(); clearTimeout(pending); runAll(); } });
+function stopRuns() { for (const p of S.panels) if (p.ctrl) { p.ctrl.abort(); p.ctrl = null; } }
 
 function pen() { pctx.strokeStyle = css("--ink"); pctx.lineWidth = PEN; pctx.lineCap = pctx.lineJoin = "round"; pctx.beginPath(); }
 function stroke(a, b) { pen(); pctx.moveTo(...a); pctx.lineTo(...b); pctx.stroke(); }
@@ -128,7 +133,8 @@ async function loadReal(index) {
   paintGray(c, S.input);
   clearPad(); pctx.imageSmoothingEnabled = false; pctx.drawImage(c, 0, 0, pad.width, pad.height);
   renderInput();
-  if (autorun()) return runAll();
+  clearTimeout(pending);
+  return runAll();
 }
 
 // ---------- stored strokes, for reproducible film takes ----------
@@ -178,7 +184,7 @@ async function draw(name, speed = 0.8) {           // speed in pad px per ms
   playing = false; updateInput();
 }
 
-async function play(name) { await draw(name); if (autorun()) await runAll(); }
+async function play(name) { await draw(name); await runAll(); }
 
 // ---------- pixel maps ----------
 
@@ -263,7 +269,7 @@ function setSeg(id, v) {
   for (const b of opts) { b.setAttribute("aria-checked", String(b.dataset.v === v)); b.tabIndex = b === on ? 0 : -1; }
 }
 function bindSeg(id, key) {
-  const pickV = (v) => { if (v === "url" || S[key] === v) return; S[key] = v; setSeg(id, v); configure().then(() => S.input && autorun() && runAll()); };
+  const pickV = (v) => { if (v === "url" || S[key] === v) return; S[key] = v; setSeg(id, v); configure().then(() => S.input && runAll()); };
   $(id).addEventListener("click", (e) => { const b = e.target.closest("button"); if (b && !b.disabled) pickV(b.dataset.v); });
   $(id).addEventListener("keydown", (e) => {
     const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]; if (!step) return;
@@ -285,16 +291,6 @@ function rove(items, cols, onFocus) {
       items.forEach((x) => { x.tabIndex = x === n ? 0 : -1; }); n.focus(); onFocus(items.indexOf(n));
     });
   });
-}
-
-function sourceHelp() {
-  return {
-    exact: S.live ? "Each neuron fires when its sum is above zero, computed locally. Free."
-      : "Live is off (server started without --live). Each neuron fires when its sum is above zero, computed locally. Free.",
-    mock: "Simulated: each call reuses a recorded answer from a neuron with a similar sum. Nothing goes to Jev.",
-    replay: "Recorded answers from real Jev calls. Requests that were never recorded get a simulated answer.",
-    live: "Real, billed Jev calls, sent when you press Run. If Jev is busy or today's budget is spent, the draw finishes on recorded or simulated answers.",
-  }[S.source];
 }
 
 function renderLede(m) {
@@ -323,9 +319,6 @@ async function configure() {
   if (u) u.textContent = `${SOURCE_NAME[S.source].split(" ")[0]} · URL`;  // "recorded · URL", "simulated · URL"
   setSeg("#source", viaUrl ? "url" : S.source);
   const cfg = plan(), m = cfg[0].model;
-  const COMPARE_HELP = {
-    training: "", neuron: "Same weights twice. A: exact math. B: Jev.", one: "" };
-  $("#source-help").textContent = [COMPARE_HELP[S.compare], sourceHelp()].filter(Boolean).join(" ");
   renderLede(m);
   // which recorded test digits this network and its twin read differently, for "Show a test digit they read differently"
   if (S.compare === "training" && !(m.name in diffs)) {
@@ -336,33 +329,6 @@ async function configure() {
   const labels = `<option value="">any</option>` + m.labels.map((d) => `<option>${d}</option>`).join("");
   if ($("#real-label").innerHTML !== labels) $("#real-label").innerHTML = labels;
   await buildPanels(cfg);
-}
-
-// A live draw's cost before it happens: the numbers each call would send for this input (connected, nonzero
-// terms for a sparse network), priced with the token fit. Without a digit yet, a typical one (150 inked pixels).
-function estimate(p) {
-  if (!p.w) return { calls: 0, tokens: 0 };
-  const inked = S.input ? [...S.input].map(kept) : null;
-  const hidden = p.w.W1.map((w) => 1 + (inked ? w.filter((wi, i) => inked[i] && (!sparse(p.model) || kept(wi))).length
-    : sparse(p.model) ? p.model.fields * 0.39 : 150));
-  const outs = p.outs.map((_, k) => 1 + p.w.W2.filter((row) => !sparse(p.model) || kept(row[k])).length);
-  const tokens = [...hidden, ...outs].reduce((a, n) => a + TOKENS[0] + TOKENS[1] * n, 0);
-  return { calls: hidden.length + outs.length, tokens };
-}
-
-function renderStatus() {
-  const live = S.panels.some((p) => p.source === "live"), per = S.panels.map(estimate);
-  const all = per.reduce((a, e) => ({ calls: a.calls + e.calls, tokens: a.tokens + e.tokens }), { calls: 0, tokens: 0 });
-  $("#b-live").textContent = `Live: ${all.calls} calls, ≈ ${(Math.round(all.tokens / 100) * 100).toLocaleString()} input tokens, ≈ ${usd(all.tokens * USD_PER_TOKEN)}` +
-    (S.panels.length > 1 ? " (two networks)." : ".");
-  // Run: its price when live, its progress while running, disabled with nothing to read
-  const run = $("#run"), busy = S.panels.some((p) => p.ctrl);
-  const total = S.panels.reduce((a, p) => a + (p.tiles?.length || 0) + (p.outs?.length || 0), 0);
-  const answered = S.panels.reduce((a, p) => a + p.events.length, 0);
-  run.textContent = busy ? `Running · ${answered} / ${total}` : live ? `Run live · ≈ ${usd(all.tokens * USD_PER_TOKEN)}` : "Run";
-  run.setAttribute("aria-busy", String(busy));
-  run.setAttribute("aria-disabled", String(busy));
-  run.disabled = !S.input;
 }
 
 // ---------- panels ----------
@@ -413,7 +379,7 @@ async function buildPanels(cfg) {
       const o = document.createElement("button");
       o.type = "button"; o.className = "out"; o.style.setProperty("--d", `${(-Math.random() * 1.1).toFixed(2)}s`);
       o.innerHTML = `<span class="lab" aria-hidden="true">${lab}</span><span class="bar-track"><i></i><b></b></span><span class="v" aria-hidden="true"></span>`;
-      o.title = `output ${lab} · tick at 0.5`;
+      o.title = `output ${lab} · tick at 0.5 · click to see its call`;
       o.addEventListener("click", () => select(p, 1, k));
       outs.append(o); return o;
     });
@@ -429,7 +395,7 @@ async function buildPanels(cfg) {
   }
   root.replaceChildren(...els);
   for (const p of S.panels) { new ResizeObserver(() => layoutWires(p)).observe(p.el); renderPanel(p); }
-  renderCalls(); renderBill(); renderStatus();
+  renderCalls(); renderBill();
 }
 
 function paintTiles(p) {
@@ -481,7 +447,7 @@ function renderPanel(p) {
     t.className = "tile" + (e ? " done" : flight ? " flight" : " idle") + (e?.disagree ? " dis" : "") + (mark ? " fb" : "") +
       (isSel(p, 0, j) ? " sel" : "") + (t._land ? " land" : "");
     t.dataset.fb = mark ? MARK[mark] : "";
-    t.title = fb ? `${hid(j)}: ${fb}, not live` : "";
+    t.title = `${hid(j)}${fb ? `: ${fb}, not live` : ""} · click to see its call`;
     t.style.setProperty("--p", e ? e.p : 0);
     $(".lbl", t).textContent = e ? pr(e.p) : hid(j);
     t.setAttribute("aria-label", neuronLabel(`hidden ${hid(j)}`, e, flight, fb));
@@ -521,31 +487,39 @@ function renderPanel(p) {
   $(".pred-cap", p.el).classList.toggle("err", !!p.error);
   $(".pred-cap", p.el).textContent = p.error ? "Stopped." :
     done ? (binary ? `p ${pr(p.result.outputs[0])}; ${p.model.labels[1]} at 0.5 or more, else ${p.model.labels[0]}` : "")
-    : inFlight ? "" : S.input ? (autorun() ? "" : "Press Run to send it.")
-    : "Waiting for a digit.";
+    : inFlight || S.input ? "" : "Waiting for a digit.";
   const dis = ev.filter((e) => e.disagree).length;
   const fbs = ev.map((e) => fallbackOf(p, e)), rec = fbs.filter((f) => f === "recorded answer").length,
     sim = fbs.filter((f) => f === "simulated answer").length;
-  $(".p-stats", p.el).innerHTML = !ev.length && !inFlight ? "no calls yet" :
-    `hidden ${hiddenEv.length}/${p.tiles.length} · output ${outs.length}/${p.outs.length} · ` +
+  // progress lives here now that there's no Run button: "running · 41 / 74"
+  const busy = !!p.ctrl && !p.result;
+  p.el.setAttribute("aria-busy", String(busy));
+  $(".p-stats", p.el).innerHTML = !ev.length && !inFlight ? (busy ? "running · starting" : "no calls yet") :
+    (busy ? `running · ${ev.length} / ${p.tiles.length + p.outs.length} · ` : "") + `hidden ${hiddenEv.length}/${p.tiles.length} · output ${outs.length}/${p.outs.length} · ` +
     `<span class="${dis ? "dis" : ""}">${dis} disagree</span>` +
     (rec ? ` · <span class="fbk">R</span> ${rec} recorded` : "") + (sim ? ` · <span class="fbk">S</span> ${sim} simulated` : "") +
-    (inFlight && !done ? ` · waiting on ${inFlight}` : "");
+    "";
   const note = $(".p-notice", p.el);
   note.hidden = !p.error && !p.notice && !(p.source === "replay" && sim);
   const only = !mixed && [...kinds][0];  // "recorded answer" | "simulated answer" when every answer is one fallback
   const key = mixed ? ` Tiles marked <span class="fbk">R</span> show a recorded Jev answer to this exact request, <span class="fbk">S</span> a simulated one.`
     : only === "recorded answer" ? ` All ${p.events.length} answers are recorded.`
     : only === "simulated answer" ? ` All ${p.events.length} answers are simulated.` : "";
-  note.innerHTML = p.error ? `Stopped: ${p.error} Press Run to retry.`
+  note.innerHTML = p.error ? `Stopped: ${p.error} Draw again to retry.`
     : p.notice ? p.notice + key
     : only ? `Never recorded: all ${p.events.length} answers are simulated.`
     : `<span class="fbk">S</span> ${sim} ${sim === 1 ? "answer" : "answers"} simulated: never recorded.`;
+  // the one-time hint that a neuron opens its call: first panel, once there are answers, until the inspector is used
+  $(".p-hint", p.el).hidden = FILM || p.id > 0 || !ev.length || inspected();
   renderSummary();
 }
+const inspected = () => { try { return localStorage.getItem("jevrons:inspected") === "1"; } catch { return false; } };
 
-const neuronLabel = (name, e, flight, fb) => name + (e ? `, ${pr(e.p)}, ${e.p >= 0.5 ? "fires" : "silent"}` +
-  (e.disagree ? ", disagrees with the sum" : "") + (fb ? `, ${fb}` : "") : flight ? ", waiting on Jev" : "");
+// Plain words for the one question each call asks ("do these numbers add up to more than zero?"): yes when p ≥ 0.5.
+const yes = (p) => p >= 0.5 ? "yes" : "no";
+const neuronLabel = (name, e, flight, fb) => name + (!e ? (flight ? ", waiting on Jev" : "")
+  : e.backend === "local step" ? `, outputs ${e.p >= 0.5 ? 1 : 0}`
+  : `, Jev said ${yes(e.p)}, ${pr(e.p)}` + (e.disagree ? `, the sum says ${yes(e.z > 0 ? 1 : 0)}` : "") + (fb ? `, ${fb}` : ""));
 
 // Two networks: the verdict leads, big and plain, one column per network above its panel.
 let diffs = {};  // model name -> recorded test digits it and its twin read differently (from /api/disagree)
@@ -559,7 +533,7 @@ function renderSummary() {
   const col = (p) => `<div class="v-col"><span class="v-tag">${panelKey(p)}</span>
     <span class="v-digit ${p.result ? "" : "pending"}">${p.result ? p.result.prediction : "·"}</span>
     <span class="v-dis">${p.events.length ? `<span class="${dis(p) ? "dis" : ""}">${dis(p)} <span class="v-of">of ${p.events.length} answers </span>disagree</span>` : p.error ? "stopped" : "not run"}</span></div>`;
-  const line = !done ? (S.input ? (a.ctrl || b.ctrl ? "Both networks are reading the same drawing…" : "Press Run to read it with both.") : "Draw a digit to compare the two.")
+  const line = !done ? (S.input ? "Both networks are reading the same drawing…" : "Draw a digit to compare the two.")
     : a.result.prediction === b.result.prediction ? `Both read ${a.result.prediction}.`
     : `They disagree: A reads ${a.result.prediction}, B reads ${b.result.prediction}.`;
   const d = diffs[a.model.name];
@@ -650,10 +624,9 @@ function renderBill() {
   $("#b-usd").textContent = usd(billed * USD_PER_TOKEN);
   $("#b-time").textContent = (elapsed / 1000).toFixed(1) + " s";
   const fell = ps.some((p) => p.source === "live" && p.events.some((e) => !e.billed));
-  $("#bill-kind").textContent = !S.panels.some((p) => p.events.length) ? "nothing run" : live ? (fell ? "billed, part recorded or simulated" : "billed")
-    : ps.length ? (ps.some((p) => p.source === "live") ? "recorded or simulated, not billed"
-      : ps.every((p) => p.source === "replay") ? "recorded, not billed" : "simulated, not billed") : "local, free";
-  renderStatus();
+  $("#bill-kind").textContent = !S.panels.some((p) => p.events.length) ? "nothing run" : live ? (fell ? "live Jev, part recorded or simulated" : "live Jev")
+    : ps.length ? (ps.some((p) => p.source === "live") ? "recorded or simulated, free"
+      : ps.every((p) => p.source === "replay") ? "recorded, free" : "simulated, free") : "local, free";
 }
 
 // ---------- calls: one bar per call, from when it was sent to when Jev answered ----------
@@ -725,6 +698,7 @@ const isSel = (p, layer, j) => S.sel && S.sel.panel === p && S.sel.layer === lay
 let opener = null;
 function select(p, layer, j) {
   if (!S.sel) opener = document.activeElement;
+  try { localStorage.setItem("jevrons:inspected", "1"); } catch {}
   S.sel = { panel: p, layer, j }; S.panels.forEach(renderPanel); renderInspector();
 }
 function closeInspector(restore = false) {
@@ -739,9 +713,9 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.sel) {
 function answerRows(e) {
   if (e.backend === "local step") return "";
   return Object.entries(e.answers).map(([k, a]) => typeof a === "object"
-    ? `<dt>choice: above zero</dt><dd>${pr(a.above)}</dd>`
-    : `<dt>${k === "v1" || k === "fires" ? "yes/no: greater than zero" : "yes/no"}</dt><dd>${pr(a)}</dd>`).join("") +
-    (Object.keys(e.answers).length > 1 ? `<dt>activation, their mean</dt><dd class="${e.disagree ? "dis" : ""}">${pr(e.p)}</dd>` : "");
+    ? `<dt>above or below zero: above</dt><dd>${pr(a.above)}</dd>`
+    : `<dt>more than zero? yes</dt><dd>${pr(a)}</dd>`).join("") +
+    (Object.keys(e.answers).length > 1 ? `<dt>Jev's answer, the mean of both</dt><dd class="${e.disagree ? "dis" : ""}">${pr(e.p)}</dd>` : "");
 }
 
 function renderInspector() {
@@ -758,10 +732,10 @@ function renderInspector() {
     if (layer === 0) paintMaps(p, j);
     return;
   }
-  const fires = e.p >= 0.5, jevish = e.backend !== "local step";
-  const verdict = !jevish ? `${fires ? "Fires" : "Silent"}: the sum is ${fmt(e.z)}.`
-    : e.disagree ? `Jev says ${fires ? "fire" : "stay silent"}, but the sum is ${fmt(e.z)}.`
-    : `Jev ${fires ? "fires" : "stays silent"}; the sum is ${fmt(e.z)}. They agree.`;
+  const jevish = e.backend !== "local step", sum = `The numbers add up to ${fmt(e.z)}`;
+  const verdict = !jevish ? `${sum}, so this neuron outputs ${e.p >= 0.5 ? 1 : 0}.`
+    : e.disagree ? `${sum}, so the answer should be ${e.z > 0 ? "yes" : "no"}. Jev said ${yes(e.p)} (${pr(e.p)}).`
+    : `${sum}. Jev said ${yes(e.p)} (${pr(e.p)}), which is right.`;
   const sw = e.terms.length > 1;
   const request = `{"state": ${JSON.stringify(sw ? { products: e.terms } : { z: e.terms[0] }).replaceAll(",", ", ")},\n "questions": ` +
     JSON.stringify(e.questions, null, 2).replaceAll("\n", "\n ") + "}";
@@ -776,7 +750,7 @@ function renderInspector() {
       <dt>answered by</dt><dd>${answeredBy(e)}${fallbackOf(p, e) && p.source === "live" ? ", not live" : ""}</dd>
       <dt>source</dt><dd>${e.backend}</dd>
       <dt>input tokens</dt><dd>${e.tokens.toLocaleString()}</dd>
-      <dt>cost</dt><dd>${e.billed ? "$" + (e.tokens * USD_PER_TOKEN).toFixed(6) : "not billed"}</dd>
+      <dt>cost</dt><dd>${e.billed ? "$" + (e.tokens * USD_PER_TOKEN).toFixed(6) : "free"}</dd>
     </dl>
     ${sw ? `<div><svg class="walk ${e.disagree ? "dis" : ""}" viewBox="0 0 400 110" preserveAspectRatio="none"></svg>
       <p class="cap">Running total of the ${e.terms.length} numbers sent, in order.</p></div>` : ""}
@@ -858,13 +832,12 @@ async function boot() {
   if (want) S.trained = want.trained;
   S.source = ["exact", "mock", "replay", "live"].includes(Q.get("source")) ? Q.get("source") : FILM ? "mock" : S.live ? "live" : "exact";
   if (["one", "training", "neuron"].includes(Q.get("compare"))) S.compare = Q.get("compare");
-  const rerun = () => configure().then(() => S.input && autorun() && runAll());
+  const rerun = () => configure().then(() => S.input && runAll());
   $("#task").addEventListener("change", (e) => { S.task = e.target.value; rerun(); });
   $("#compare").addEventListener("click", () => { S.compare = S.compare === "training" ? "one" : "training"; rerun(); });
   bindSeg("#source", "source");
   $("#clear").addEventListener("click", clear);
   $("#real").addEventListener("click", () => loadReal());
-  $("#run").addEventListener("click", () => { if (!S.panels.some((p) => p.ctrl)) runAll(); });  // busy: ignore, don't bill twice
   renderInput(); await configure();
   window.jevrons = { play, draw, clear, run: runAll, loadDigit: loadReal, strokes: Object.keys(STROKES) };
   const delay = Number(Q.get("delay") ?? 900);
