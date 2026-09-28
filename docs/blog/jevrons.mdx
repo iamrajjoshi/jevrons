@@ -11,7 +11,7 @@ updatedDate: 2026-09-26
 
 His ALU had fixed wiring. When a gate misfired, the answer was wrong and nothing in the circuit could correct it. I wanted to know what happens when the wiring can learn: if a model acting as a neuron is imperfect, can the weights around it learn to compensate?
 
-Jevrons is a small neural network where every neuron is a live Jev call, trained with backprop on handwritten digits. It started as one neuron and a lot of yes/no questions, and each experiment raised the question the next one answered. The result I care about: a network trained with perfect arithmetic falls apart when you drop Jev in, and one trained through Jev doesn't.
+Jevrons is a small neural network where every neuron is a live Jev call, trained with backprop on handwritten digits. It started as one neuron and a lot of yes/no questions, and each experiment raised the question the next one answered. The result I care about: when every neuron has to add a long list, a network trained with perfect arithmetic falls apart on Jev, losing 31 points on ten digits, and one trained through Jev doesn't. Give each neuron a short list instead and the gap shrinks to 7 points, and the network trained through Jev reaches 85.3%, the best in the project.
 
 ## One neuron, one API call
 
@@ -331,7 +331,7 @@ terms    Jev: k, sign accuracy    fine-tuned laya: k, sign accuracy
 
 It holds 97.8% at 150 terms (Jev: 89.1%) and gets 99.1% of real journal states right, against Jev's recorded 97.6%. It isn't a perfect adder: one big +4.9 against 74 small negatives fools it every time. A second version trained to copy Jev's answers picked up Jev's sign vote and none of its other quirks.
 
-Then the swap test. Ollaya serves 512 tokens, so this 3 vs 8 network keeps 64 weights per hidden neuron (about 35 terms). Trained through the fine-tuned laya it gets 91.0%. Its exact-trained twin, swapped onto the same neuron, keeps 90.2%, down 1 point from 91.2% on an exact neuron. On Jev, the dense network lost 25. The two setups aren't like for like, but the direction is plain: when the neuron adds well enough, there's nothing for the network to adapt to. The swap gap measures how wrong the neuron is.
+Then the swap test. Ollaya serves 512 tokens, so this 3 vs 8 network keeps 64 weights per hidden neuron (about 35 terms). Trained through the fine-tuned laya it gets 91.0%. Its exact-trained twin, swapped onto the same neuron, keeps 90.2%, down 1 point from 91.2% on an exact neuron. On Jev, the dense network lost 25. The two setups aren't like for like, but the direction is plain: when the neuron adds well enough, there's nothing for the network to adapt to. The swap gap measures how wrong the neuron is on the inputs the network actually sends it.
 
 ## Two questions per neuron
 
@@ -380,7 +380,7 @@ That's 84.6% on Jev, up from 68.5%, and above the 77-79% an exact neuron reached
 
 ![Top, test accuracy on an exact neuron and on live Jev. Trained through Jev on 5,000 images: 70.0% exact and 84.6% on Jev. Trained exact: 83.9% exact and 52.6% on Jev. The stage 6 means at 1,000 images sit below for comparison. Bottom, per-digit accuracy on live Jev at 1,000 and 5,000 images: the network trained through Jev improves on every digit but 2, most of all on 8, while the exact-trained network still gets 5.5% of 0s and 16.5% of 3s.](../figures/stage7-swap.png)
 
-The swap gap didn't shrink, and that breaks the rule I'd drawn from laya. On 3 vs 8, a more faithful neuron cut the gap from 25 to 4.6 points. On ten digits, the swapped network's hidden neurons are even more faithful than the Jev-trained ones (93.5% against 90.8% fire as intended), and the gap still grew, from 28.8 at 1,000 images to 31.3, because the failure moved to the output. No output neuron fires on 97.8% of its images, which makes every prediction a ranking of ten "no" answers, and Jev's graded "no" doesn't keep the order of small differences between sums. The Jev-trained network gets an output to actually fire on about 40% of images. 0 and 3 still collapse in the swapped network (6% and 17%).
+The swap gap didn't shrink. On 3 vs 8 the two-question neuron cut it from 25 to 4.6 points, but on ten digits it grew, from 28.8 at 1,000 images to 31.3. The hidden layer isn't the problem: the swapped network's hidden neurons fire as intended even more often than the Jev-trained ones (93.5% against 90.8%). The damage shows up at the output. No output neuron fires on 97.8% of its images, which makes every prediction a ranking of ten "no" answers, and Jev's graded "no" doesn't keep the order of small differences between sums. The Jev-trained network gets an output to actually fire on about 40% of images. And 0 and 3, the digits with the longest lists, still collapse in the swapped network (6% and 17%). So Jev is still wrong on the inputs this network sends it, the long sums of heavy digits and the small gaps between ten "no" answers, just not where I was measuring.
 
 ## Ninety-six pixels per neuron
 
@@ -397,7 +397,7 @@ I trained it through Jev on 1,000 images for 6 epochs, one seed, with an exact-t
 
 ![Top, test accuracy for six networks, each drawn as a line from its exact-neuron score to its live-Jev score. Dense, trained through Jev: 70.0% exact, 84.6% on Jev. Dense, trained exact: 83.9% exact, 52.6% on Jev. Sparse, trained through Jev: 75.7% exact, 85.3% on Jev. Sparse, trained exact: 72.6% exact, 65.8% on Jev. Sparse, pretrained on simulated Jev: 57.1% exact, 83.8% on Jev. Sparse, pretrained then trained on Jev: 79.0% exact, 83.8% on Jev. Bottom, hidden misfire rate by margin band for dense calls of about 153 numbers and sparse calls of about 37: the sparse curve sits well below the dense one at every margin, about 7% against 20% between 0.5 and 1 spreads and 1% against 10% between 1 and 1.5.](../figures/stage8-sparse.png)
 
-85.3% is the best result in the project, from a fifth of the training data stage 7 used to reach 84.6%. The swap gap is 6.8 points, down from 31.3. The swapped network no longer loses 0 (99%, its best digit). It loses 8 and 6 instead (29% and 38%).
+85.3% is the best result in the project, from a fifth of the training data stage 7 used to reach 84.6%. With shorter lists going to Jev, the swap gap fell from 31.3 points to 6.8. The swapped network no longer loses 0 (99%, its best digit). It loses 8 and 6 instead (29% and 38%).
 
 Sparsity didn't help the way I expected. Shorter sums are sharper: at the same margin, a 37-number call misfires far less often than a 153-number one. Pooling both arms of each, it's 7.0% against 20.1% between 0.5 and 1 spreads from zero, and 0.7% against 9.7% between 1 and 1.5. But the sparse networks' sums sit closer to zero, at about half stage 7's median margin, so their hidden neurons fire as intended about as often as before (90.7-91.6%). What changed is where the misfires land. Nearly all of them are within one spread of zero, where a flipped answer moves the next layer's sum very little. The output layer changed too. Stage 7's swapped network had no output firing on 97.8% of test images, and the sparse one on 81.0%. Its output neurons now add 64 hidden answers instead of 32, and I didn't separate whether the sparse fields or the wider layer made the difference.
 
@@ -429,6 +429,6 @@ I don't know how correlated Jev's errors are across neurons in the same image, w
 
 ## A digit you can draw
 
-Next, I'm building a live draw-a-digit page where each drawing runs through the network on real Jev calls, showing each neuron's intended sum, Jev's answer, and where the two disagree. Those disagreements are the whole point. Without them it would look like any small MLP.
+Next, I'm building a live draw-a-digit page. Each drawing runs through the sparse network (85.3%) on real Jev calls, with the dense 5,000-image network as the alternative, and the page shows each neuron's intended sum, Jev's answer, and where the two disagree. A toggle runs the same drawing through that network's exact-trained twin for comparison. Those disagreements are the whole point. Without them it would look like any small MLP.
 
 {/* TODO: link the demo page once it exists */}
