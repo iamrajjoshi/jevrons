@@ -124,13 +124,17 @@ def noul(instructions: str, true: str, false: str) -> dict:
 
 
 class Jev:
-    def __init__(self, journal: Path, max_usd: float | None = None, backends: list[str] | None = None):
+    def __init__(self, journal: Path, max_usd: float | None = None, backends: list[str] | None = None,
+                 wait_rounds: int = 6):
+        """wait_rounds: how many times to retry when every backend is rate-limited or down (a minute more each
+        time). Training runs wait it out; the demo passes 1 and reports the rate limit instead."""
         names = backends or [n for n in os.environ.get("JEVRONS_BACKENDS", "").split(",") if n]
         self.backends = [BACKENDS[n] for n in names] if names else [b for b in BACKENDS.values() if b.default and b.key]
         missing = [b.name for b in self.backends if not b.key]
         if missing or not self.backends:
             raise RuntimeError(f"no key for {missing or 'any backend'}; set it in the env or {CREDENTIALS}")
         self.journal = journal
+        self.wait_rounds = wait_rounds
         self.max_usd = max_usd
         self.usd = 0.0
         self.tokens = 0
@@ -149,7 +153,7 @@ class Jev:
         if self.max_usd is not None and self.usd >= self.max_usd:
             raise RuntimeError(f"spend cap ${self.max_usd} reached")
         failures = []
-        for rnd in range(6):
+        for rnd in range(self.wait_rounds):
             for backend in sorted(self.backends, key=Backend.next_slot):
                 if (wait := backend.reserve()) > 0:
                     time.sleep(wait)
@@ -163,7 +167,7 @@ class Jev:
                     self._log_failure(backend.name, str(e), tag)
             else:
                 # Rate limits and outages pass; billing and key errors don't. Wait out the former.
-                if not any("retries exhausted" in f for f in failures):
+                if rnd == self.wait_rounds - 1 or not any("retries exhausted" in f for f in failures):
                     raise RuntimeError(f"every backend failed: {failures}")
                 time.sleep(60 * (rnd + 1))
                 continue

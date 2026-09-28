@@ -34,7 +34,68 @@ DEMO = Path(__file__).resolve().parent
 ROOT = DEMO.parent
 JOURNAL = DEMO / "runs" / "journal.jsonl"
 SOURCES = ("exact", "mock", "replay", "live")
-ARGS = argparse.Namespace(live=False, max_usd=0.05)
+ARGS = argparse.Namespace(live=False, daily_usd=2.0, per_ip_hour=20, max_live=4)
+DRAW_USD = 0.0025  # a stage 7 draw bills about $0.0017; budget a little more so the daily cap isn't overshot
+
+
+# ---------- live budget and limits ----------
+
+class LiveRefused(Exception):
+    """A live draw the server won't start. The message is safe to show the visitor."""
+
+
+SPEND = DEMO / "runs" / "spend.json"
+_budget_lock = threading.Lock()
+_live_slots = threading.BoundedSemaphore(ARGS.max_live)
+_ip_draws: dict[str, list[float]] = {}
+
+
+def _spent_today() -> tuple[str, float]:
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+    try:
+        d = json.loads(SPEND.read_text())
+    except (OSError, ValueError):
+        d = {}
+    return today, float(d.get(today, 0.0))
+
+
+def reserve_live(ip: str):
+    """Refuse a live draw over the daily dollar cap, over the visitor's hourly limit, or when too many draws are
+    already running. Returns the day the draw is charged to."""
+    with _budget_lock:
+        today, spent = _spent_today()
+        if spent + DRAW_USD > ARGS.daily_usd:
+            raise LiveRefused("Today's live budget is used up. Replay shows real recorded Jev answers.")
+        now = time.time()
+        recent = [t for t in _ip_draws.get(ip, []) if now - t < 3600]
+        if len(recent) >= ARGS.per_ip_hour:
+            raise LiveRefused(f"That's {ARGS.per_ip_hour} live draws this hour, the limit per visitor. Replay still works.")
+        if not _live_slots.acquire(blocking=False):
+            raise LiveRefused("Too many live draws are running right now. Try again in a few seconds.")
+        _ip_draws[ip] = recent + [now]
+        return today
+
+
+def charge_live(usd: float):
+    with _budget_lock:
+        today, spent = _spent_today()
+        try:
+            d = json.loads(SPEND.read_text())
+        except (OSError, ValueError):
+            d = {}
+        d[today] = round(spent + usd, 6)
+        SPEND.write_text(json.dumps(d))
+
+
+def public_error(e: Exception) -> str:
+    """What a visitor sees when a live draw fails. Rate limits are said plainly; billing, key and other
+    backend failures are not described."""
+    msg = str(e)
+    if isinstance(e, LiveRefused):
+        return msg
+    if "429" in msg:
+        return "Jev is rate-limiting the demo right now. Try again in a minute, or use replay."
+    return "Something went wrong with the live call. Replay still works."
 
 
 # ---------- models ----------
@@ -171,7 +232,7 @@ def live_jev() -> Jev:
     global _jev
     with _jev_lock:
         if _jev is None:
-            _jev = Jev(JOURNAL, max_usd=ARGS.max_usd)
+            _jev = Jev(JOURNAL, max_usd=None, wait_rounds=1)  # the daily cap is enforced per draw in reserve_live
             for b in _jev.backends:
                 def post(state, questions, _orig=b.post, _name=b.name):
                     t0 = time.monotonic()
@@ -251,7 +312,7 @@ class Handler(SimpleHTTPRequestHandler):
         q = {k: v[0] for k, v in parse_qs(url.query).items()}
         try:
             if url.path == "/api/models":
-                return self.send_json({"models": registry(), "live": ARGS.live, "max_usd": ARGS.max_usd})
+                return self.send_json({"models": registry(), "live": ARGS.live, "daily_usd": ARGS.daily_usd})
             if url.path == "/api/weights":
                 (W1, b1), (W2, b2) = params(model(q.get("name", ""))["weights"])
                 return self.send_json({"W1": np.round(W1.T, 3).tolist(), "b1": b1.round(3).tolist(),
@@ -270,6 +331,12 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json({"error": str(e)}, 400)
         return super().do_GET()
 
+    def client_ip(self) -> str:
+        # ponytail: trusts the proxy's client-IP header; run behind a proxy that sets it (Fly does), or a visitor
+        # can spoof it and dodge the per-visitor limit. The daily dollar cap holds either way.
+        fwd = self.headers.get("Fly-Client-IP") or self.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        return fwd or self.client_address[0]
+
     def do_POST(self):
         if urlparse(self.path).path != "/api/run":
             return self.send_json({"error": "not found"}, 404)
@@ -279,26 +346,48 @@ class Handler(SimpleHTTPRequestHandler):
             pixels = test_set()[0][int(req["mnist"])] if "mnist" in req else [float(v) for v in req["pixels"]]
             if len(pixels) != 784 or req.get("source") not in SOURCES:
                 raise ValueError("need 784 pixels and a known source")
-            events = run(str(req["model"]), req["source"], pixels, int(req.get("seed", 0)))
-            first = next(events)  # validation errors surface here, before the stream starts
+            live = req["source"] == "live"
+            if live and not ARGS.live:
+                raise ValueError("live source is off; start the server with --live")
+            if live:
+                reserve_live(self.client_ip())
+        except LiveRefused as e:
+            return self.send_json({"error": str(e)}, 429)
         except (ValueError, KeyError, TypeError, json.JSONDecodeError) as e:
             return self.send_json({"error": str(e)}, 400)
-        self.send_response(200)
-        self.send_header("Content-Type", "text/event-stream")
-        self.send_header("Cache-Control", "no-cache")
-        self.end_headers()
+        usd, done = 0.0, False
         try:
-            self.wfile.write(f"data: {json.dumps(first)}\n\n".encode())
+            events = run(str(req["model"]), req["source"], pixels, int(req.get("seed", 0)))
             try:
-                for ev in events:
-                    self.wfile.write(f"data: {json.dumps(ev)}\n\n".encode())
-                    self.wfile.flush()
+                first = next(events)  # validation errors surface here, before the stream starts
+            except ValueError as e:
+                return self.send_json({"error": str(e)}, 400)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            try:
+                self.wfile.write(f"data: {json.dumps(first)}\n\n".encode())
+                try:
+                    for ev in events:
+                        if ev["type"] == "neuron":
+                            usd += ev["tokens"] * USD_PER_INPUT_TOKEN
+                        done = ev["type"] == "result"
+                        self.wfile.write(f"data: {json.dumps(ev)}\n\n".encode())
+                        self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError):
+                    raise
+                except Exception as e:  # rate limit, billing or backend failure mid-run
+                    print(f"run failed: {e!r}", flush=True)
+                    msg = public_error(e) if live else str(e)
+                    self.wfile.write(f"data: {json.dumps({'type': 'error', 'message': msg})}\n\n".encode())
             except (BrokenPipeError, ConnectionResetError):
-                raise
-            except Exception as e:  # e.g. spend cap or a backend outage mid-run
-                self.wfile.write(f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n".encode())
-        except (BrokenPipeError, ConnectionResetError):
-            pass  # browser went away; in-flight neurons finish, nothing more is sent
+                pass  # browser went away; in-flight neurons finish, nothing more is sent
+        finally:
+            if live:
+                # a failed or abandoned draw can still bill calls that were in flight: charge it a full draw
+                charge_live(usd if done else max(usd, DRAW_USD))
+                _live_slots.release()
 
 
 def check():
@@ -328,17 +417,76 @@ def check():
         assert all(e["backend"].startswith("replay") for e in evs if e["type"] == "neuron"), i
         assert np.allclose(np.round(evs[-1]["outputs"], 2), recorded[te.index(i)], atol=0.006), i
     print("        s7-jev: replay of 12 recorded test digits matches the stage 7 journal call for call")
+    check_live_limits(x[0])
+
+
+def check_live_limits(pixels):
+    """Live path against a local stub backend (nothing billed): a 429 tells the visitor it's a rate limit, a 402
+    shows only a generic error, and the daily cap and per-visitor limit refuse the draw before any call."""
+    global JOURNAL, SPEND
+    import tempfile
+    import urllib.request
+    tmp = Path(tempfile.mkdtemp())
+    JOURNAL, SPEND = tmp / "journal.jsonl", tmp / "spend.json"
+    code = {"v": 429}
+
+    class Stub(SimpleHTTPRequestHandler):
+        def do_POST(self):
+            self.rfile.read(int(self.headers["Content-Length"]))
+            self.send_response(code["v"])
+            self.end_headers()
+            self.wfile.write(b'{"detail": "stub"}')
+
+        def log_message(self, *a):
+            pass
+
+    servers = [ThreadingHTTPServer(("127.0.0.1", 0), h) for h in (Stub, Handler)]
+    for srv in servers:
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+    for b in live_jev().backends:
+        b.endpoint = f"http://127.0.0.1:{servers[0].server_port}/"
+    ARGS.live, ARGS.daily_usd, ARGS.per_ip_hour = True, 1.0, 3
+
+    def draw():
+        body = json.dumps({"model": "s7-jev", "source": "live", "pixels": list(map(float, pixels))}).encode()
+        req = urllib.request.Request(f"http://127.0.0.1:{servers[1].server_port}/api/run", body)
+        try:
+            text = urllib.request.urlopen(req).read().decode()
+        except urllib.error.HTTPError as e:
+            return e.code, json.loads(e.read())["error"]
+        err = [json.loads(line[6:]) for line in text.splitlines() if line.startswith("data: ")][-1]
+        return 200, err.get("message", "")
+
+    status, msg = draw()
+    assert status == 200 and "rate-limiting" in msg, msg
+    code["v"] = 402
+    status, msg = draw()
+    assert status == 200 and msg.startswith("Something went wrong") and "402" not in msg and "credit" not in msg, msg
+    status, msg = draw()  # third draw this hour from this visitor: still allowed
+    status, msg = draw()
+    assert status == 429 and "per visitor" in msg, msg
+    ARGS.per_ip_hour = 100
+    SPEND.write_text(json.dumps({time.strftime("%Y-%m-%d", time.gmtime()): 1.0}))
+    status, msg = draw()
+    assert status == 429 and "budget" in msg, msg
+    for srv in servers:
+        srv.shutdown()
+    print("          live: rate limit, payment failure, per-visitor limit and daily cap all handled")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--live", action="store_true", help="allow the live source (real Jev calls, billed)")
-    ap.add_argument("--max-usd", type=float, default=0.05, help="spend cap for live calls in this process")
+    ap.add_argument("--daily-usd", type=float, default=2.0, help="live spend cap per UTC day (demo/runs/spend.json)")
+    ap.add_argument("--per-ip-hour", type=int, default=20, help="live draws per visitor per hour")
+    ap.add_argument("--max-live", type=int, default=4, help="live draws running at once")
+    ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--check", action="store_true")
     ARGS = ap.parse_args()
     if ARGS.check:
         check()
     else:
-        print(f"http://127.0.0.1:{ARGS.port}  live={'on' if ARGS.live else 'off'}", flush=True)
-        ThreadingHTTPServer(("127.0.0.1", ARGS.port), Handler).serve_forever()
+        _live_slots = threading.BoundedSemaphore(ARGS.max_live)
+        print(f"http://{ARGS.host}:{ARGS.port}  live={'on' if ARGS.live else 'off'}  daily cap ${ARGS.daily_usd}", flush=True)
+        ThreadingHTTPServer((ARGS.host, ARGS.port), Handler).serve_forever()

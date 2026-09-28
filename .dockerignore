@@ -1,0 +1,14 @@
+# Only what demo/Dockerfile copies; everything else (3 GB of journals, laya/, video/) stays out of the build.
+*
+!src/jevrons
+!data/t10k-images-idx3-ubyte.gz
+!data/t10k-labels-idx1-ubyte.gz
+!runs/stage4/weights.npz
+!runs/stage5/weights-*.npz
+!runs/stage6/weights-seed0-*.npz
+!runs/stage7/weights-*.npz
+!runs/stage7/result-jev.json
+!runs/margin/summary.json
+!demo
+demo/runs/spend.json
+**/__pycache__
