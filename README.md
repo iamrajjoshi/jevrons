@@ -1,24 +1,26 @@
 # Jevrons
 
-A handwritten-digit classifier where every neuron is a live API call to [Jev](https://docs.typesafe.ai), trained with backprop anyway.
+A handwritten-digit classifier where every neuron is a live API call to [Jev](https://typesafe.ai), trained with backprop anyway. [Try the demo](https://jevrons.rajjoshi.me).
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](.python-version)
 
 ![The Jevrons demo replaying a live run on the sparse network: a hand-drawn 3 on the left; 64 hidden Jev neurons, each tile showing its 96-pixel receptive field, with three answers that disagree with the arithmetic outlined in pink; output 3 firing at 0.89; and a timeline of the 74 calls below.](demo/screenshots/04-done.png)
 
-Jev is TypeSafe AI's System-1 model. You send it a JSON state and a yes/no question, and it returns a probability. It has no gradient, no logits and no fine-tuning. Jevrons treats that probability as a neuron's activation: the code computes each weighted sum, sends Jev the pieces, and asks whether the total is positive. A 784-32-10 network of these neurons costs 42 calls per digit.
+[Jev](https://docs.typesafe.ai) is [TypeSafe AI](https://typesafe.ai)'s System-1 model. You send it a JSON state and a yes/no question, and it sends back a probability. There's no gradient to take and no weights to tune. So each neuron here is one question: the code multiplies the pixels by the weights, sends Jev the list of products, and asks whether they add up to more than zero. Jev's probability is the neuron's output.
 
-Training uses a straight-through estimator. The forward pass is the real Jev answer and the backward pass pretends Jev was a sigmoid of the sum it was asked about. Trained that way on 5,000 MNIST images, the network gets **84.6%** on 2,000 test digits with every neuron a Jev call. The control is the interesting part: the same network trained with exact arithmetic scores 83.9% on an exact neuron and falls to **52.6%** when Jev replaces it. Weights trained through Jev learn to work around the neuron's quirks, and weights trained without it don't.
+Jev is [not great at arithmetic](https://docs.typesafe.ai/model-jaggedness/jev-1.13#math-and-numbers). Training uses a straight-through estimator: the forward pass uses Jev's real answer, and the backward pass pretends Jev was a smooth function of the sum it was asked about. The weights end up working around Jev's mistakes. The test that shows it is a swap: take a network trained with perfect arithmetic and drop Jev in as its neuron. It loses 7 to 31 points, depending on how long the sums are.
 
-The rest of the repo is the trail that led there, one experiment per stage, with every paid call journaled: probing a single Jev neuron, logic gates, a circle, two digits, ten digits, what the trained weights reveal about Jev, and teaching an open-weight model (laya) to be a better neuron than Jev. Total spend on Jev so far is about $230.
+The best network gives each of its 64 hidden neurons its own 96 pixels, so every call is a short sum (about 37 numbers) that Jev handles well. Trained on 1,000 images, it reads **85.3%** of 1,000 test digits with every neuron a Jev call. A dense 784-32-10 network trained on 5,000 images gets 84.6%, and its perfect-math twin falls from 83.9% to 52.6% on Jev.
 
-| Network (784-32-10, ten digits) | Exact neuron | Live Jev |
+| Network | Exact neuron | Live Jev |
 | --- | --- | --- |
-| Trained through Jev, 5,000 images (stage 7) | 70.0% | **84.6%** |
-| Trained exact, 5,000 images (stage 7) | 83.9% | 52.6% |
-| Trained through Jev, 1,000 images (stage 6, 3 seeds) | 67.2% | 68.5% |
-| Trained exact, 1,000 images (stage 6, 3 seeds) | 76.8% | 48.0% |
+| Sparse 784-64-10, trained through Jev, 1,000 images (stage 8a) | 75.7% | **85.3%** |
+| Sparse, trained with exact math (stage 8a) | 72.6% | 65.8% |
+| Dense 784-32-10, trained through Jev, 5,000 images (stage 7) | 70.0% | 84.6% |
+| Dense, trained with exact math (stage 7) | 83.9% | 52.6% |
+
+The rest of the repo is how it got there, one experiment at a time: probing a single Jev neuron, logic gates, a circle, two digits, ten digits, what the trained weights reveal about Jev, and teaching a small open model ([laya](https://huggingface.co/convaiinnovations/laya)) to be a better neuron than Jev. All the Jev calls together cost about $230.
 
 ## The neuron
 
@@ -29,7 +31,7 @@ p = Jev(state)                          P("the total is greater than zero"), the
 ∂L/∂z ≈ ∂L/∂p · σ'(z/τ)/τ               straight-through: backprop as if p = σ(z/τ)
 ```
 
-The stage 7 network asks each neuron two questions in one call (the yes/no above and a neutral above/below choice) and averages them, because the two lean in opposite directions ([stage 8g](docs/results/stage8g-neuron-fixes.md)). Its backward pass uses the slope of Jev's measured response curve instead of the sigmoid. The client is [`src/jevrons/jev.py`](src/jevrons/jev.py) and the training loop is [`src/jevrons/net.py`](src/jevrons/net.py).
+The stage 7 and 8a networks ask each neuron two questions in one call (the yes/no above and a neutral above/below choice) and averages them, because the two lean in opposite directions ([stage 8g](docs/results/stage8g-neuron-fixes.md)). Its backward pass uses the slope of Jev's measured response curve instead of the sigmoid. The client is [`src/jevrons/jev.py`](src/jevrons/jev.py) and the training loop is [`src/jevrons/net.py`](src/jevrons/net.py).
 
 ## Quickstart
 
@@ -40,7 +42,7 @@ uv sync
 ./scripts/fetch_mnist.sh        # MNIST into data/, sha256-checked
 ```
 
-The demo runs without an API key. It serves a draw-a-digit page on http://127.0.0.1:8765 with three free sources: `exact` (a local step neuron), `mock` (resampled recorded Jev calls) and `replay` (recorded answers; the "Test digit" button picks digits that were recorded call for call).
+The demo runs without an API key. It serves the draw-a-digit page on http://127.0.0.1:8765 with exact math as the neurons, and can replay recorded Jev answers (`?source=replay`).
 
 ```bash
 uv run python demo/server.py
@@ -56,11 +58,11 @@ uv run python -m jevrons.stage3 local
 
 ### Live runs
 
-Live runs call Jev and are billed, at about $0.042 per million input tokens. The client reads `TYPESAFE_API_KEY` (TypeSafe direct) and `VERCEL_API_KEY` (Vercel AI Gateway, pinned to the TypeSafe upstream) from the environment, or from `~/.config/jev-research/credentials.env` as `KEY=value` lines. `JEVRONS_BACKENDS=vercel` (or `typesafe`) restricts the router to one backend.
+Live runs call Jev and are billed, at about $0.042 per million input tokens. The client reads `TYPESAFE_API_KEY` ([TypeSafe](https://typesafe.ai) direct) and `VERCEL_API_KEY` ([Vercel AI Gateway](https://vercel.com/ai-gateway), pinned to the TypeSafe upstream) from the environment, or from `~/.config/jev-research/credentials.env` as `KEY=value` lines. `JEVRONS_BACKENDS=vercel` (or `typesafe`) restricts the router to one backend.
 
 ```bash
 export VERCEL_API_KEY=...
-JEVRONS_BACKENDS=vercel uv run python demo/server.py --live --max-usd 0.01   # one live draw is ~$0.0017
+JEVRONS_BACKENDS=vercel uv run python demo/server.py --live --daily-usd 0.05   # one live draw is ~$0.002
 uv run python -m jevrons.stage2                                              # XOR, ~33k calls, ~$0.46
 ```
 
@@ -94,26 +96,20 @@ The design and staged gates are in [docs/proposal.md](docs/proposal.md), and dec
 src/jevrons/      Jev client (jev.py), network and straight-through training (net.py), one module per stage, figures.py
 scripts/          fetch_mnist.sh
 spikes/           stage 0: local capacity checks and a noisy-neuron mock, with saved output
-runs/             per-stage results, weights, curves and compressed call journals (large journals are gitignored)
+runs/             per-stage results, weights and curves (raw Jev call journals aren't published)
 docs/results/     one write-up per stage
 docs/figures/     figures for the write-ups and the blog post (PNG and SVG)
-docs/blog/        the long-form post (jevrons.mdx)
 demo/             draw-a-digit web demo, replay data, Fly.io deploy files
-video/            the demo video and the code that renders it
 laya/             stage 10 subproject (own uv env with torch): fine-tuning laya into a neuron
 ```
 
 ## Demo
 
-`demo/server.py` is a single-file server with a static page. It can run the stage 7 network or earlier ones against any of the four sources, has a film mode for screen recording, and caps live spend per day. [demo/README.md](demo/README.md) covers the flags, and `demo/Dockerfile` and `demo/fly.toml` deploy it to Fly.io with the steps in the Dockerfile's header. The build copies `data/` and a few `runs/` weight files, so deploy from a checkout that has MNIST downloaded.
-
-## Video
-
-[video/jevrons-16x9.mp4](video/jevrons-16x9.mp4) is the 70-second cut (a 4:5 version sits beside it). Two alternative cuts are in `video/nolan/` and `video/explainer/`, and [video/STORYBOARD.md](video/STORYBOARD.md) describes the shots and score. `video/render.py` rebuilds it from demo captures (its docstring lists the steps; it needs Node, Playwright and ffmpeg).
+Live at [jevrons.rajjoshi.me](https://jevrons.rajjoshi.me). `demo/server.py` is a single-file server with a static page: draw a digit and it runs on its own, through the sparse network or the stage 7 one, on live Jev or exact math, optionally next to its perfect-math twin. Click any neuron to see the exact call it sent. It caps live spend per day and keeps nothing on disk. [demo/README.md](demo/README.md) covers the flags and film mode; pushes to `main` deploy it to one Fly.io machine (`.github/workflows/demo.yml`).
 
 ## Blog post
 
-The full story, with the derivations and dead ends, is [Training a Neural Network Made of Jev Calls](#) (link coming; the source is [docs/blog/jevrons.mdx](docs/blog/jevrons.mdx)).
+The full story, with the derivations and dead ends: [Training a Neural Network Made of Jev Calls](https://rajjoshi.me/blog/jevrons).
 
 ## Credit
 
