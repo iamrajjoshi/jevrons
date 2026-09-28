@@ -83,9 +83,9 @@ kbd { font: 500 var(--fs-cap)/1 var(--mono); border: 1px solid currentColor; pad
 .brand { display: flex; flex-direction: column; gap: var(--s3); }
 h1 { font: 400 40px/0.95 var(--display); letter-spacing: -0.01em; margin: 0; }
 .by { margin: 0; font: var(--fs-cap)/1.5 var(--mono); color: var(--mute); }
-.by a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px;
+.by a, .lede a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px;
   transition: color var(--dur-1) ease-out, text-decoration-color var(--dur-1) ease-out; }
-.by a:hover { color: var(--ink); text-decoration-color: currentColor; }
+.by a:hover, .lede a:hover { color: var(--ink); text-decoration-color: currentColor; }
 .lede { margin: 0; max-width: 64ch; color: var(--ink-2); text-wrap: pretty; }
 .status { margin: 0; white-space: nowrap; color: var(--ink-2); display: flex; align-items: center; gap: var(--s2); }
 .status i { flex: 0 0 auto; width: 7px; height: 7px; border: 1px solid var(--mute); }

@@ -1,0 +1,64 @@
+# The demo: checked on every pull request that touches it, deployed to Fly (one machine) when it lands on main.
+# Needs one repo secret, FLY_API_TOKEN: `fly tokens create deploy -a jevrons-demo`, then
+# `gh secret set FLY_API_TOKEN -R iamrajjoshi/jevrons` and paste it.
+name: demo
+
+on:
+  pull_request:
+    paths:
+      - "demo/**"
+      - "src/jevrons/**"
+      - "runs/stage7/weights-*.npz"
+      - "runs/stage8a/weights-*.npz"
+      - "runs/margin/summary.json"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".dockerignore"
+      - ".github/workflows/demo.yml"
+  push:
+    branches: [main]
+    paths:
+      - "demo/**"
+      - "src/jevrons/**"
+      - "runs/stage7/weights-*.npz"
+      - "runs/stage8a/weights-*.npz"
+      - "runs/margin/summary.json"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".dockerignore"
+      - ".github/workflows/demo.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: demo-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
+      - run: ./scripts/fetch_mnist.sh
+      # The live-path test runs against a local stub backend; the key only has to exist, nothing is called.
+      - run: uv run python demo/server.py --check
+        env:
+          VERCEL_API_KEY: ci-stub
+          JEVRONS_BACKENDS: vercel
+
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: fly-deploy  # one deploy at a time; a newer push waits for the running one
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/fetch_mnist.sh  # the image copies the MNIST test set
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: flyctl deploy (skipped until the FLY_API_TOKEN secret exists)
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then echo "FLY_API_TOKEN not set; skipping deploy"; exit 0; fi
+          flyctl deploy . --config demo/fly.toml --dockerfile demo/Dockerfile --ha=false --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

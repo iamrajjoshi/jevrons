@@ -298,10 +298,10 @@ function sourceHelp() {
 }
 
 function renderLede(m) {
-  $("#lede").innerHTML = `This is a small neural network where every neuron is an API call to Jev, an AI model. ` +
+  $("#lede").innerHTML = `This is a small neural network where every neuron is an API call to <a href="https://typesafe.ai">Jev</a>, an AI model from TypeSafe. ` +
     `Each ${sparse(m) ? "hidden neuron looks at its own " + m.fields + " pixels" : "neuron looks at the pixels"}, multiplies them by its weights, ` +
     `and asks Jev one question: do these numbers add up to more than zero? Jev's answer becomes the neuron's output. ` +
-    `Jev is not great at arithmetic, so the page also does the sum itself and marks every answer Jev got wrong in ` +
+    `<a href="https://docs.typesafe.ai/model-jaggedness/jev-1.13#math-and-numbers">Jev is not great at arithmetic</a>, so the page also does the sum itself and marks every answer Jev got wrong in ` +
     `<span class="dis-key">pink</span>. The weights were trained through those mistakes, and it still reads most digits right. Draw one and watch it work.`;
 }
 
