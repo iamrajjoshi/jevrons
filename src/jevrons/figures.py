@@ -702,20 +702,20 @@ def traps():
 
 # ---------------------------------------------------------------- Teaching laya to add
 
+LAYA = {"base": (S.GREY, "base laya"), "truth": (S.INK, "fine-tuned laya")}
+
+
 def stage10_curves():
     fits = js("margin/summary.json")["offset_fit"]
-    ev = {n: js(f"stage10/eval-{n}.json") for n in ("base", "truth", "jev")}
-    style = {"base": (S.GREY, "base laya"), "jev": (S.JEV_LIGHT, "laya trained on Jev's answers"),
-             "truth": (S.INK, "fine-tuned laya")}
+    ev = {n: js(f"stage10/eval-{n}.json") for n in LAYA}
     mm = np.linspace(-3, 3, 400)
     fig, axes = S.figure(3.2, ncols=3, sharey=True)
     for ax, n in zip(axes, (10, 30, 75)):
         ax.axhline(0.5, color=S.RULE, lw=0.8, zorder=0)
         ax.axvline(0, color=S.RULE, lw=0.8, zorder=0)
-        for name in ("base", "jev", "truth"):
+        for name, (color, _) in LAYA.items():
             c = ev[name]["curves"][f"probe-{n}"]
             b = np.array(c["binned"])
-            color = style[name][0]
             ax.plot(b[:, 0] + 0.125, b[:, 1], "o", ms=2.8, color=color, alpha=0.9)
             ax.plot(mm, Phi(c["k"] * (mm - c["m0"])), color=color, lw=1.8)
         k, m0 = fits[str(n)]["k"], fits[str(n)]["threshold_m0"]
@@ -737,13 +737,7 @@ def stage10_curves():
                 arrowprops=dict(arrowstyle="-", color=S.INK, lw=0.6))
     ax.annotate("Jev", xy=(0.12, 0.3), xytext=(-2.9, 0.3), fontsize=8.5, color=S.JEV_TEXT, va="center",
                 arrowprops=dict(arrowstyle="-", color=S.JEV, lw=0.6))
-    ax2 = axes[1]
-    ax2.annotate("trained on\nJev's answers", xy=(0.95, 0.55), xytext=(1.25, 0.28), fontsize=8.5, color=S.JEV_TEXT,
-                 arrowprops=dict(arrowstyle="-", color=S.JEV_LIGHT, lw=0.8), linespacing=1.1)
     S.save(fig, "stage10-curves.png")
-
-
-LAYA = {"base": (S.GREY, "base laya"), "jev": (S.JEV_LIGHT, "laya trained on Jev's answers"), "truth": (S.INK, "fine-tuned laya")}
 
 
 def stage10_accuracy():
@@ -757,9 +751,8 @@ def stage10_accuracy():
         ks = sorted(int(k.split("-")[1]) for k in ev[name]["curves"] if k.startswith("gen-"))
         acc = [ev[name]["curves"][f"gen-{k}"]["sign_accuracy"] for k in ks]
         ax.plot(ks, acc, "o-", color=color, ms=4, lw=1.8)
-        ax.annotate(label, (ks[-1], acc[-1]), xytext=(6, {"truth": 5, "jev": -7}.get(name, 0)), textcoords="offset points",
-                    va="center", fontsize=9,
-                    color=S.INK2 if name != "jev" else S.JEV_TEXT)
+        ax.annotate(label, (ks[-1], acc[-1]), xytext=(6, 0), textcoords="offset points", va="center", fontsize=9,
+                    color=S.INK2)
     ks = sorted(int(k) for k in jev)
     ax.plot(ks, [jev[str(k)]["sign_accuracy"] for k in ks], "o", color=S.JEV, ms=4, lw=1.8, ls=(0, (4, 2.5)))
     ax.annotate("Jev", (ks[-1], jev[str(ks[-1])]["sign_accuracy"]), xytext=(6, 0), textcoords="offset points", va="center",
@@ -780,22 +773,17 @@ def stage10_accuracy():
 
 
 def stage10_training():
-    """Results doc only: fine-tuning loss and validation accuracy by step, both arms."""
+    """Results doc only: fine-tuning loss and validation accuracy by step, true-math arm."""
     fig, axes = S.figure(3.2, ncols=2)
-    for name in ("truth", "jev"):
-        color, label = LAYA[name]
-        rows = [json.loads(line) for line in (RUNS / f"stage10/{name}/log.jsonl").open()]
-        steps = [r for r in rows if "loss" in r]
-        loss = np.convolve([r["loss"] for r in steps], np.ones(50) / 50, "valid")
-        axes[0].plot(np.arange(len(loss)) + 50, loss, color=color, lw=1.6)
-        if name == "jev":
-            axes[0].annotate("trained on\nJev's answers", (len(loss) + 49, loss[-1]), xytext=(6, 0),
-                             textcoords="offset points", va="center", fontsize=8.5, linespacing=1.1, color=S.JEV_TEXT)
-        else:
-            axes[0].text(2100, 0.2, label, fontsize=8.5, color=S.INK2)
-        evs = [r["eval"] for r in rows if "eval" in r]
-        for key, ls in (("acc_s10", "-"), ("acc_s75", (0, (1, 1.5))), ("acc_real", (0, (4, 2)))):
-            axes[1].plot([e["step"] for e in evs], [e[key] for e in evs], color=color, ls=ls, lw=1.5)
+    color, label = LAYA["truth"]
+    rows = [json.loads(line) for line in (RUNS / "stage10/truth/log.jsonl").open()]
+    steps = [r for r in rows if "loss" in r]
+    loss = np.convolve([r["loss"] for r in steps], np.ones(50) / 50, "valid")
+    axes[0].plot(np.arange(len(loss)) + 50, loss, color=color, lw=1.6)
+    axes[0].text(2100, 0.2, label, fontsize=8.5, color=S.INK2)
+    evs = [r["eval"] for r in rows if "eval" in r]
+    for key, ls in (("acc_s10", "-"), ("acc_s75", (0, (1, 1.5))), ("acc_real", (0, (4, 2)))):
+        axes[1].plot([e["step"] for e in evs], [e[key] for e in evs], color=color, ls=ls, lw=1.5)
     axes[1].text(0.98, 0.05, "vs the true sign\nsolid: 10 terms\ndotted: 75 terms\ndashed: real journal states",
                  transform=axes[1].transAxes, ha="right", va="bottom", fontsize=8, color=S.INK2, linespacing=1.3)
     axes[0].set_yscale("log")
@@ -813,13 +801,13 @@ def stage10_training():
 
 
 def stage10_traps():
-    """Results doc only: trap misfires for Jev and the three laya models; ticks are the matched controls."""
+    """Results doc only: trap misfires for Jev and the two laya models; ticks are the matched controls."""
     ev = {n: js(f"stage10/eval-{n}.json")["traps"] for n in LAYA}
     jt = js("stage6b/traps.json")["families"]
     fams = [("last", "last", "big number last\n(75 terms)"), ("first", "first", "big number first\n(75)"),
             ("vote", "vote", "sign vote\n(75)"), ("long90", "long", "long list, m = \u22121\n(90; Jev: 250)"),
             ("zeros60", "zeros", "zero padding\n(60; Jev: 150)")]
-    series = [("Jev", S.JEV, {f: jt[j] for f, j, _ in fams})] + [(LAYA[n][1], LAYA[n][0], ev[n]) for n in ("base", "jev", "truth")]
+    series = [("Jev", S.JEV, {f: jt[j] for f, j, _ in fams})] + [(LAYA[n][1], LAYA[n][0], ev[n]) for n in LAYA]
     fig, ax = S.figure(3.4)
     x = np.arange(len(fams))
     w = 0.8 / len(series)

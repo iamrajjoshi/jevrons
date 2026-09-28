@@ -18,11 +18,9 @@ uv sync                                   # torch + transformers, this directory
 uv run python real_data.py                # real Jev-answered states from the journals -> real.jsonl.gz
 uv run python data.py                     # self-check of the synthetic generator
 uv run python train.py truth --name truth --steps 3000   # true-math arm
-uv run python train.py jev --name jev --steps 1500       # copy-Jev arm
 uv run python evaluate.py base            # -> eval-base.json (unmodified laya)
 uv run python evaluate.py truth           # -> eval-truth.json
-uv run python evaluate.py jev             # -> eval-jev.json
-uv run python plots.py base jev truth     # -> ../docs/figures/stage10-*.png
+uv run python plots.py base truth         # -> ../docs/figures/stage10-*.png
 uv run python payoff.py truth             # sparse 3 vs 8 through the laya neuron, plus the swap control
 uv run python install_ollaya.py truth laya-neuron   # serve it: adds laya-neuron:latest to Ollaya's store
 uv run python client_check.py ollaya-laya-neuron truth   # probes through Jev(..., backends=["ollaya-laya-neuron"])

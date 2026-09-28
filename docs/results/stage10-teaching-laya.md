@@ -30,13 +30,12 @@ Synthetic states, with term counts 2 to 60 except 10 and 30, margins m = z / spr
 
 Real states: 457,958 distinct folded states from the stage 2, 3, 5 and 6 journals (stage 6 from the 20:46 backup), the stage 1 wording probe and the backend check, 2 to 97 numbers each, with Jev's mean p. 10% are held out by state hash. The margin probe's 1,800 states are held out entirely, since they define Jev's published curve.
 
-Two arms, full fine-tune from laya's weights, AdamW 2e-5 with warmup and cosine decay, batch 16, gradient checkpointing, bf16 autocast, loss = cross-entropy on the calibrated probability softmax(logits / 1.983), so the number Ollaya reports is the number trained:
+A pilot and a final run, both full fine-tunes from laya's weights, AdamW 2e-5 with warmup and cosine decay, batch 16, gradient checkpointing, bf16 autocast, loss = cross-entropy on the calibrated probability softmax(logits / 1.983), so the number Ollaya reports is the number trained:
 
 | Arm | Data | Label | Steps | Time | Peak MPS memory |
 | --- | --- | --- | --- | --- | --- |
 | Pilot (true math) | 70% synthetic (probe 75%, generic 25%), 30% real | true sign | 1,000 | 49 min | 19.5 GB |
 | True math | 70% synthetic (probe 50%, generic 20%, mixed 30%), 30% real | true sign | 3,000 | 1 h 51 min | 17.8 GB |
-| Copy Jev | real only | Jev's mean p (soft) | 1,500 | 1 h 14 min | 17.4 GB |
 
 Steps took 1.8-2.4 s alone on the GPU and up to 5 s when an evaluation or another Ollaya run shared it. The official fine-tuning notebook uses REINFORCE against proper scoring rules, then refits a temperature. Cross-entropy is the log score's expected-value form, and holding the temperature fixed keeps Ollaya's calibration layer valid, so neither step was needed.
 
@@ -48,11 +47,11 @@ The true-math arm reached Jev's accuracy within 250-500 steps (4,000-8,000 state
 
 P(fire) = Φ(k(m − m0)) fitted by maximum likelihood to yes/no answers, per term count. The Jev row is the published margin-probe fit; refitting it on the same deduplicated states with Jev's mean p gives k 2.9 / 2.3 / 1.9 and m0 +0.20 / +0.15 / −0.15.
 
-| Terms (+ bias) | Jev: k, m0, sign accuracy | Base laya | Copy-Jev arm | True-math arm |
-| --- | --- | --- | --- | --- |
-| 10 (held out) | 3.2, +0.20, 94.7% | fires always, 48.3% | 2.9, +0.35, 93.0% | 13.5, −0.05, 98.7% |
-| 30 (held out) | 2.2, +0.15, 93.8% | fires always, 53.0% | 3.1, +0.65, 88.7% | 6.5, −0.10, 97.3% |
-| 75 (never trained) | 1.8, −0.10, 93.8% | fires always, 50.7% | 3.0, +0.25, 95.8% | 7.5, −0.10, 97.5% |
+| Terms (+ bias) | Jev: k, m0, sign accuracy | Base laya | True-math arm |
+| --- | --- | --- | --- |
+| 10 (held out) | 3.2, +0.20, 94.7% | fires always, 48.3% | 13.5, −0.05, 98.7% |
+| 30 (held out) | 2.2, +0.15, 93.8% | fires always, 53.0% | 6.5, −0.10, 97.3% |
+| 75 (never trained) | 1.8, −0.10, 93.8% | fires always, 50.7% | 7.5, −0.10, 97.5% |
 
 Same 600 states per row for every model. Jev's accuracy here is on the deduplicated states with its mean p; the published per-call figures are 95.1 / 93.6 / 93.3%.
 
@@ -61,7 +60,6 @@ Fresh states from the margin probe's generator (seed 99, 400 per count; 2 and 5 
 | Terms | 2 | 5 | 10 | 20 | 30 | 45 | 60 | 75 | 90 | 150* |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Base laya | 63.5% | 53.5% | 51.0% | 52.0% | 52.3% | 51.8% | 45.8% | 53.8% | 49.0% | 49.5% |
-| Copy-Jev arm | 97.0% | 94.5% | 93.5% | 86.3% | 89.5% | 92.3% | 94.3% | 94.5% | 94.0% | 96.3% |
 | True-math arm | 98.8% | 98.0% | 98.0% | 98.8% | 98.3% | 98.0% | 99.0% | 98.3% | 97.3% | 97.8% |
 | Jev (margin probe) | | | 95.1% | | 93.6% | | | 93.3% | | 89.1% |
 
@@ -73,23 +71,17 @@ The true-math arm has a slight yes-lean (m0 −0.05 to −0.15, fires on 2-5% of
 
 On 6,000 held-out real journal states (72% stage 6 output neurons, mostly 33 numbers), the true-math arm gets the sign right 99.1% of the time, against 97.6% for Jev's own recorded answers. It gains most on stage 3's small circle networks (97.5% vs 92.8%).
 
-## The copy-Jev arm
-
-Trained on Jev's p, laya learns Jev closely on the kind of states it saw. On held-out real states it agrees with Jev's yes/no 98.2% of the time with a mean |p − p_jev| of 0.028, which is about Jev's own repeat noise (identical calls flip 1.6-3.1%). It matches Jev's accuracy per source (97.7% vs 97.6% overall).
-
-It copies Jev's p less well off that distribution. The random probe states look nothing like trained-network states, and there it agrees 89-95% and fires later than Jev (m0 +0.25 to +0.65 against Jev's −0.15 to +0.20). Its p is graded like Jev's (the dots in the curve figure), not a step. It also copied Jev's sign vote (below), which the true-math arm had to be taught out of.
-
 ## Traps
 
 Stage 6b's trap families at their original 75 terms, and length-limited versions of the two that don't fit 512 tokens. Jev's long-list and zero-padding numbers are from 250 and 150 terms, so they aren't the same states. Misfire = yes/no disagrees with the true sign; 200 trap states and 200 matched controls per family.
 
-| Family | Jev: trap / control | Base laya | Pilot (1,000 steps, no mixed family)† | Copy-Jev arm | True-math arm |
-| --- | --- | --- | --- | --- | --- |
-| One big +4.9 last, 74 small negatives, m = −0.5 | 4.5% / 82.5% (big one mid-list) | 100 / 100% | 0 / 0% | 0 / 0% | 100 / 100% |
-| Same, big one first | 27.5% / 82.5% | 100 / 100% | 0 / 0% | 0 / 0% | 100 / 100% |
-| Sign vote: 60 small +, 15 large −, m = −0.5 | 99.0% / 59.0% | 100 / 100% | 95.5 / 0% | 100 / 6% | 1 / 0% |
-| Long list, m = −1 (90 terms; Jev 250) | 74.5% / 0% | 100 / 0% | 0 / 0% | 0 / 0% | 0 / 0% |
-| Zero padding: 20 real + 40 zeros, m = +0.3 (Jev 40 + 110) | 0% / 1% | 0 / 0% | 0 / 8% | 0 / 39% | 0 / 0.5% |
+| Family | Jev: trap / control | Base laya | Pilot (1,000 steps, no mixed family)† | True-math arm |
+| --- | --- | --- | --- | --- |
+| One big +4.9 last, 74 small negatives, m = −0.5 | 4.5% / 82.5% (big one mid-list) | 100 / 100% | 0 / 0% | 100 / 100% |
+| Same, big one first | 27.5% / 82.5% | 100 / 100% | 0 / 0% | 100 / 100% |
+| Sign vote: 60 small +, 15 large −, m = −0.5 | 99.0% / 59.0% | 100 / 100% | 95.5 / 0% | 1 / 0% |
+| Long list, m = −1 (90 terms; Jev 250) | 74.5% / 0% | 100 / 0% | 0 / 0% | 0 / 0% |
+| Zero padding: 20 real + 40 zeros, m = +0.3 (Jev 40 + 110) | 0% / 1% | 0 / 0% | 0 / 8% | 0 / 0.5% |
 
 † The pilot's evaluation crashed at its final speed test, after every other number was printed, so its results are in `runs/stage10/eval-pilot-truth.log` and not in a JSON file or the figure.
 
@@ -99,17 +91,15 @@ The pilot learned to count signs. Its synthetic states were built by shifting ev
 
 The final model picked up a different hole. With one large positive number (98% of the spread) and 74 small negatives each around −0.1, it answers yes every time, wherever the big number sits, including the control where Jev fails. A follow-up check narrowed it down. The same construction with 10 or 30 small numbers is answered 100% correctly, as are its mirror image (one big negative, 74 small positives) and the version at m = −1.5. So it fails to accumulate many small negatives against one large positive near the boundary on long lists, and it does this deterministically. The pilot didn't have this hole. No training data targeted it, and it wasn't fixed here.
 
-The copy-Jev arm reproduced Jev's sign vote (100% on the trap) but none of Jev's other quirks: it gets the position traps and the long list right and has no yes-lean. Those quirks show up on states unlike the trained-network states it learned from.
-
 ## Scalar sweep
 
 z in [−10, 10] at 0.1, never trained:
 
-| Question | Base laya | Copy-Jev arm | True-math arm | Jev (stage 1) |
-| --- | --- | --- | --- | --- |
-| "z is a number." / greater than zero / zero or less | 51.7% | 100% | 100% | 0% on negatives (p 0.66-0.74) |
-| "Is the number z positive?" | 50.2% | 91.0% | 99.5% | 100% |
-| `{"products": [z]}`, folded question | 94.0% | 100% | 100% | |
+| Question | Base laya | True-math arm | Jev (stage 1) |
+| --- | --- | --- | --- |
+| "z is a number." / greater than zero / zero or less | 51.7% | 100% | 0% on negatives (p 0.66-0.74) |
+| "Is the number z positive?" | 50.2% | 99.5% | 100% |
+| `{"products": [z]}`, folded question | 94.0% | 100% | |
 
 Fine-tuning on the folded question carried over to the scalar wordings, including the one that fooled Jev.
 
@@ -144,9 +134,9 @@ From Hugging Face, only laya's code and small configs at revision `aa8c91ca` (`r
 
 ## Caveats
 
-- One seed per arm and one payoff run. The curves use 400-600 states per term count, so an accuracy of 97.5% has a 95% interval of about ±1.3 points.
+- One seed per run and one payoff run. The curves use 400-600 states per term count, so an accuracy of 97.5% has a 95% interval of about ±1.3 points.
 - The synthetic distribution was changed once after looking at a trap result, and the change resembles the vote trap. The final model's vote-trap number isn't a clean held-out test. The position traps were, and the final model fails them.
 - The stage 6b comparison is uneven: Jev's long-list and zero-padding traps used 250- and 150-term lists, laya's used 90 and 60.
 - The true-math arm's p is nearly a step: mean p is 0.00 below m = −0.75 and 1.00 above m = +0.5, so its probability says little about confidence. For straight-through training that's harmless, but stage 6b's observation that Jev's graded p keeps gradients alive in the output layer doesn't carry over.
 - Ollaya serves 512 tokens, so laya-neuron covers about 99 terms. The 1,024-token result at 150 terms is offline only. Dense MNIST hidden neurons (about 150 terms) need a custom server or a longer-context Ollaya model.
-- `runs/stage10/` holds three 804 MB checkpoints, and `.gitignore` doesn't cover `*.safetensors`.
+- `runs/stage10/` holds two 804 MB checkpoints, and `.gitignore` doesn't cover `*.safetensors`.

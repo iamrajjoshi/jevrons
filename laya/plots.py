@@ -1,5 +1,5 @@
 """Figures for docs/results/stage10-teaching-laya.md from runs/stage10/eval-*.json and training logs.
-Usage: uv run python plots.py base truth jev   (eval names; the first is base laya)"""
+Usage: uv run python plots.py base truth   (eval names; the first is base laya)"""
 
 import json
 import sys
@@ -16,16 +16,16 @@ import data  # noqa: E402
 RUNS, FIG = data.ROOT / "runs/stage10", data.ROOT / "docs/figures"
 JEV = {10: (3.2, 0.20), 30: (2.2, 0.15), 75: (1.8, -0.10), 150: (1.8, -0.6), 250: (1.5, -1.1)}  # runs/margin/summary.json
 JEV_ACC = {10: 0.951, 30: 0.936, 75: 0.933, 150: 0.891, 250: 0.809}
-COLORS = {"base": "#9a9a9a", "jev-copy": "#e4507a", "truth": "#2a7de1", "Jev": "#222222"}
+COLORS = {"base": "#9a9a9a", "truth": "#2a7de1", "Jev": "#222222"}
 Phi = np.vectorize(lambda t: 0.5 * (1 + erf(t / np.sqrt(2))))
 
 
 def label(name):
-    return "base laya" if name == "base" else ("laya, copy-Jev arm" if name.startswith("jev") else "laya, true-math arm")
+    return "base laya" if name == "base" else "laya, true-math arm"
 
 
 def color(name):
-    return COLORS["base"] if name == "base" else COLORS["jev-copy"] if name.startswith("jev") else COLORS["truth"]
+    return COLORS["base"] if name == "base" else COLORS["truth"]
 
 
 def main(names):

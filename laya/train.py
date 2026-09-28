@@ -1,8 +1,7 @@
 """Fine-tune laya end to end on the folded neuron question.
 
-Arms:
+Arm:
   truth  synthetic states (70%) + real journal states (30%), label = true sign of the total
-  jev    real journal states only, soft label = Jev's recorded mean p ("copy Jev")
 Loss is cross-entropy on softmax(logits / T) with laya's own noul temperature T, so the probability
 Ollaya reports after calibration is the one trained. bf16 autocast on MPS, gradient checkpointing.
 Usage: uv run python train.py truth --steps 3000 --name truth
@@ -36,13 +35,13 @@ def make_items(tok, recs):
     return out
 
 
-def sampler(arm, rng, real_train):
+def sampler(rng, real_train):
     def one():
-        if arm == "truth" and rng.random() < 0.7:
+        if rng.random() < 0.7:
             s, z = data.synth(rng, int(rng.choice(data.TRAIN_K)))
             return s, float(z > 0)
         r = real_train[rng.integers(len(real_train))]
-        return {"products": r["products"]}, (float(r["z"] > 0) if arm == "truth" else r["p_jev"])
+        return {"products": r["products"]}, float(r["z"] > 0)
     return one
 
 
@@ -55,7 +54,7 @@ def val_set(tok, real_test):
     tags = ["s10"] * 100 + ["s30"] * 100 + ["s75"] * 100 + ["real"] * 300
     items = make_items(tok, recs)
     assert len(items) == len(recs)
-    return items, np.array(tags), np.array([r[1] for r in recs]), np.array([real_test[i]["p_jev"] for i in sel])
+    return items, np.array(tags), np.array([r[1] for r in recs])
 
 
 @torch.no_grad()
@@ -79,7 +78,7 @@ def save(model, path: Path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("arm", choices=["truth", "jev"])
+    ap.add_argument("arm", choices=["truth"])
     ap.add_argument("--name", required=True)
     ap.add_argument("--steps", type=int, default=3000)
     ap.add_argument("--bs", type=int, default=16)
@@ -96,7 +95,7 @@ def main():
     tok = L.tokenizer()
     real_train, real_test = data.real_states()
     print(f"real states: {len(real_train)} train, {len(real_test)} test", flush=True)
-    val_items, val_tags, val_y, val_pjev = val_set(tok, real_test)
+    val_items, val_tags, val_y = val_set(tok, real_test)
     model = L.load()
     model.encoder.gradient_checkpointing_enable()
     model.train()
@@ -106,7 +105,7 @@ def main():
     opt = torch.optim.AdamW(params, lr=args.lr, weight_decay=0.0)
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min(1, (s + 1) / args.warmup) * (
         0.1 + 0.9 * 0.5 * (1 + math.cos(math.pi * min(1, s / args.steps)))))
-    draw = sampler(args.arm, rng, real_train)
+    draw = sampler(rng, real_train)
     queue, log, t0, peak = [], (out / "log.jsonl").open("w"), time.time(), 0
     dev = L.device()
 
@@ -118,7 +117,6 @@ def main():
         for tag in ("s10", "s30", "s75", "real"):
             sel = val_tags == tag
             rec[f"acc_{tag}"] = float(np.mean((p[sel] >= 0.5) == (val_y[sel] > 0.5)))
-        rec["real_mae_vs_jev"] = float(np.mean(np.abs(p[val_tags == "real"] - val_pjev)))
         print("eval", rec, flush=True)
         log.write(json.dumps({"eval": rec}) + "\n")
         log.flush()
