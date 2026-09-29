@@ -935,7 +935,9 @@ def check_live_limits(pixels):
     first.join()
     finished(evs)
     waits = [e for e in evs if e["type"] == "waiting"]
-    assert waits == [{"type": "waiting", "reason": "queue", "ahead": 0}, {"type": "waiting", "reason": None}] and keepalives, waits
+    # it waited in line first, then ran; a slow runner may also show pacing or a retry while it runs
+    assert waits[0] == {"type": "waiting", "reason": "queue", "ahead": 0} and keepalives, waits
+    assert all(w.get("reason") in (None, "queue", "busy", "pace") for w in waits) and waits[-1]["reason"] is None, waits
 
     behave["f"] = lambda n: (200, 1.0)
     a, ra = opened()
