@@ -41,7 +41,7 @@ Inspiration: [Mustafa Akın's NAND-gate ALU made of Jev calls](https://x.com/mus
 | 9. Open-weight neurons (Ollaya) | Done (local probes, XOR on decider) | |
 | 9c. Laya as a scalar neuron | Done | [stage9c-laya-scalar.md](results/stage9c-laya-scalar.md) |
 | 10. Teaching laya to add | Done | [stage10-teaching-laya.md](results/stage10-teaching-laya.md) |
-| Demo + video | Demo built (`demo/`), video not started | |
+| Demo | Live at [jevrons.rajjoshi.me](https://jevrons.rajjoshi.me) (`demo/`) | |
 | Blog post | Draft in `docs/blog/jevrons.mdx` | |
 
 ## Stage 1 probe
