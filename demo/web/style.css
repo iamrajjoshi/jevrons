@@ -85,7 +85,16 @@ kbd { font: 500 var(--fs-cap)/1 var(--mono); border: 1px solid currentColor; pad
 .brand { display: flex; flex-direction: column; gap: var(--s3); }
 h1 { font: 400 40px/0.95 var(--display); letter-spacing: -0.01em; margin: 0; }
 .by { margin: 0; font: var(--fs-cap)/1.5 var(--mono); color: var(--mute); }
-.by button { font: inherit; padding: 0; border: 0; background: none; cursor: pointer; }  /* the theme switch reads as a link */
+.title-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); }
+/* the theme switch: the compare switch's track alone, no label; on = dark */
+.theme-switch { padding: 4px; margin: -4px; border: 0; background: none; cursor: pointer; }
+.theme-switch i { display: block; position: relative; width: 30px; height: 16px; border: var(--line); background: var(--paper);
+  transition: background-color var(--dur-2) var(--ease); }
+.theme-switch i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; background: var(--mute-2);
+  transition: transform var(--dur-2) var(--ease), background-color var(--dur-2) var(--ease); }
+.theme-switch:hover i { background: var(--faint); }
+.theme-switch[aria-checked="true"] i { background: var(--ink); }
+.theme-switch[aria-checked="true"] i::after { transform: translateX(14px); background: var(--paper); }
 .by a, .by button, .lede a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px;
   transition: color var(--dur-1) ease-out, text-decoration-color var(--dur-1) ease-out; }
 .by a:hover, .by button:hover, .lede a:hover { color: var(--ink); text-decoration-color: currentColor; }
@@ -362,7 +371,7 @@ pre.state { background: var(--faint); padding: 10px; margin: 0; white-space: pre
 /* ---------- film: ?film ---------- */
 body.film { --rail: 500px; --tile: 54px; }
 body.film .lede, body.film .how, body.film .controls, body.film .bill, body.film .seen, body.film .row, body.film .pad-empty,
-body.film .calls-head .btn, body.film .by, body.film .p-note, body.film .verdict, body.film .verdict-more, body.film .out-axis { display: none !important; }
+body.film .calls-head .btn, body.film .by, body.film .theme-switch, body.film .p-note, body.film .verdict, body.film .verdict-more, body.film .out-axis { display: none !important; }
 body.film .top, body.film .layout { max-width: 1800px; padding-left: 56px; padding-right: 56px; }
 body.film .top { padding-top: 48px; grid-template-columns: var(--rail) 1fr; }
 body.film .top .status { justify-self: end; }

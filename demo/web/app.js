@@ -815,13 +815,12 @@ function repaint() {
   renderInput();  // the seen canvas and every panel's tiles
   if (S.sel) renderInspector();
 }
-// The byline's last word names the theme a click switches to. Until a click the page follows the system; picking the
-// system's own theme clears the stored choice, so it goes back to following it.
+// The header's unlabelled switch shows the current theme (on = dark). Until a click the page follows the system; picking
+// the system's own theme clears the stored choice, so it goes back to following it.
 const sysDark = matchMedia("(prefers-color-scheme: dark)"), root = document.documentElement;
 const themeNow = () => root.dataset.theme || (sysDark.matches ? "dark" : "light");
 function themeWord() {
-  const to = themeNow() === "dark" ? "light" : "dark";
-  $("#theme").textContent = to; $("#theme").setAttribute("aria-label", `Switch to ${to} theme`);
+  $("#theme").setAttribute("aria-checked", String(themeNow() === "dark"));
 }
 $("#theme").addEventListener("click", () => {
   const to = themeNow() === "dark" ? "light" : "dark", sys = sysDark.matches ? "dark" : "light";
