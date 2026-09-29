@@ -20,6 +20,10 @@ The best network gives each of its 64 hidden neurons its own 96 pixels, so every
 | The dense network (784-32-10), trained through Jev, 5,000 images | 70.0% | 84.6% |
 | The dense network, trained with exact math | 83.9% | 52.6% |
 
+![Training curves for the dense and sparse networks and their exact-trained twins: batch accuracy and loss by epoch, with validation and test accuracy on live Jev marked.](docs/figures/training-curves.png)
+
+*Training curves: trained through Jev, the dense and sparse networks end at 84.6% and 85.3% on Jev; their exact-trained twins get 52.6% and 65.8% there.*
+
 The rest of the repo is how it got there, one experiment at a time: probing a single Jev neuron, logic gates, a circle, two digits, ten digits, what the trained weights reveal about Jev, and teaching a small open model ([laya](https://huggingface.co/convaiinnovations/laya)) to be a better neuron than Jev. All the Jev calls together cost about $230.
 
 ## The neuron

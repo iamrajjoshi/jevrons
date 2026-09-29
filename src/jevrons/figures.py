@@ -551,6 +551,111 @@ def stage8_sparse():
     S.save(fig, "stage8-sparse.png")
 
 
+def training_curves():
+    """The two headline networks, dense (stage 7) and sparse (stage 8a): batch accuracy and loss by epoch,
+    validation on Jev at the evaluated epochs, and the final test accuracy on Jev."""
+    nets = (("stage7", "dense 784-32-10, 5,000 images", {"jev": "84.6%", "swap": "52.6%"}),
+            ("stage8a", "sparse 784-64-10, 1,000 images", {"jev": "85.3%", "swap": "65.8%"}))
+    fig, axes = S.figure(5.0, ncols=2, nrows=2, sharex="col", gridspec_kw={"height_ratios": [1.5, 1]})
+    for c, (run, title, cited) in enumerate(nets):
+        top, bottom = axes[0, c], axes[1, c]
+        for arm, color in (("swap", S.INK), ("jev", S.JEV)):
+            cur = js(f"{run}/curve-{arm}.json")
+            res = js(f"{run}/result-{arm}.json")
+            epochs = max(r["epoch"] for r in cur) + 1
+            per = len(cur) / epochs
+            x = (np.arange(len(cur)) + 1) / per
+            k = max(3, int(per // 4))
+            for ax, key in ((top, "acc"), (bottom, "loss")):
+                if key == "loss" and arm == "swap":
+                    continue  # a step neuron's loss is a clipped count of mistakes, not comparable
+                v = np.array([r[key] for r in cur])
+                ax.plot(x, v, color=color, lw=0.6, alpha=0.12)
+                ax.plot(x[k - 1:], np.convolve(v, np.ones(k) / k, "valid"), color=color, lw=1.8)
+            val = sorted((int(e), r["accuracy"]) for e, r in res["val"].items())
+            top.plot([e for e, _ in val], [a for _, a in val], "o", ms=7, mfc=S.PAPER, mec=color, mew=1.8, zorder=4)
+            test = res["test"]["accuracy"]
+            check(test, cited[arm], "{:.1%}")
+            top.plot([epochs + 0.35], [test], "D", ms=6.5, color=color, zorder=4, clip_on=False)
+            top.annotate(f"{test:.1%}", (epochs + 0.35, test), xytext=(8, 0), textcoords="offset points", va="center",
+                         fontsize=9, fontweight="medium", color=S.JEV_TEXT if arm == "jev" else S.INK)
+        top.set_title(title, fontsize=10)
+        top.set_ylim(0.3, 1.02)
+        top.set_xlim(0, epochs + 0.35)
+        S.pct(top)
+        bottom.set_ylim(0, 0.62)
+        bottom.set_xlabel("epoch")
+        bottom.set_xticks(range(0, epochs + 1, 2))
+        for ax in (top, bottom):
+            S.ygrid(ax)
+            if c:
+                ax.set_yticklabels([])
+    fig.text(0.0, -0.01, "Top: lines are training batch accuracy, each network on its own neuron (smoothed over a quarter "
+             "epoch, raw behind); rings are validation on Jev; diamonds are test on Jev.", ha="left", va="top", fontsize=8,
+             color=S.INK2, wrap=True)
+    axes[0, 1].text(3.1, 0.93, "trained through Jev", fontsize=9, color=S.JEV_TEXT, ha="center")
+    axes[0, 1].text(3.1, 0.47, "trained exact\n(its twin)", fontsize=9, color=S.INK, ha="center", va="top", linespacing=1.1)
+    axes[0, 0].set_ylabel("accuracy")
+    axes[1, 0].set_ylabel("training loss\n(trained through Jev)", fontsize=10)
+    axes[1, 1].text(0.98, 0.9, "the twin's loss isn't drawn: a step neuron outputs\n0 or 1, so its loss only counts mistakes",
+                    transform=axes[1, 1].transAxes, ha="right", va="top", fontsize=8, color=S.MUTE, linespacing=1.3)
+    S.save(fig, "training-curves.png")
+
+
+def sparse_confusion():
+    """Stage 8a: confusion on live Jev over the 1,000 test digits, trained through Jev and its exact-trained twin."""
+    from jevrons.digits import mnist, test_subset
+    from jevrons.net import decide
+    from jevrons.stage8a import N_TEST
+    _, _, _, yte = mnist()
+    y = yte[test_subset(yte, N_TEST)]
+    # The result files round each output to 2 decimals, which creates ties that the run broke on unrounded
+    # values; the journal (gitignored) has every output call, so rebuild the exact outputs from it.
+    outputs = {a: np.full((N_TEST, 10), np.nan) for a in ("jev", "swap")}
+    with open(RUNS / "stage8a/journal.jsonl", "rb") as fh:
+        for line in fh:
+            if b'"split": "test"' not in line or b'"layer": 1' not in line:
+                continue
+            r = json.loads(line)
+            t = r["tag"]
+            if t.get("layer") == 1 and r.get("answers"):
+                outputs[t["arm"]][t["i"], t["j"]] = np.mean([v["above"] if isinstance(v, dict) else v
+                                                             for v in r["answers"].values()])
+    assert not any(np.isnan(o).any() for o in outputs.values()), "journal is missing test output calls"
+    fig, axes = S.figure(3.9, ncols=2)
+    for ax, (arm, title, cited) in zip(axes, (("jev", "trained through Jev", "85.3%"), ("swap", "trained exact, run on Jev", "65.8%"))):
+        r = js(f"stage8a/result-{arm}.json")["test"]
+        pred = decide(outputs[arm])
+        assert np.allclose([np.mean(pred[y == d] == d) for d in range(10)], r["per_digit"])
+        check(np.mean(pred == y), cited, "{:.1%}")
+        counts = np.zeros((10, 10), int)
+        np.add.at(counts, (y, pred), 1)
+        frac = counts / counts.sum(1, keepdims=True)
+        rgb = np.ones((10, 10, 3))
+        for i in range(10):
+            for j in range(10):
+                cmap = S.SEQ_INK if i == j else S.SEQ_JEV
+                rgb[i, j] = cmap(frac[i, j] if i == j else min(frac[i, j] / 0.4, 1) * 0.6)[:3]
+        ax.imshow(rgb, interpolation="nearest")
+        for i in range(10):
+            for j in range(10):
+                if counts[i, j] and (i == j or frac[i, j] >= 0.05):
+                    dark = frac[i, j] > 0.5 and i == j
+                    ax.text(j, i, str(counts[i, j]), ha="center", va="center", fontsize=7.5,
+                            color=S.PAPER if dark else (S.INK if i == j else S.JEV_TEXT if frac[i, j] < 0.2 else S.INK))
+        ax.set_xticks(range(10))
+        ax.set_yticks(range(10))
+        ax.tick_params(length=0, labelsize=8.5)
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+        ax.set_title(f"{title}\n{r['accuracy']:.1%} of 1,000 test digits", fontsize=10, linespacing=1.3)
+        ax.set_xlabel("predicted", fontsize=9.5)
+    axes[0].set_ylabel("true digit", fontsize=9.5)
+    fig.text(1.0, -0.01, "cells: image counts; diagonal shaded grey, off-diagonal shaded pink by share of the row; "
+             "off-diagonal counts shown at 5% of the row or more", ha="right", va="top", fontsize=8, color=S.MUTE)
+    S.save(fig, "stage8a-confusion.png")
+
+
 # ---------------------------------------------------------------- Two ways the weights adapt
 
 def margin_dynamics():
@@ -945,6 +1050,7 @@ FIGURES = {
     "margin_by_terms": margin_by_terms, "bias": bias, "wording": wording, "xor": xor, "stage3": stage3_boundary,
     "stage5": stage5_swap, "stage5_training": stage5_training, "stage5_margins": stage5_margins,
     "stage6": stage6_swap, "stage6_digits": stage6_digits, "stage7": stage7, "stage8_sparse": stage8_sparse,
+    "training_curves": training_curves, "sparse_confusion": sparse_confusion,
     "dynamics": margin_dynamics, "weights": weights_3v8, "traps": traps, "stage10": stage10_curves,
     "stage10_accuracy": stage10_accuracy, "stage10_training": stage10_training, "stage10_traps": stage10_traps,
     "bend": bend, "pixels": pixels,
