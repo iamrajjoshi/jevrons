@@ -2,17 +2,17 @@
   {"name": "s8a-jev", "on_jev": "85.3%", "title": "sparse network", "trained": "jev", "twin": "s8a-swap", "fields": 96,
    "weights": "runs/stage8a/weights-jev.npz", "labels": ["0","1","2","3","4","5","6","7","8","9"], "format": "sparse-e",
    "replay": "demo/runs/stage8a-jev-replay.jsonl", "mock": "demo/runs/stage8a-mock.json",
-   "note": "Sparse network. 85.3% on 1,000 test digits on Jev, trained on 1,000."},
+   "note": "Sparse network. Reads 85.3% of 1,000 test digits on Jev. Trained on 1,000 handwritten digits."},
   {"name": "s8a-swap", "on_jev": "65.8%", "title": "sparse network", "trained": "exact", "twin": "s8a-jev", "fields": 96,
    "weights": "runs/stage8a/weights-swap.npz", "labels": ["0","1","2","3","4","5","6","7","8","9"], "format": "sparse-e",
    "replay": "demo/runs/stage8a-swap-replay.jsonl", "mock": "demo/runs/stage8a-mock.json",
-   "note": "Sparse network control. 72.6% with exact math, 65.8% on Jev."},
+   "note": "Trained with perfect math instead. Reads 72.6% of test digits with exact math, 65.8% on Jev."},
   {"name": "s7-jev", "on_jev": "84.6%", "title": "dense network", "trained": "jev", "twin": "s7-swap",
    "weights": "runs/stage7/weights-jev.npz", "labels": ["0","1","2","3","4","5","6","7","8","9"], "format": "e",
    "replay": "demo/runs/stage7-replay.jsonl", "mock": "demo/runs/stage7-mock.json",
-   "note": "Dense network. 84.6% on 2,000 test digits on Jev, trained on 5,000."},
+   "note": "Dense network. Reads 84.6% of 2,000 test digits on Jev. Trained on 5,000 handwritten digits."},
   {"name": "s7-swap", "on_jev": "52.6%", "title": "dense network", "trained": "exact", "twin": "s7-jev",
    "weights": "runs/stage7/weights-swap.npz", "labels": ["0","1","2","3","4","5","6","7","8","9"], "format": "e",
    "mock": "demo/runs/stage7-mock.json",
-   "note": "Dense network control. 83.9% with exact math, 52.6% on Jev."}
+   "note": "Trained with perfect math instead. Reads 83.9% of test digits with exact math, 52.6% on Jev."}
 ]
