@@ -36,7 +36,7 @@ DEMO = Path(__file__).resolve().parent
 ROOT = DEMO.parent
 JOURNAL = DEMO / "runs" / "journal.jsonl"
 SOURCES = ("exact", "mock", "replay", "live")
-ARGS = argparse.Namespace(live=False, daily_usd=9.0, per_ip_hour=0, max_live=0, journal=False)
+ARGS = argparse.Namespace(live=False, daily_usd=9.0, per_ip_hour=0, max_live=0, journal=False, draws_per_min=30)
 DRAW_USD = 0.0025  # a stage 7 or 8a draw bills about $0.0017-0.0019; budget a little more so the daily cap isn't overshot
 
 
@@ -50,6 +50,17 @@ SPEND = DEMO / "runs" / "spend.json"
 _budget_lock = threading.Lock()
 _live_slots = None  # set at startup when --max-live is on
 _ip_draws: dict[str, list[float]] = {}
+# Jev's capacity is the real ceiling (about 3,000-6,000 calls a minute through the gateway, measured 2026-09-26) and a
+# draw is 74 calls. So live draws share a per-minute budget, and after a 429 the demo leaves Jev alone for BUSY_S.
+# Past either, draws finish on recorded or simulated answers straight away instead of queueing or hammering Jev.
+BUSY_S = 30.0
+_recent_draws: list[float] = []
+_busy_until = 0.0
+
+
+def jev_busy():
+    global _busy_until
+    _busy_until = time.monotonic() + BUSY_S
 
 
 def _spent_today() -> tuple[str, float]:
@@ -77,10 +88,16 @@ def reserve_live(ip: str):
                     _ip_draws[k] = kept
             if len(_ip_draws.get(ip, [])) >= ARGS.per_ip_hour:
                 raise LiveRefused(f"That's {ARGS.per_ip_hour} live draws this hour, the limit per visitor, so this one uses recorded and simulated answers.")
+        if time.monotonic() < _busy_until:
+            raise LiveRefused("Jev is busy right now, so this draw uses recorded and simulated answers. Try again in a minute.")
+        _recent_draws[:] = [t for t in _recent_draws if now - t < 60]
+        if ARGS.draws_per_min and len(_recent_draws) >= ARGS.draws_per_min:
+            raise LiveRefused("Lots of people are drawing right now, so this draw uses recorded and simulated answers. Try again in a minute.")
         if _live_slots and not _live_slots.acquire(blocking=False):
             raise LiveRefused("Too many live draws are running right now, so this one uses recorded and simulated answers.")
         if ARGS.per_ip_hour:
             _ip_draws.setdefault(ip, []).append(now)
+        _recent_draws.append(now)
         return today
 
 
@@ -102,7 +119,7 @@ def public_error(e: Exception) -> str:
     if isinstance(e, LiveRefused):
         return msg
     if "429" in msg:
-        return "Jev is rate-limiting the demo right now; the rest of this draw uses recorded and simulated answers."
+        return "Jev is busy right now, so the rest of this draw uses recorded and simulated answers. Try again in a minute."
     return "Something went wrong with the live calls; the rest of this draw uses recorded and simulated answers."
 
 
@@ -281,6 +298,7 @@ def live_jev() -> Jev:
                 # Training paces calls at 3,000/min; a draw is one burst of 64, and bursts of 64 at once drew no 429s
                 # (2026-09-28). Pacing here only delays the last calls of the burst and trips the hedges.
                 b.per_min = max(b.per_min, 30000)
+                b.attempts = 2  # a busy Jev fails the draw over in about a second instead of a minute
                 def post(state, questions, _orig=b.post, _name=b.name):
                     t0 = time.monotonic()
                     resp, attempts = _orig(state, questions)
@@ -295,7 +313,7 @@ def live_jev() -> Jev:
 # is sent again and the first answer wins. Past the last mark it waits: a slow neuron stays live, never simulated.
 HEDGE_S = (1.5, 4.0, 10.0)
 # ponytail: a losing attempt keeps its thread until the gateway answers or times out; fine at --max-live 16.
-_attempts = ThreadPoolExecutor(256)
+_attempts = ThreadPoolExecutor(128)
 
 
 def live_source(state, questions, z, tag, rng):
@@ -339,6 +357,8 @@ def run(name: str, source: str, pixels, seed: int = 0, refused: str | None = Non
             try:
                 return live_source(*a)
             except Exception as e:  # rate limit, billing or backend failure: finish the draw without live calls
+                if "429" in str(e):
+                    jev_busy()  # new draws skip Jev for BUSY_S
                 if failed["why"] is None:
                     print(f"live call failed, finishing on fallbacks: {e!r}", flush=True)
                 failed["why"] = failed["why"] or public_error(e)
@@ -577,9 +597,13 @@ def check_live_limits(pixels):
         assert all(e["backend"] == "simulated" or e["backend"].startswith("recorded") for e in neurons)
         return next(e["message"] for e in evs if e["type"] == "notice")
 
+    global _busy_until
     msg = draw()
-    assert "rate-limiting" in msg, msg
+    assert "busy" in msg and _busy_until > time.monotonic(), msg  # a 429 trips the breaker
     code["v"] = 402
+    msg = draw()  # while it's tripped, the next draw doesn't touch Jev
+    assert "busy" in msg and "Try again" in msg, msg
+    _busy_until = 0.0
     msg = draw()
     assert msg.startswith("Something went wrong") and "402" not in msg and "credit" not in msg, msg
     _ip_draws["203.0.113.9"] = [time.time() - 7200]  # a visitor from two hours ago is forgotten at the next draw
@@ -595,9 +619,13 @@ def check_live_limits(pixels):
     SPEND.write_text(json.dumps({time.strftime("%Y-%m-%d", time.gmtime()): 1.0}))
     msg = draw()
     assert "budget" in msg and _spent_today()[1] == 1.0, msg
+    SPEND.write_text("{}")
+    ARGS.draws_per_min = len(_recent_draws)  # the shared per-minute budget is used up
+    msg = draw()
+    assert "Lots of people" in msg, msg
     for srv in servers:
         srv.shutdown()
-    print("          live: rate limit, payment failure, per-visitor limit and daily cap fall back to recorded/simulated answers, unbilled;\n"
+    print("          live: rate limit (and its 30 s breaker), payment failure, per-visitor, per-minute and daily caps fall back to recorded/simulated answers, unbilled;\n"
           "                nothing journaled without --journal, stale visitors pruned, spend.json keeps 7 days")
 
 
@@ -608,6 +636,7 @@ if __name__ == "__main__":
     ap.add_argument("--daily-usd", type=float, default=9.0, help="live spend cap per UTC day, about 5,000 draws at $9 (demo/runs/spend.json)")
     ap.add_argument("--per-ip-hour", type=int, default=0, help="live draws per visitor per hour (0 = no limit)")
     ap.add_argument("--max-live", type=int, default=0, help="live draws running at once (0 = no limit)")
+    ap.add_argument("--draws-per-min", type=int, default=30, help="live draws a minute across all visitors (0 = no limit)")
     ap.add_argument("--journal", action="store_true", help="keep live calls in demo/runs/journal.jsonl (off: nothing written)")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--check", action="store_true")

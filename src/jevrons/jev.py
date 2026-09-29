@@ -45,6 +45,7 @@ class Backend:
     extra: dict = field(default_factory=dict)  # backend-specific request fields
     default: bool = True  # included when no backends are named; False for a different model
     usd_per_token: float = USD_PER_INPUT_TOKEN
+    attempts: int = 6  # tries per request on 429, 5xx and network errors (the demo uses fewer)
     _next: float = field(default=0.0, repr=False)
     _cool_until: float = field(default=0.0, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
@@ -81,7 +82,7 @@ class Backend:
         body = json.dumps({"model": self.model, "state": state, "questions": questions, **self.extra}).encode()
         headers = {"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"}
         errors = []
-        for attempt in range(6):
+        for attempt in range(self.attempts):
             try:
                 with urllib.request.urlopen(urllib.request.Request(self.endpoint, body, headers),
                                             timeout=120) as r:
@@ -95,7 +96,8 @@ class Backend:
                 errors.append(str(e.code))
             except (urllib.error.URLError, TimeoutError) as e:
                 errors.append(type(e).__name__)
-            time.sleep(min(30, 2**attempt))
+            if attempt < self.attempts - 1:
+                time.sleep(min(30, 2**attempt))
         raise BackendDown(f"{self.name}: retries exhausted ({', '.join(errors)})")
 
 
