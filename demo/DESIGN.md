@@ -72,6 +72,14 @@ All controls are native elements (`button`, `select`, `input[type=range]`), with
   has a Copy button that confirms for 1.2 s.
 - Badges (R, S) are 9px mono on an ink square: a single letter, explained in the panel notice and the tile's tooltip.
 
+## Header and "How it works"
+
+- The header is one left-aligned block on the page's grid: the serif title, the byline, a 24px lead sentence (`--fs-hero`),
+  and one quiet supporting line with the two links and the pink key. It stops at 62ch however wide the screen is.
+- The detail and the math live at the bottom in "How it works", in the same frame: a serif heading over a 1px rule, mono
+  labels, sans prose, and equations in native MathML on a `--faint` box that scrolls sideways on its own if it has to.
+  If the browser can't lay out MathML, a plain-text version of each equation shows instead (`.no-mathml`).
+
 ## Compare
 
 - Off by default. The switch says what it does ("Also run a network trained with perfect math"). No prices up front.

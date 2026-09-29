@@ -8,7 +8,7 @@
                         GET /api/digit?recorded=s8a-jev picks one at random)
      &source=replay     live | exact (the two visitors see) | replay | mock (URL only; not in the UI).
                         Default: live when the server runs with --live, else exact; mock in film mode
-     &model=s7-jev      any name in demo/models.json (default s8a-jev; s7-jev in film mode, which the video's takes use)
+     &model=s7-jev      any name in demo/models.json (default s8a-jev; s7-jev in film mode)
      &compare=training  one | training | neuron (neuron: URL only)
      &seed=7            mock/replay randomness; film defaults to 7 so a take repeats exactly
      &delay=900         ms before the stroke starts (default 900)
@@ -293,14 +293,6 @@ function rove(items, cols, onFocus) {
   });
 }
 
-function renderLede(m) {
-  $("#lede").innerHTML = `This is a small neural network where every neuron is an API call to <a href="https://typesafe.ai">Jev</a>, an AI model from TypeSafe. ` +
-    `Each ${sparse(m) ? "hidden neuron looks at its own " + m.fields + " pixels" : "neuron looks at the pixels"}, multiplies them by its weights, ` +
-    `and asks Jev one question: do these numbers add up to more than zero? Jev's answer becomes the neuron's output. ` +
-    `<a href="https://docs.typesafe.ai/model-jaggedness/jev-1.13#math-and-numbers">Jev is not great at arithmetic</a>, so the page also does the sum itself and marks every answer Jev got wrong in ` +
-    `<span class="dis-key">pink</span>. The weights were trained through those mistakes, and it still reads most digits right. Draw one and watch it work.`;
-}
-
 async function configure() {
   const hasTwin = pick(S.task, "jev") && pick(S.task, "exact");
   if (!hasTwin && S.compare === "training") S.compare = "one";
@@ -319,7 +311,6 @@ async function configure() {
   if (u) u.textContent = `${SOURCE_NAME[S.source].split(" ")[0]} · URL`;  // "recorded · URL", "simulated · URL"
   setSeg("#source", viaUrl ? "url" : S.source);
   const cfg = plan(), m = cfg[0].model;
-  renderLede(m);
   // which recorded test digits this network and its twin read differently, for "Show a test digit they read differently"
   if (S.compare === "training" && !(m.name in diffs)) {
     diffs[m.name] = [];
@@ -821,6 +812,9 @@ function clear() {
 }
 
 async function boot() {
+  { const m = document.createElementNS("http://www.w3.org/1998/Math/MathML", "math"), sp = document.createElementNS(m.namespaceURI, "mspace");
+    sp.setAttribute("width", "40px"); m.append(sp); m.style.position = "absolute"; document.body.append(m);
+    if (Math.abs(m.getBoundingClientRect().width - 40) > 2) document.documentElement.classList.add("no-mathml"); m.remove(); }
   if (Q.get("theme")) document.documentElement.dataset.theme = Q.get("theme");
   if (FILM) document.body.classList.add("film");
   const r = await (await fetch("/api/models")).json();

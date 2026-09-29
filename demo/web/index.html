@@ -17,7 +17,12 @@
     <h1>Jevrons</h1>
     <p class="by">by <a href="https://rajjoshi.me">Raj Joshi</a> · <a href="https://github.com/iamrajjoshi/jevrons">GitHub</a></p>
   </div>
-  <p class="lede" id="lede"></p>
+  <div class="lede">
+    <p class="lead">A small neural network where every neuron is an API call to <a href="https://typesafe.ai">Jev</a>, an AI model from TypeSafe.</p>
+    <p class="sub"><a href="https://docs.typesafe.ai/model-jaggedness/jev-1.13#math-and-numbers">Jev is not great at arithmetic</a>, so the
+      page does each sum too and marks every answer Jev gets wrong in <span class="dis-key">pink</span>. The network was trained
+      through those mistakes and still reads most digits. Draw one.</p>
+  </div>
 </header>
 
 <main class="layout">
@@ -86,6 +91,44 @@
     </section>
   </div>
 </main>
+
+<section class="how" id="how" aria-labelledby="how-title">
+  <h2 id="how-title">How it works</h2>
+  <div class="how-grid">
+    <article>
+      <h3>one neuron</h3>
+      <p>A hidden neuron is wired to 96 fixed pixels <i>S</i>. Its sum is the usual weighted sum:</p>
+      <div class="eq"><math display="block" alttext="z = sum over i in S of w_i x_i, plus b"><mi>z</mi><mo>=</mo><munder><mo>∑</mo><mrow><mi>i</mi><mo>∈</mo><mi>S</mi></mrow></munder><msub><mi>w</mi><mi>i</mi></msub><msub><mi>x</mi><mi>i</mi></msub><mo>+</mo><mi>b</mi></math><code class="eq-alt">z = Σ wᵢ·xᵢ + b, over i in S</code></div>
+      <p>The page doesn't send <i>z</i>. It sends Jev the list of products <i>wᵢxᵢ</i> and <i>b</i>, and asks: do these add up to
+        more than zero? Jev's probability of yes, <i>p</i>, is the neuron's output. The page works out <i>z</i> itself, and a
+        neuron is <span class="dis-key">pink</span> when the two disagree:</p>
+      <div class="eq"><math display="block" alttext="pink when (p at least 0.5) differs from (z greater than 0)"><mtext class="dis-key">pink</mtext><mspace width="0.5em"/><mo>⟺</mo><mspace width="0.5em"/><mo stretchy="false">(</mo><mi>p</mi><mo>≥</mo><mn>0.5</mn><mo stretchy="false">)</mo><mo>≠</mo><mo stretchy="false">(</mo><mi>z</mi><mo>&gt;</mo><mn>0</mn><mo stretchy="false">)</mo></math><code class="eq-alt">pink ⇔ (p ≥ 0.5) ≠ (z &gt; 0)</code></div>
+    </article>
+    <article>
+      <h3>the network</h3>
+      <p>784 pixels feed 64 hidden neurons, 96 pixels each, which feed 10 outputs, one per digit. That's 74 Jev calls a
+        digit: the 64 hidden ones at once, then the 10 outputs. The highest output wins:</p>
+      <div class="eq"><math display="block" alttext="predicted digit = argmax over k of p_k"><mover><mi>y</mi><mo>^</mo></mover><mo>=</mo><munder><mrow><mi>arg</mi><mo>&#x2061;</mo><mi>max</mi></mrow><mi>k</mi></munder><mspace width="0.2em"/><msub><mi>p</mi><mi>k</mi></msub></math><code class="eq-alt">ŷ = argmaxₖ pₖ</code></div>
+      <p>Stage 7, the other network in the menu, is dense: every hidden neuron sees all 784 pixels (784 → 32 → 10, 42 calls).</p>
+    </article>
+    <article>
+      <h3>training</h3>
+      <p>Jev has no gradient. Training uses a straight-through estimator: the forward pass uses Jev's real <i>p</i>, and the
+        backward pass uses the slope of <i>f</i>, Jev's measured response curve, at the neuron's <i>z</i>:</p>
+      <div class="eq"><math display="block" alttext="dL/dz is approximately dL/dp times f prime of z"><mfrac><mrow><mo>∂</mo><mi>L</mi></mrow><mrow><mo>∂</mo><mi>z</mi></mrow></mfrac><mo>≈</mo><mfrac><mrow><mo>∂</mo><mi>L</mi></mrow><mrow><mo>∂</mo><mi>p</mi></mrow></mfrac><mo>·</mo><mi>f</mi><mo lspace="0" rspace="0">′</mo><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo></math><code class="eq-alt">∂L/∂z ≈ ∂L/∂p · f′(z)</code></div>
+    </article>
+    <article>
+      <h3>the comparison</h3>
+      <p>The perfect-math twin starts from the same weights but trains on an exact step neuron, so it never sees Jev's
+        mistakes. Run on Jev, over 1,000 test digits:</p>
+      <dl class="acc">
+        <dt>trained through Jev</dt><dd><span class="acc-bar" style="--v: .853"></span>85.3%</dd>
+        <dt>trained with perfect math</dt><dd><span class="acc-bar" style="--v: .658"></span>65.8%</dd>
+      </dl>
+    </article>
+  </div>
+  <p class="how-links"><a href="https://github.com/iamrajjoshi/jevrons">code on GitHub</a> · <a href="https://rajjoshi.me/blog/jevrons">the write-up</a></p>
+</section>
 
 <aside class="drawer win" id="inspector" role="dialog" aria-modal="false" aria-labelledby="i-title" hidden>
   <div class="bar"><span id="i-title">neuron</span><button class="x" id="i-close" type="button" aria-label="Close inspector">close <kbd>esc</kbd></button></div>

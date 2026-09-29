@@ -64,7 +64,7 @@ A draw that stops early is charged a full draw, since calls in flight can still 
 ## Film mode
 
 `/?film` hides the copy and controls, enlarges the pad and tiles, fixes the seed (7) and keeps the frame still while
-calls stream in. Film mode defaults to stage 7 and the mock, which is what the video's takes were recorded on. Add:
+calls stream in. Film mode defaults to stage 7 and the mock. Add:
 
 | flag | effect |
 | --- | --- |
@@ -74,13 +74,6 @@ calls stream in. Film mode defaults to stage 7 and the mock, which is what the v
 | `&model=s8a-jev` | any name in `models.json` |
 | `&theme=dark` | `light` or `dark` |
 | `&compare=training`, `&seed=7`, `&delay=900` | as named (`compare=neuron` puts exact and Jev side by side) |
-
-The takes the video uses:
-
-- `/?film&source=replay&stroke=3` replays the live stage 7 draw of stroke 3 from 2026-09-27: 42 real answers,
-  predicted 3, with rate-limit waits squeezed.
-- `/?film&source=replay&digit=5110` replays a stage 7 test 7 from the training journal.
-- `/?film&source=replay&stroke=3&model=s8a-jev` replays a live stage 8a draw of the same stroke from 2026-09-28.
 
 A recording script can call `await window.jevrons.play("3")` (it resolves when the answer is in) and
 `window.jevrons.clear()`. It can also watch `document.body.dataset.state` (`idle`, `drawing`, `running`, `done`) or
