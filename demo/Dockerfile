@@ -15,6 +15,7 @@ COPY demo ./demo
 ENV PYTHONPATH=/app/src JEVRONS_BACKENDS=vercel PYTHONUNBUFFERED=1
 EXPOSE 8080
 # No --journal: the hosted demo keeps nothing on disk but the spend counter. --max-live 16 bounds the threads a
-# burst of live draws can start (about 74 each) on a 1 GB machine; --draws-per-min 30 keeps all visitors together at about 2,200 Jev calls a minute.
+# burst of live draws can start (about 74 each) on a 1 GB machine, and the rest wait in line; --calls-per-min 2200
+# keeps all visitors together under Jev's measured capacity (3,000-6,000 a minute through the gateway).
 CMD ["python", "demo/server.py", "--live", "--host", "0.0.0.0", "--port", "8080", \
-     "--daily-usd", "9", "--max-live", "16", "--draws-per-min", "30"]
+     "--daily-usd", "9", "--max-live", "16", "--calls-per-min", "2200"]

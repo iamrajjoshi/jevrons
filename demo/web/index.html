@@ -16,6 +16,10 @@
   if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; })();</script>
 </head>
 <body data-state="idle">
+<div class="banner" id="degraded" role="status" hidden>
+  <p id="degraded-text"></p>
+  <button class="banner-x" id="degraded-x" type="button" aria-label="Dismiss this notice">dismiss</button>
+</div>
 <header class="top">
   <div class="brand">
     <div class="title-row">
@@ -164,6 +168,8 @@
     <div class="p-foot"><span class="p-stats"></span><span class="p-note"></span></div>
   </article>
 </template>
+
+<p class="toast" id="toast" role="status" aria-live="polite" hidden></p>
 
 <script src="app.js"></script>
 </body>

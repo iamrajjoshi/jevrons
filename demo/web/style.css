@@ -265,7 +265,7 @@ h1 { font: 400 40px/0.95 var(--display); letter-spacing: -0.01em; margin: 0; }
 .tile.dis canvas { outline: 2px solid var(--accent); }
 .tile.dis .act i { background: var(--accent); }
 .tile.dis .lbl { color: var(--accent-text); }
-/* an answer that isn't live (the live call was refused or failed): dashed, with R (recorded) or S (simulated) */
+/* a replayed request that was never recorded: dashed, with S (simulated) */
 .tile.fb:not(.dis) canvas { outline: 1px dashed var(--ink-2); }
 .tile.fb::after, .out.fb::after, .fbk { font: 500 9px/1 var(--mono); background: var(--ink); color: var(--paper); padding: 2px 3px; }
 .tile.fb::after { content: attr(data-fb); position: absolute; top: 0; right: 0; pointer-events: none; }
@@ -338,6 +338,21 @@ body.cmp { --tile: 26px; }
 #calls-svg .grid { stroke: var(--rule); }
 #calls-svg .head { stroke: var(--ink); stroke-dasharray: 3 2; }
 #calls-range { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
+
+/* ---------- TypeSafe under load: the banner across the top, and a toast when a draw starts waiting ---------- */
+.banner { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s4);
+  padding: var(--s2) max(var(--s7), calc((100% - var(--max)) / 2 + var(--s7)));  /* on the header's grid */
+  border-bottom: var(--hair); font: var(--fs-cap)/1.5 var(--mono); color: var(--ink-2); }
+.banner p { margin: 0; max-width: var(--max); }
+.banner a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.banner-x { flex-shrink: 0; padding: 0; border: 0; background: none; color: var(--mute); font: inherit; cursor: pointer;
+  text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+.banner-x:hover { color: var(--ink); text-decoration-color: currentColor; }
+.toast { position: fixed; right: var(--s4); bottom: var(--s4); z-index: 20; max-width: 36ch; margin: 0; padding: var(--s2) var(--s3);
+  border: var(--line); background: var(--paper); color: var(--ink); font: var(--fs-cap)/1.5 var(--mono);
+  animation: slide var(--dur-2) var(--ease); }
+.toast.out { opacity: 0; transition: opacity var(--dur-2) ease-out; }
+body.film .banner, body.film .toast { display: none !important; }
 
 /* ---------- inspector ---------- */
 .drawer { position: fixed; top: var(--s4); right: var(--s4); bottom: var(--s4); width: min(480px, calc(100vw - var(--s6))); display: flex;
@@ -451,5 +466,7 @@ body.film .calls-track { pointer-events: none; }
   .p-foot { flex-direction: column; gap: 2px; }
   .p-note { text-align: left; }
   .drawer { top: auto; left: 0; right: 0; bottom: 0; width: 100%; max-height: 82vh; border-width: 1px 0 0; }
+  .banner { padding: var(--s2) var(--s4); }
+  .toast { left: var(--s4); max-width: none; }
   @keyframes slide { from { transform: translateY(var(--s4)); opacity: 0; } }
 }

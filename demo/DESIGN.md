@@ -19,7 +19,7 @@ value below is a CSS variable in `web/style.css`, so a number that isn't on this
 | `--accent-text` | `#c92f64` | `#f2769c` | the same meaning in text, and paper-on-pink fills (4.8:1 / 7.2:1) |
 
 - Pink means one thing: Jev's answer disagrees with the sum. It's not used for focus, hover, errors, live or brand.
-- Errors and fallbacks are ink on `--faint`. Being calm is the point: a refusal isn't an alarm.
+- Errors, waiting and load notices are ink on paper or `--faint`. Being calm is the point: a slow upstream isn't an alarm.
 - No gradients, glows, blur, shadows or tinted neutrals. There's one elevation (the inspector), and a 1px ink border
   carries it.
 
@@ -32,7 +32,7 @@ value below is a CSS variable in `web/style.css`, so a number that isn't on this
 - Scale: `--fs-cap` 11px (mono captions and badges), `--fs-ui` 13px (controls and data), `--fs-body` 15px (prose),
   `--fs-lead` 20px (the compare verdict line), the verdict digits (`--fs-v`, 96px, 56px phone) and the prediction
   digit (`--fs-digit`, 176px, 112px narrow, 96px phone). Nothing smaller than 11px except the 9px
-  R/S badge letters.
+  S badge letter.
 - `font-variant-numeric: tabular-nums` on the body, so every number lines up.
 - Probabilities (Jev's answers, neuron outputs, the 0 / .5 / 1 axis) drop the leading zero: ".27", "1.00". Sums, seconds and
   dollars keep it, since they can be negative or above 1. Prose keeps "0.5".
@@ -58,7 +58,7 @@ All controls are native elements (`button`, `select`, `input[type=range]`), with
 | active | fill held, 1px down (`translateY(1px)`), no scale |
 | focus-visible | 2px ink outline, 2px offset, on every focusable thing, the range and tiles included. Never pink |
 | disabled | 40% opacity, `not-allowed` cursor, and a reason in text nearby |
-| loading | the panel footer says what it's waiting on (`running · 41 / 74`) and the panel gets `aria-busy` |
+| loading | the panel footer says what it's waiting on (`running · 41 / 74`, `waiting on TypeSafe · 3 draws ahead`, `waiting on TypeSafe · retrying`) and the panel gets `aria-busy`; tiles keep the in-flight sweep while their call waits |
 
 - The network select is a native `<select>` (appearance off) with a drawn chevron. It has a visible label.
 - The source toggle group is a `radiogroup`: one tab stop, arrow keys move and select, and a disabled option is
@@ -76,7 +76,14 @@ All controls are native elements (`button`, `select`, `input[type=range]`), with
 - The inspector is a non-modal `role="dialog"`. Focus stays on the tile that opened it, so the arrow keys keep
   exploring and the inspector follows. Escape or close shuts it and puts focus back on that tile. The request JSON
   has a Copy button that confirms for 1.2 s.
-- Badges (R, S) are 9px mono on an ink square: a single letter, explained in the panel notice and the tile's tooltip.
+- The S badge is 9px mono on an ink square, explained in the panel notice and the tile's tooltip. It only appears on
+  `?source=replay`, where a request that was never recorded is simulated; a live draw is only ever answered live.
+- When live draws are slow, a banner runs across the top: mono caption size, `--ink-2` on paper, one hairline under it,
+  aligned to the header's grid, with a plain "dismiss" (for the session). It quotes TypeSafe's status page when that
+  reports an issue ("TypeSafe reports: …"), else says TypeSafe is under heavy load. Both link to the status page.
+- When a draw starts waiting because of load, a toast (1px ink border on paper, mono caption size) slides in
+  bottom-right (bottom on a phone) with `slide` and `--dur-2`, says so once, and fades after 5 s. It's `aria-live="polite"`,
+  and it isn't repeated within a minute while the banner is up. Neither shows in film mode.
 
 ## Header and "How it works"
 
@@ -122,7 +129,7 @@ for anything entering or changing value, and plain `ease-out` for exits. No boun
 
 ## Anti-patterns avoided
 
-The ones I checked for: pulsing dots, a glow or gradient anywhere, card-in-card nesting, status-chip soup (R/S are
-the only badges), text below 11px, grey text on a coloured fill, a line length over 75ch, content hidden behind an
+The ones I checked for: pulsing dots, a glow or gradient anywhere, card-in-card nesting, status-chip soup (S is
+the only badge), text below 11px, grey text on a coloured fill, a line length over 75ch, content hidden behind an
 entrance animation, layout-shifting animation, em dashes in the copy, and vague buttons (each one names its action;
 there's no Run button, since drawing is the action).

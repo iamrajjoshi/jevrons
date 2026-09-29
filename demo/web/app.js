@@ -26,13 +26,14 @@ const SOURCE_NAME = { exact: "exact math", mock: "simulated Jev", replay: "recor
 const answeredBy = (e) => e.backend === "simulated" ? "simulated answer" : e.backend.startsWith("recorded") ? "recorded answer"
   : e.backend === "local step" ? "exact math" : "live Jev";
 const NATIVE = { exact: "exact math", mock: "simulated answer", replay: "recorded answer", live: "live Jev" };
-const fallbackOf = (p, e) => answeredBy(e) !== NATIVE[p.source] ? answeredBy(e) : null;  // "recorded answer" | "simulated answer" | null
-const MARK = { "recorded answer": "R", "simulated answer": "S" };
+// a live draw is only ever answered live; replay (a URL flag) falls back to simulated answers where nothing was recorded
+const fallbackOf = (p, e) => answeredBy(e) !== NATIVE[p.source] ? answeredBy(e) : null;  // "simulated answer" | null
+const MARK = { "simulated answer": "S" };
 
 const S = {
   models: [], live: false, weights: {},
   input: null, real: null,            // processed 784 input; {index, label} when it is an unmodified test digit
-  compare: "one", trained: "jev", source: "exact", task: null,
+  compare: "one", trained: "jev", source: "exact", task: null, load: null,  // load: why live is slow, for the banner
   panels: [], t: Infinity, sel: null, // t: scrub position in ms (Infinity = now); sel: {panel, layer, j}
 };
 
@@ -345,7 +346,7 @@ function panelTitle(p) {
 async function buildPanels(cfg) {
   for (const p of S.panels) p.ctrl?.abort();
   const root = $("#panels");
-  S.panels = cfg.map((c, k) => ({ id: k, ...c, events: [], layers: [], result: null, error: null, notice: null }));
+  S.panels = cfg.map((c, k) => ({ id: k, ...c, events: [], layers: [], result: null, error: null, wait: null }));
   closeInspector();
   const els = [];
   for (const p of S.panels) {
@@ -431,8 +432,8 @@ function renderPanel(p) {
   if (!p.tiles) return;
   const ev = visible(p), byKey = new Map(ev.map((e) => [`${e.layer}:${e.j}`, e]));
   const binary = p.model.labels.length === 2;
-  // Badges only mark the odd ones out: when every answer came the same way (all simulated, all recorded), the notice
-  // and the footer say so once, and the tiles stay clean.
+  // Badges only mark the odd ones out: when every answer is simulated, the notice and the footer say so once, and the
+  // tiles stay clean.
   const kinds = new Set(p.events.map((e) => fallbackOf(p, e))), mixed = kinds.size > 1;
   const badge = (e) => mixed && e && fallbackOf(p, e);
   p.tiles.forEach((t, j) => {
@@ -441,7 +442,7 @@ function renderPanel(p) {
     t.className = "tile" + (e ? " done" : flight ? " flight" : " idle") + (e?.disagree ? " dis" : "") + (mark ? " fb" : "") +
       (isSel(p, 0, j) ? " sel" : "") + (t._land ? " land" : "");
     t.dataset.fb = mark ? MARK[mark] : "";
-    t.title = `${hid(j)}${fb ? `: ${fb}, not live` : ""} · click to see its call`;
+    t.title = `${hid(j)}${fb ? `: ${fb}` : ""} · click to see its call`;
     t.style.setProperty("--p", e ? e.p : 0);
     $(".lbl", t).textContent = e ? pr(e.p) : hid(j);
     t.setAttribute("aria-label", neuronLabel(`hidden ${hid(j)}`, e, flight, fb));
@@ -483,24 +484,21 @@ function renderPanel(p) {
     done ? (binary ? `p ${pr(p.result.outputs[0])}; ${p.model.labels[1]} at 0.5 or more, else ${p.model.labels[0]}` : "")
     : inFlight || S.input ? "" : "Waiting for a digit.";
   const dis = ev.filter((e) => e.disagree).length;
-  const fbs = ev.map((e) => fallbackOf(p, e)), rec = fbs.filter((f) => f === "recorded answer").length,
-    sim = fbs.filter((f) => f === "simulated answer").length;
-  // progress lives here now that there's no Run button: "running · 41 / 74"
+  const sim = ev.filter((e) => fallbackOf(p, e)).length;
+  // progress lives here now that there's no Run button: "running · 41 / 74", or what a live draw waits on
   const busy = !!p.ctrl && !p.result;
   p.el.setAttribute("aria-busy", String(busy));
-  $(".p-stats", p.el).innerHTML = !ev.length && !inFlight ? (busy ? "running · starting" : "no calls yet") :
-    (busy ? `running · ${ev.length} / ${p.tiles.length + p.outs.length} · ` : "") + `hidden ${hiddenEv.length}/${p.tiles.length} · output ${outs.length}/${p.outs.length} · ` +
+  const w = busy && p.wait, doing = !w ? "running" : w.reason === "busy" ? "waiting on TypeSafe · retrying"
+    : w.reason === "queue" ? `waiting on TypeSafe · ${w.ahead ? `${w.ahead} ${w.ahead === 1 ? "draw" : "draws"} ahead` : "next in line"}`
+    : "waiting on TypeSafe";
+  $(".p-stats", p.el).innerHTML = !ev.length && !inFlight ? (busy ? (w ? doing : "running · starting") : "no calls yet") :
+    (busy ? `${doing} · ${ev.length} / ${p.tiles.length + p.outs.length} · ` : "") + `hidden ${hiddenEv.length}/${p.tiles.length} · output ${outs.length}/${p.outs.length} · ` +
     `<span class="${dis ? "dis" : ""}">${dis} disagree</span>` +
-    (rec ? ` · <span class="fbk">R</span> ${rec} recorded` : "") + (sim ? ` · <span class="fbk">S</span> ${sim} simulated` : "") +
-    "";
+    (sim ? ` · <span class="fbk">S</span> ${sim} simulated` : "");
   const note = $(".p-notice", p.el);
-  note.hidden = !p.error && !p.notice && !(p.source === "replay" && sim);
-  const only = !mixed && [...kinds][0];  // "recorded answer" | "simulated answer" when every answer is one fallback
-  const key = mixed ? ` Tiles marked <span class="fbk">R</span> show a recorded Jev answer to this exact request, <span class="fbk">S</span> a simulated one.`
-    : only === "recorded answer" ? ` All ${p.events.length} answers are recorded.`
-    : only === "simulated answer" ? ` All ${p.events.length} answers are simulated.` : "";
-  note.innerHTML = p.error ? `Stopped: ${p.error} Draw again to retry.`
-    : p.notice ? p.notice + key
+  note.hidden = !p.error && !(p.source === "replay" && sim);
+  const only = !mixed && [...kinds][0];  // "simulated answer" when nothing was recorded
+  note.innerHTML = p.error ? `Stopped: ${p.error}`
     : only ? `Never recorded: all ${p.events.length} answers are simulated.`
     : `<span class="fbk">S</span> ${sim} ${sim === 1 ? "answer" : "answers"} simulated: never recorded.`;
   // the one-time hint that a neuron opens its call: first panel, once there are answers, until the inspector is used
@@ -526,7 +524,7 @@ function renderSummary() {
   const dis = (p) => p.events.filter((e) => e.disagree).length;
   const col = (p) => `<div class="v-col"><span class="v-tag">${panelKey(p)}</span>
     <span class="v-digit ${p.result ? "" : "pending"}">${p.result ? p.result.prediction : "·"}</span>
-    <span class="v-dis">${p.events.length ? `<span class="${dis(p) ? "dis" : ""}">${dis(p)} <span class="v-of">of ${p.events.length} answers </span>disagree</span>` : p.error ? "stopped" : "not run"}</span></div>`;
+    <span class="v-dis">${p.events.length ? `<span class="${dis(p) ? "dis" : ""}">${dis(p)} <span class="v-of">of ${p.events.length} answers </span>disagree</span>` : p.error ? "stopped" : p.ctrl ? (p.wait ? "waiting on TypeSafe" : "running") : "not run"}</span></div>`;
   const line = !done ? (S.input ? "Both networks are reading the same drawing…" : "Draw a digit to compare the two.")
     : a.result.prediction === b.result.prediction ? `Both read ${a.result.prediction}.`
     : `They disagree: A reads ${a.result.prediction}, B reads ${b.result.prediction}.`;
@@ -544,6 +542,40 @@ function renderSummary() {
   loadReal(d[Math.floor(Math.random() * d.length)]);
 });
 
+// ---------- TypeSafe under load: a banner while it lasts, a toast when a draw starts waiting on it ----------
+
+// The server reads TypeSafe's status page (the page never calls it) and watches its own calls' 429s and 5xx.
+// TypeSafe's own word wins; our signal alone says heavy load; neither, no banner.
+let bannerOff = false;  // dismissed for this session
+try { bannerOff = sessionStorage.getItem("jevrons:banner-off") === "1"; } catch {}
+const STATUS = "https://status.typesafe.ai/";
+function setHealth(h) {
+  const ts = h?.typesafe, said = ts && (ts.state !== "operational" || ts.report);
+  S.load = said ? `<a href="${STATUS}">TypeSafe reports</a>: ${esc(ts.report || ts.state.replaceAll("_", " "))}. Live draws may be slow.`
+    : h?.degraded ? `<a href="${STATUS}">TypeSafe</a> is under heavy load right now, so live draws are slower than usual.` : null;
+  if (S.load && $("#degraded-text").innerHTML !== S.load) $("#degraded-text").innerHTML = S.load;
+  $("#degraded").hidden = FILM || bannerOff || !S.load;
+}
+const esc = (t) => t.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
+$("#degraded-x").addEventListener("click", () => {
+  bannerOff = true; $("#degraded").hidden = true;
+  try { sessionStorage.setItem("jevrons:banner-off", "1"); } catch {}
+});
+// Once per draw, when it waits because of load (retrying, paced, or in line while TypeSafe is degraded); not again
+// within a minute while the banner already says it.
+let toastAt = -Infinity, toastTimer = null;
+function loadToast(p, e) {
+  if (FILM || p.toasted || (e.reason === "queue" && !S.load)) return;
+  p.toasted = true;
+  if (!$("#degraded").hidden && performance.now() - toastAt < 60000) return;
+  toastAt = performance.now();
+  const t = $("#toast");
+  t.textContent = "TypeSafe is under heavy load. Your draw is waiting and will finish on its own.";
+  t.hidden = false; t.classList.remove("out");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.classList.add("out"); toastTimer = setTimeout(() => { t.hidden = true; }, 200); }, 5000);
+}
+
 // ---------- running ----------
 
 let runSeq = 0;
@@ -559,7 +591,8 @@ async function runAll() {
 
 async function runPanel(p, seed) {
   p.ctrl?.abort(); p.ctrl = new AbortController();
-  Object.assign(p, { events: [], layers: [], result: null, error: null, notice: null, t0: performance.now() });
+  // t0 is set when the first layer goes out: a live draw may wait in line before that
+  Object.assign(p, { events: [], layers: [], result: null, error: null, wait: null, toasted: false, t0: null });
   renderPanel(p); renderBill();
   const body = { model: p.model.name, source: p.source, seed,
     ...(S.real ? { mnist: S.real.index } : { pixels: Array.from(S.input, (v) => Math.round(v * 1000) / 1000) }) };
@@ -581,15 +614,15 @@ async function runPanel(p, seed) {
   } catch (e) {
     if (e.name === "AbortError") return;
     // a dropped connection reads as a TypeError; say what it means rather than "Failed to fetch"
-    p.error = e instanceof TypeError && /fetch|network|load/i.test(e.message) ? "lost the connection to the demo server." : String(e.message || e).replace(/\.?$/, ".");
+    p.error = e instanceof TypeError && /fetch|network|load/i.test(e.message) ? "lost the connection to the demo server. Draw again to retry."
+      : String(e.message || e).replace(/\.?$/, ".");
   }
-  p.ctrl = null;
+  p.ctrl = null; p.wait = null;
   renderPanel(p); renderCalls(); renderBill();
 }
 
 function onEvent(p, e) {
-  if (e.type === "start") p.t0 = performance.now();
-  else if (e.type === "layer") p.layers.push(e);
+  if (e.type === "layer") { if (!e.layer) p.t0 = performance.now(); p.layers.push(e); }
   else if (e.type === "neuron") {
     p.events.push(e);
     const el = e.layer === 0 ? p.tiles[e.j] : null;
@@ -597,7 +630,8 @@ function onEvent(p, e) {
     if (S.sel && S.sel.panel === p && S.sel.layer === e.layer && S.sel.j === e.j) renderInspector();
   } else if (e.type === "result") p.result = e;
   else if (e.type === "error") p.error = e.message;
-  else if (e.type === "notice") p.notice = e.message;
+  else if (e.type === "waiting") { p.wait = e.reason ? e : null; if (e.reason) loadToast(p, e); }
+  else if (e.type === "degraded") setHealth({ degraded: e.on, typesafe: e.typesafe });
   renderPanel(p); renderBill();
 }
 
@@ -617,10 +651,8 @@ function renderBill() {
   const billed = ps.reduce((a, p) => a + p.events.reduce((b, e) => b + (e.billed ? e.tokens : 0), 0), 0);
   $("#b-usd").textContent = usd(billed * USD_PER_TOKEN);
   $("#b-time").textContent = (elapsed / 1000).toFixed(1) + " s";
-  const fell = ps.some((p) => p.source === "live" && p.events.some((e) => !e.billed));
-  $("#bill-kind").textContent = !S.panels.some((p) => p.events.length) ? "nothing run" : live ? (fell ? "live Jev, part recorded or simulated" : "live Jev")
-    : ps.length ? (ps.some((p) => p.source === "live") ? "recorded or simulated, free"
-      : ps.every((p) => p.source === "replay") ? "recorded, free" : "simulated, free") : "local, free";
+  $("#bill-kind").textContent = !S.panels.some((p) => p.events.length) ? "nothing run" : live ? "live Jev"
+    : ps.length ? (ps.every((p) => p.source === "replay") ? "recorded, free" : "simulated, free") : "local, free";
 }
 
 // ---------- calls: one bar per call, from when it was sent to when Jev answered ----------
@@ -741,7 +773,7 @@ function renderInspector() {
       <dt>their true sum</dt><dd>${fmt(e.z)}</dd>
       ${answerRows(e)}
       <dt>answered after</dt><dd>${(e.latency_ms / 1000).toFixed(2)} s</dd>
-      <dt>answered by</dt><dd>${answeredBy(e)}${fallbackOf(p, e) && p.source === "live" ? ", not live" : ""}</dd>
+      <dt>answered by</dt><dd>${answeredBy(e)}</dd>
       <dt>source</dt><dd>${e.backend}</dd>
       <dt>input tokens</dt><dd>${e.tokens.toLocaleString()}</dd>
       <dt>cost</dt><dd>${e.billed ? "$" + (e.tokens * USD_PER_TOKEN).toFixed(6) : "free"}</dd>
@@ -835,7 +867,7 @@ themeWord();
 
 function clear() {
   clearPad(); S.real = null; S.input = null; renderInput(); setState("idle");
-  for (const p of S.panels) { p.ctrl?.abort(); Object.assign(p, { ctrl: null, events: [], layers: [], result: null, error: null, notice: null }); renderPanel(p); }
+  for (const p of S.panels) { p.ctrl?.abort(); Object.assign(p, { ctrl: null, events: [], layers: [], result: null, error: null, wait: null }); renderPanel(p); }
   renderCalls(); renderBill();
 }
 
@@ -845,7 +877,9 @@ async function boot() {
     if (Math.abs(m.getBoundingClientRect().width - 40) > 2) document.documentElement.classList.add("no-mathml"); m.remove(); }
   if (FILM) document.body.classList.add("film");
   const r = await (await fetch("/api/models")).json();
-  S.models = r.models; S.live = r.live;
+  S.models = r.models; S.live = r.live; setHealth(r);
+  // an open page learns when TypeSafe's load comes and goes: a draw's stream says so, and so does a light poll
+  if (S.live && !FILM) setInterval(() => { if (!document.hidden) fetch("/api/status").then((r) => r.json()).then(setHealth).catch(() => {}); }, 30000);
   const avail = S.models.filter((m) => m.available), tasks = [...new Set(avail.map((m) => m.title))];
   const want = avail.find((m) => m.name === (Q.get("model") ?? (FILM ? "s7-jev" : "s8a-jev")));
   $("#task").innerHTML = tasks.map((t) => `<option value="${t}">${t} · ${(pick(t, "jev") || pick(t, "exact")).on_jev}</option>`).join("");
