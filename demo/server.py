@@ -940,8 +940,10 @@ def check_live_limits(pixels):
     assert all(w.get("reason") in (None, "queue", "busy", "pace") for w in waits) and waits[-1]["reason"] is None, waits
 
     behave["f"] = lambda n: (200, 1.0)
+    base = calls[0]
     a, ra = opened()
     assert until(lambda: QUEUE.running == 1)
+    assert until(lambda: calls[0] - base >= 64, 10.0), "the hidden layer never went out"  # all 64 sent, 1 s each
     b, rb = opened()
     while b"queue" not in rb.readline():
         pass
