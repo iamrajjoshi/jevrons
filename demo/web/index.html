@@ -100,9 +100,9 @@
       <p>A hidden neuron is wired to 96 fixed pixels <i>S</i>. Its sum is the usual weighted sum:</p>
       <div class="eq"><math display="block" alttext="z = sum over i in S of w_i x_i, plus b"><mi>z</mi><mo>=</mo><munder><mo>∑</mo><mrow><mi>i</mi><mo>∈</mo><mi>S</mi></mrow></munder><msub><mi>w</mi><mi>i</mi></msub><msub><mi>x</mi><mi>i</mi></msub><mo>+</mo><mi>b</mi></math><code class="eq-alt">z = Σ wᵢ·xᵢ + b, over i in S</code></div>
       <p>The page doesn't send <i>z</i>. It sends Jev the list of products <i>wᵢxᵢ</i> and <i>b</i>, and asks: do these add up to
-        more than zero? Jev's probability of yes, <i>p</i>, is the neuron's output. The page works out <i>z</i> itself, and a
-        neuron is <span class="dis-key">pink</span> when the two disagree:</p>
-      <div class="eq"><math display="block" alttext="pink when (p at least 0.5) differs from (z greater than 0)"><mtext class="dis-key">pink</mtext><mspace width="0.5em"/><mo>⟺</mo><mspace width="0.5em"/><mo stretchy="false">(</mo><mi>p</mi><mo>≥</mo><mn>0.5</mn><mo stretchy="false">)</mo><mo>≠</mo><mo stretchy="false">(</mo><mi>z</mi><mo>&gt;</mo><mn>0</mn><mo stretchy="false">)</mo></math><code class="eq-alt">pink ⇔ (p ≥ 0.5) ≠ (z &gt; 0)</code></div>
+        more than zero? Jev's probability of yes, <i>p</i>, is the neuron's output. The page also works out <i>z</i> itself, so it
+        can tell when Jev gets it wrong: Jev says yes (<i>p</i> ≥ 0.5) when <i>z</i> isn't above zero, or no when it is. Those
+        errors are the <span class="dis-key">pink</span> tiles.</p>
     </article>
     <article>
       <h3>the network</h3>
@@ -113,9 +113,13 @@
     </article>
     <article>
       <h3>training</h3>
-      <p>Jev has no gradient. Training uses a straight-through estimator: the forward pass uses Jev's real <i>p</i>, and the
-        backward pass uses the slope of <i>f</i>, Jev's measured response curve, at the neuron's <i>z</i>:</p>
+      <p>Jev has no gradient, so training needs a stand-in for how <i>p</i> changes with <i>z</i>. We measured one: we asked Jev
+        thousands of sums whose true totals we knew and recorded how often it said yes. Call that curve <i>f</i>, so
+        <i>f</i>(<i>z</i>) is roughly the chance Jev says yes to a list that adds up to <i>z</i>. Training runs Jev's real answer
+        <i>p</i> forward and the slope of <i>f</i> backward (a straight-through estimator):</p>
       <div class="eq"><math display="block" alttext="dL/dz is approximately dL/dp times f prime of z"><mfrac><mrow><mo>∂</mo><mi>L</mi></mrow><mrow><mo>∂</mo><mi>z</mi></mrow></mfrac><mo>≈</mo><mfrac><mrow><mo>∂</mo><mi>L</mi></mrow><mrow><mo>∂</mo><mi>p</mi></mrow></mfrac><mo>·</mo><mi>f</mi><mo lspace="0" rspace="0">′</mo><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo></math><code class="eq-alt">∂L/∂z ≈ ∂L/∂p · f′(z)</code></div>
+      <p><i>L</i> is the training loss. <i>f</i>′(<i>z</i>) is large when <i>z</i> is near zero, where Jev's answer is still
+        deciding, and small far from it, so the weights get pushed hardest on the sums Jev is least sure about.</p>
     </article>
     <article>
       <h3>the comparison</h3>
@@ -125,6 +129,9 @@
         <dt>trained through Jev</dt><dd><span class="acc-bar" style="--v: .853"></span>85.3%</dd>
         <dt>trained with perfect math</dt><dd><span class="acc-bar" style="--v: .658"></span>65.8%</dd>
       </dl>
+      <p>The 19.5-point gap is what the first network's weights learned about Jev. They're tuned to its mistakes and
+        biases, like its habit of saying yes to sums that should be no. The twin's weights assume a neuron that adds
+        perfectly, and Jev isn't one.</p>
     </article>
   </div>
   <p class="how-links"><a href="https://github.com/iamrajjoshi/jevrons">code on GitHub</a> · <a href="https://rajjoshi.me/blog/jevrons">the write-up</a></p>
