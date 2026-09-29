@@ -1,4 +1,4 @@
-# Stage 4: Jev as a scalar activation on ten digits
+# Sums in code: Jev as a scalar activation on ten digits
 
 2026-09-26 · 84,000 calls (+13,437 in a crashed first attempt) · $1.10 · TypeSafe direct and Vercel gateway
 
@@ -11,11 +11,11 @@ Code: `src/jevrons/stage4.py`. Weights and summary: `runs/stage4/`.
 | Validation (1,000, from the training partition) | 77.5% | 77.0% | 99.95% | 99.89% | 14.1% |
 | Test (1,000, stratified subset of the official test set) | 78.5% | 79.1% | 99.96% | 99.92% | 11.0% |
 
-The question was "Is the number z positive?" with z at two decimals; the stage 1 wording would have answered yes to every negative z.
+The question was "Is the number z positive?" with z at two decimals; the single-neuron probe's wording would have answered yes to every negative z.
 
-## Correction to stage 0
+## Correction to the local capacity check
 
-The stage 0 spike reported ~83-84% for a hard-step 784-32-10 net on 1,000 images. That figure broke ties between output neurons using the exact output sums. With near-binary outputs, 11-22% of images have no output neuron firing at all, so the tie rule matters: with random tie-breaking, the honest ceiling is about 77-79%. All results from stage 4 on use random tie-breaking (`net.decide`). Graded outputs, such as full-state Jev neurons produce, should be less affected.
+The local capacity check reported ~83-84% for a hard-step 784-32-10 net on 1,000 images. That figure broke ties between output neurons using the exact output sums. With near-binary outputs, 11-22% of images have no output neuron firing at all, so the tie rule matters: with random tie-breaking, the honest ceiling is about 77-79%. All results from here on use random tie-breaking (`net.decide`). Graded outputs, such as full-state Jev neurons produce, should be less affected.
 
 ## Infrastructure notes
 

@@ -1,16 +1,16 @@
-# Stage 6b: what Jev's behaviour reveals
+# Jev's quirks: what Jev's behaviour reveals
 
 2026-09-26 · 1,471,415 journaled full-state calls analysed offline · 1,800 live trap calls, $0.075 · model `jev-1.13.0`
 
 Jev isn't skimming the list, but it isn't only adding either: its yes/no also follows a sign vote over the terms, leans yes more the longer the list, reacts strongly to where one big number sits, and puts out a p that is compressed toward 0.5. Training through Jev finds and uses these quirks without being told about them. The Jev-trained networks push their hidden sums 1.6-1.8× as far from zero (in spreads) as exact-trained networks from the same start, and their first-layer weights end up 2-4× farther from init.
 
-Optimization finds quirks you didn't know to look for. Stage 1 found the first one by accident: with a separate `bias` field, Jev followed the bias sign 72-97% of the time. Stage 2 then showed training could only solve XOR once the bias was folded into the list. This stage goes looking for the rest.
+Optimization finds quirks you didn't know to look for. The single-neuron probe found the first one by accident: with a separate `bias` field, Jev followed the bias sign 72-97% of the time. Logic gates then showed training could only solve XOR once the bias was folded into the list. This experiment goes looking for the rest.
 
 Code: `src/jevrons/stage6b_features.py` (streams the journals into `runs/stage6b/features.npz`), `src/jevrons/stage6b.py` (offline analysis and figures), `src/jevrons/stage6b_traps.py` (live traps). Numbers: `runs/stage6b/*.json`. Trap journal: `runs/stage6b/journal.jsonl`.
 
 ## Data
 
-Every call whose state was a neuron: stage 1 (full, full2, wording; packed calls excluded), stages 2, 3, 5 and 6, the margin probe and the backend check. z is recomputed from the state exactly as sent, so every call has a known true sign. Stage 6 was still running, so its journal was read up to its size at the start (1,042,347 calls: seed 0 complete, seed 1 jev arm complete, seed 1 swap and seed 2 not yet run). Random probes are 15,740 calls; the rest come from trained networks, mostly 150-term hidden neurons from stages 5-6.
+Every call whose state was a neuron: the single-neuron probe (full, full2, wording; packed calls excluded), logic gates, the circle, two digits and ten digits, the margin probe and the backend check. z is recomputed from the state exactly as sent, so every call has a known true sign. The ten-digit experiment was still running, so its journal was read up to its size at the start (1,042,347 calls: seed 0 complete, seed 1 jev arm complete, seed 1 swap and seed 2 not yet run). Random probes are 15,740 calls; the rest come from trained networks, mostly 150-term hidden neurons from the two-digit and ten-digit runs.
 
 m = z / spread, where spread = sqrt(sum of squared terms, bias included). In the folded format the bias is the list's final number.
 
@@ -42,7 +42,7 @@ The share-of-zero-terms weight is large and negative at 60+ terms (−3.5 to −
 
 ### Is Jev skimming the list? No
 
-Stage 1 noted that "first 10 terms + bias" and "last 10 terms + bias" agreed with Jev about 91% of the time. On that probe, the bias was set to place the total at a chosen margin, so first-10-plus-bias mostly reproduced the bias's sign. Jev follows the bias, and the partial sum agreed with Jev (87-94%) more often than the true sign did (81-89%). It was the bias-trust quirk showing up again.
+The single-neuron probe noted that "first 10 terms + bias" and "last 10 terms + bias" agreed with Jev about 91% of the time. On that probe, the bias was set to place the total at a chosen margin, so first-10-plus-bias mostly reproduced the bias's sign. Jev follows the bias, and the partial sum agreed with Jev (87-94%) more often than the true sign did (81-89%). It was the bias-trust quirk showing up again.
 
 The direct test takes the cases where a partial sum has the wrong sign and asks which way Jev goes. A skimmer would side with the partial sum. On random probes with 30+ terms, Jev sides with it 29-46% of the time, and with the true total the rest:
 
@@ -62,7 +62,7 @@ Every value is below 50%, so Jev isn't reading a prefix. First-n beats random-n 
 | --- | --- | --- | --- | --- | --- |
 | All full-state calls | 1,471,415 | 0.066 | 0.154 | 99.0% | 0.8% |
 | Random probes | 15,740 | 0.107 | 0.130 | 94.2% | 4.0% |
-| Trained nets (stages 2-6) | 1,455,675 | 0.065 | 0.154 | 99.1% | 0.7% |
+| Trained nets (logic gates through ten digits) | 1,455,675 | 0.065 | 0.154 | 99.1% | 0.7% |
 | 30-59 terms | 265,218 | 0.020 | 0.097 | 98.8% | 1.2% |
 | 120-199 terms | 694,546 | 0.086 | 0.189 | 99.3% | 0.1% |
 
@@ -72,25 +72,25 @@ That compression matters for training (see "What training changed").
 
 ## 3. Training dynamics: margin maximization, measured
 
-For each arm and epoch, the hidden neurons' |m| on the training batches. The Jev arm's values come from its journaled training calls. The swap arm was retrained locally with a recording step neuron; the replay is deterministic and reproduces the saved weights exactly for stage 6 seed 0 and both stage 5 pairs. The swap arm has no live calls during training, so its fires-as-intended rate is predicted from the margin-probe curve, and that prediction is checked against its live validation pass.
+For each arm and epoch, the hidden neurons' |m| on the training batches. The Jev arm's values come from its journaled training calls. The swap arm was retrained locally with a recording step neuron; the replay is deterministic and reproduces the saved weights exactly for ten-digit seed 0 and both two-digit pairs. The swap arm has no live calls during training, so its fires-as-intended rate is predicted from the margin-probe curve, and that prediction is checked against its live validation pass.
 
 ![Margin dynamics](../figures/stage6b-margin-dynamics.png)
 
 | Run | Arm | Median hidden \|m\|, epoch 1 → last | Share with \|m\| < 1 | 10th pct \|m\| | Fires as intended, last epoch (measured / curve) |
 | --- | --- | --- | --- | --- | --- |
-| Stage 6 seed 0 | Jev | 2.21 → 2.36 | 23% → 15% | 0.43 → 0.73 | 92.0% / 94.9% |
-| Stage 6 seed 0 | exact | 1.63 → 1.41 | 31% → 36% | 0.32 → 0.27 | val 85.8% / 86.0% |
-| Stage 6 seed 1 | Jev | 2.30 → 2.35 | 21% → 16% | 0.47 → 0.69 | 91.0% / 94.4% |
-| Stage 5 0v1 | Jev | 1.76 → 4.09 | 31% → 2% | 0.30 → 2.60 | 99.4% / 99.4% |
-| Stage 5 0v1 | exact | 1.44 → 2.39 | 36% → 18% | 0.27 → 0.59 | val 96.4% / 95.7% |
-| Stage 5 3v8 | Jev | 1.60 → 2.32 | 32% → 13% | 0.31 → 0.81 | 93.7% / 94.6% |
-| Stage 5 3v8 | exact | 1.03 → 1.36 | 49% → 39% | 0.19 → 0.25 | val 86.8% / 84.4% |
+| Ten digits, seed 0 | Jev | 2.21 → 2.36 | 23% → 15% | 0.43 → 0.73 | 92.0% / 94.9% |
+| Ten digits, seed 0 | exact | 1.63 → 1.41 | 31% → 36% | 0.32 → 0.27 | val 85.8% / 86.0% |
+| Ten digits, seed 1 | Jev | 2.30 → 2.35 | 21% → 16% | 0.47 → 0.69 | 91.0% / 94.4% |
+| Two digits, 0v1 | Jev | 1.76 → 4.09 | 31% → 2% | 0.30 → 2.60 | 99.4% / 99.4% |
+| Two digits, 0v1 | exact | 1.44 → 2.39 | 36% → 18% | 0.27 → 0.59 | val 96.4% / 95.7% |
+| Two digits, 3v8 | Jev | 1.60 → 2.32 | 32% → 13% | 0.31 → 0.81 | 93.7% / 94.6% |
+| Two digits, 3v8 | exact | 1.03 → 1.36 | 49% → 39% | 0.19 → 0.25 | val 86.8% / 84.4% |
 
 Epoch-1 values average over the whole epoch; both arms start from the same weights at step 0.
 
-In every run, training through Jev empties the low-margin region where Jev is unreliable: the share of hidden sums within one spread of zero falls to 2-16%. Exact training leaves 18-39% there, and in stage 6 that share grows. The margin curve predicts the exact arm's live fires-as-intended rate within 2.4 points, so the swap gap from stage 5 is mostly the margin distribution.
+In every run, training through Jev empties the low-margin region where Jev is unreliable: the share of hidden sums within one spread of zero falls to 2-16%. Exact training leaves 18-39% there, and on ten digits that share grows. The margin curve predicts the exact arm's live fires-as-intended rate within 2.4 points, so the two-digit swap gap is mostly the margin distribution.
 
-In stage 6 the Jev arm's measured rate stays at 90-92% while its margins grow and the curve predicts 94-95%. The missing 3 points are yes-lean misfires. The share of intended fires rises from 42% to 57% over training, and Jev fires on 64% of calls by the end. The margin curve, fitted on random bias-0 lists, doesn't capture the sign-vote and length effects on these states.
+On ten digits the Jev arm's measured rate stays at 90-92% while its margins grow and the curve predicts 94-95%. The missing 3 points are yes-lean misfires. The share of intended fires rises from 42% to 57% over training, and Jev fires on 64% of calls by the end. The margin curve, fitted on random bias-0 lists, doesn't capture the sign-vote and length effects on these states.
 
 ## 4. Traps: states built to fool Jev
 
@@ -114,14 +114,14 @@ Zero padding changed nothing, so the large zero-share coefficient in section 1 i
 
 ## 5. Weight maps and what training changed
 
-Both arms share their initialization (`stage6.init(seed)`, `stage5.init(0)`), so ΔW = W − W_init is exact for each arm. Stage 6 seed 1's swap arm hadn't finished, so only seed 0 is compared.
+Both arms share their initialization (`stage6.init(seed)`, `stage5.init(0)`), so ΔW = W − W_init is exact for each arm. Ten-digit seed 1's swap arm hadn't finished, so only seed 0 is compared.
 
-![Stage 6 weights](../figures/stage6b-weights-s6-seed0.png)
-![Stage 6 margins and biases](../figures/stage6b-margins-s6-seed0.png)
-![Stage 5 3 vs 8 weights](../figures/stage6b-weights-s5-3v8.png)
-![Stage 5 3 vs 8 margins and biases](../figures/stage6b-margins-s5-3v8.png)
+![Ten-digit weights](../figures/stage6b-weights-s6-seed0.png)
+![Ten-digit margins and biases](../figures/stage6b-margins-s6-seed0.png)
+![Two digits, 3 vs 8 weights](../figures/stage6b-weights-s5-3v8.png)
+![Two digits, 3 vs 8 margins and biases](../figures/stage6b-margins-s5-3v8.png)
 
-| | Stage 6 seed 0: Jev | exact | Stage 5 3v8: Jev | exact |
+| | Ten digits, seed 0: Jev | exact | Two digits, 3v8: Jev | exact |
 | --- | --- | --- | --- | --- |
 | ‖ΔW1‖ (Frobenius) | 152.8 | 36.5 | 42.3 | 18.0 |
 | ‖ΔW2‖ | 48.5 | 3.5 | 1.39 | 0.61 |
@@ -143,9 +143,9 @@ The ΔW maps look like digit detectors in both arms, but the Jev arm's are large
 
 Margins grow more under Jev training. Per-neuron mean |m| is 3.1× init for the Jev arm versus 2.0× for the exact arm on ten digits (3.0× vs 1.7× on 3 vs 8). The Jev arm's validation margins are bimodal, with a trough at zero: it pushes sums out of the band where Jev is unreliable. m is scale-invariant, so this isn't just bigger weights. The products have to become more sign-consistent within each sum, which is also what Jev's sign vote rewards.
 
-The yes-lean prediction isn't supported. If training compensated for over-firing on long sums, Jev-trained sums (through biases or the mean of ΔW) would drift negative relative to the exact arm, especially on images with more active pixels. They drift the other way. The median change in a neuron's mean z is +4.1 for the Jev arm and −3.5 for the exact arm on ten digits (−0.8 vs −3.0 on 3 vs 8). The Jev arm's intended fire rate stays near 46-57% while the exact arm's falls to 33-34%. By image length on ten digits, the Jev arm's intended fire rate rises from 52% on the shortest third of images to 60% on the longest, while the exact arm's falls from 34% to 31%. The hidden biases barely move in either arm on 3 vs 8 (mean −0.034 vs −0.035). Training doesn't learn to counter the lean. It moves sums far enough from zero that the lean matters less, and in stage 6 it still costs about 3 points of hidden accuracy (section 3).
+The yes-lean prediction isn't supported. If training compensated for over-firing on long sums, Jev-trained sums (through biases or the mean of ΔW) would drift negative relative to the exact arm, especially on images with more active pixels. They drift the other way. The median change in a neuron's mean z is +4.1 for the Jev arm and −3.5 for the exact arm on ten digits (−0.8 vs −3.0 on 3 vs 8). The Jev arm's intended fire rate stays near 46-57% while the exact arm's falls to 33-34%. By image length on ten digits, the Jev arm's intended fire rate rises from 52% on the shortest third of images to 60% on the longest, while the exact arm's falls from 34% to 31%. The hidden biases barely move in either arm on 3 vs 8 (mean −0.034 vs −0.035). Training doesn't learn to counter the lean. It moves sums far enough from zero that the lean matters less, and on ten digits it still costs about 3 points of hidden accuracy (section 3).
 
-The Jev arm moves much farther, and that follows from the calibration finding. The output loss gradient is p − y. Jev's p almost never leaves 0.04-0.96 (the stage 6 Jev arm's output calls had min 0.04 and max 0.92), so every training example keeps pushing its margin outward, like logistic regression. With an exact step neuron the output is 0 or 1, and correctly classified examples give no gradient, like a perceptron. That explains the 14× larger ‖ΔW2‖, the output biases dragged down by 9 of 10 targets being 0 (−1.11 vs −0.13), and a Jev network that almost never fires an output (97% of test images have no output p ≥ 0.5) yet classifies at 71% by comparing graded p's. It's a plausible mechanism, not a tested one.
+The Jev arm moves much farther, and that follows from the calibration finding. The output loss gradient is p − y. Jev's p almost never leaves 0.04-0.96 (the ten-digit Jev arm's output calls had min 0.04 and max 0.92), so every training example keeps pushing its margin outward, like logistic regression. With an exact step neuron the output is 0 or 1, and correctly classified examples give no gradient, like a perceptron. That explains the 14× larger ‖ΔW2‖, the output biases dragged down by 9 of 10 targets being 0 (−1.11 vs −0.13), and a Jev network that almost never fires an output (97% of test images have no output p ≥ 0.5) yet classifies at 71% by comparing graded p's. It's a plausible mechanism, not a tested one.
 
 In the output layer, the Jev arm spreads its weight across nearly all 32 hidden neurons (participation ratio 31.5 vs 21.2; on 3 vs 8, 28.0 vs 16.1). It doesn't lean on the hidden neurons Jev runs most reliably. The correlation between a neuron's output-weight norm and its measured fires-as-intended rate is −0.13 on ten digits and −0.31 on 3 vs 8, against +0.35 and +0.29 in the exact arm.
 
@@ -153,25 +153,25 @@ In the output layer, the Jev arm spreads its weight across nearly all 32 hidden 
 
 ![Repeat noise](../figures/stage6b-repeat-noise.png)
 
-Repeat noise sits at small margins. Among 80,358 states that were called more than once (stage 1 repeats and wording, stages 2-3, the margin probe, the backend check, and stage 5's two validation passes; stage 6 never repeats a state), two identical calls disagree on yes/no 1.6-3.1% of the time overall. Half of all disagreement sits at |m| < 0.5, which holds 12% of the repeated states. The flip probability is 5-12% at |m| < 0.25, under 1% beyond |m| = 2, and zero beyond 4 in every term-count band. Long lists stay noisy further out: at 200+ terms it's still 5% at |m| of 1-2, against under 1% below 120 terms. The sd of p across repeats is 0.02-0.03 near zero and 0.002-0.005 at large margins.
+Repeat noise sits at small margins. Among 80,358 states that were called more than once (single-neuron probe repeats and wording, logic gates, the circle, the margin probe, the backend check, and the two-digit runs' two validation passes; the ten-digit runs never repeat a state), two identical calls disagree on yes/no 1.6-3.1% of the time overall. Half of all disagreement sits at |m| < 0.5, which holds 12% of the repeated states. The flip probability is 5-12% at |m| < 0.25, under 1% beyond |m| = 2, and zero beyond 4 in every term-count band. Long lists stay noisy further out: at 200+ terms it's still 5% at |m| of 1-2, against under 1% below 120 terms. The sd of p across repeats is 0.02-0.03 near zero and 0.002-0.005 at large margins.
 
-At the stage 5-6 scale the backends are no longer indistinguishable. Comparing hidden-neuron calls within matched cells of (term count, |m|, true sign, neuron index), 1.07M calls in 1,945 cells:
+At the scale of the two-digit and ten-digit runs, the backends are no longer indistinguishable. Comparing hidden-neuron calls within matched cells of (term count, |m|, true sign, neuron index), 1.07M calls in 1,945 cells:
 
 | Hidden calls, typesafe − vercel | Fire rate | Fires as intended | SE |
 | --- | --- | --- | --- |
 | All | −0.74 pts | +0.62 pts | 0.04 |
 | True total ≤ 0 | −1.31 pts | +1.31 pts | 0.08 |
 | True total > 0 | −0.13 pts | −0.13 pts | 0.03 |
-| Stage 5 only | −0.51 pts | +0.42 pts | 0.06 |
-| Stage 6 only | −0.74 pts | +0.64 pts | 0.05 |
+| Two digits only | −0.51 pts | +0.42 pts | 0.06 |
+| Ten digits only | −0.74 pts | +0.64 pts | 0.05 |
 
 The gateway fires slightly more often, almost all of it on negative totals, so it has a little more yes-lean. The raw hidden fires-as-intended rate is 92.1% on typesafe and 91.6% on vercel. The difference is consistent across stages, splits and neurons. On output neurons, where margins are large, there's no difference (−0.01 ± 0.03 pts). The backend check (100 states × 3 repeats) couldn't resolve a gap this size. For the networks it doesn't matter: 0.6 points of hidden accuracy is well below the arm-to-arm differences. But the two backends aren't bit-for-bit the same neuron. The gateway only exposes the unversioned `typesafe-ai/jev` alias, and whether it serves exactly `jev-1.13.0` can't be checked from the responses. Only 260 identical-state pairs landed on different backends, too few to compare per state (flip 2.3% cross-backend vs 1.7% same-backend).
 
 ## Caveats
 
 - Nearly all calls come from trained networks, mostly 150-term hidden neurons, so the pooled models are weighted toward that regime. Trained-network features (zeros, vote, image position) are correlated with each other and with the network state. That's why the traps exist: of the five, three confirmed a prediction, one reversed it, and one showed a confound.
-- Stage 6 was read mid-run: seed 0 complete, seed 1 Jev arm only, seed 2 absent. The weight comparison is one seed on ten digits and one pair on two.
+- The ten-digit journal was read mid-run: seed 0 complete, seed 1 Jev arm only, seed 2 absent. The weight comparison is one seed on ten digits and one pair on two.
 - The logistic model predicts Jev's answer about as well as the margin alone plus 0.1-0.4 points. It's a description of which features move Jev, not a model of how Jev computes.
 - The trap families each test one construction at one term count and margin. The position result is large but its cause is untested.
 
-13 trap calls hit repeated 429s on the gateway (it shares a rate limit with stage 6) and failed over to typesafe. All 1,800 got answers.
+13 trap calls hit repeated 429s on the gateway (it shares a rate limit with the ten-digit runs) and failed over to typesafe. All 1,800 got answers.

@@ -1,4 +1,4 @@
-# Stage 3: a circular boundary from Jev neurons
+# The circle: a circular boundary from Jev neurons
 
 2026-09-26 · 83,748 calls · $1.16 · model `jev-1.13.0` (TypeSafe direct)
 

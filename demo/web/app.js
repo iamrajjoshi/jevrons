@@ -12,7 +12,7 @@
      &compare=training  one | training | neuron (neuron: URL only)
      &seed=7            mock/replay randomness; film defaults to 7 so a take repeats exactly
      &delay=900         ms before the stroke starts (default 900)
-     &theme=dark        light | dark (default follows the system)
+     &theme=dark        light | dark; wins over the byline's theme switch (default: the stored choice, else the system)
    From a recording script: window.jevrons.play("3") draws and runs, resolving when the answer is in;
    window.jevrons.clear(); document.body.dataset.state is idle | drawing | running | done, and a
    "jevrons:done" event fires on window when every panel has its answer. */
@@ -89,6 +89,11 @@ function pen() { pctx.strokeStyle = css("--ink"); pctx.lineWidth = PEN; pctx.lin
 function stroke(a, b) { pen(); pctx.moveTo(...a); pctx.lineTo(...b); pctx.stroke(); }
 function curve(a, c, b) { pen(); pctx.moveTo(...a); pctx.quadraticCurveTo(...c, ...b); pctx.stroke(); }
 function clearPad() { pctx.clearRect(0, 0, pad.width, pad.height); }
+function padDigit() {  // a test digit, painted onto the pad
+  const c = document.createElement("canvas"); c.width = c.height = 28;
+  paintGray(c, S.input);
+  clearPad(); pctx.imageSmoothingEnabled = false; pctx.drawImage(c, 0, 0, pad.width, pad.height);
+}
 
 // MNIST: bounding box scaled to fit 20x20 (area-averaged, so anti-aliased), then placed in 28x28 so the
 // center of mass sits at the center.
@@ -129,9 +134,7 @@ async function loadReal(index) {
     : `/api/digit?labels=${labels}` + (m.replay ? `&recorded=${m.name}` : "");
   const r = await (await fetch(url)).json();
   S.input = Float32Array.from(r.pixels); S.real = { index: r.index, label: r.label };
-  const c = document.createElement("canvas"); c.width = c.height = 28;
-  paintGray(c, S.input);
-  clearPad(); pctx.imageSmoothingEnabled = false; pctx.drawImage(c, 0, 0, pad.width, pad.height);
+  padDigit();
   renderInput();
   clearTimeout(pending);
   return runAll();
@@ -803,6 +806,32 @@ function drawWalk(svg, terms) {
     `<circle class="end" cx="${X(pts.length - 1)}" cy="${Y(pts.at(-1))}" r="3.5"/>`;
 }
 
+// ---------- theme ----------
+// The inline script in <head> applied ?theme= or the stored choice before paint. Canvases read the colour tokens when
+// they draw, so a theme change repaints them; SVG and MathML follow the CSS on their own.
+function repaint() {
+  if (S.real) padDigit();
+  else { pctx.save(); pctx.globalCompositeOperation = "source-in"; pctx.fillStyle = css("--ink"); pctx.fillRect(0, 0, pad.width, pad.height); pctx.restore(); }
+  renderInput();  // the seen canvas and every panel's tiles
+  if (S.sel) renderInspector();
+}
+// The byline's last word names the theme a click switches to. Until a click the page follows the system; picking the
+// system's own theme clears the stored choice, so it goes back to following it.
+const sysDark = matchMedia("(prefers-color-scheme: dark)"), root = document.documentElement;
+const themeNow = () => root.dataset.theme || (sysDark.matches ? "dark" : "light");
+function themeWord() {
+  const to = themeNow() === "dark" ? "light" : "dark";
+  $("#theme").textContent = to; $("#theme").setAttribute("aria-label", `Switch to ${to} theme`);
+}
+$("#theme").addEventListener("click", () => {
+  const to = themeNow() === "dark" ? "light" : "dark", sys = sysDark.matches ? "dark" : "light";
+  try { if (to === sys) localStorage.removeItem("jevrons:theme"); else localStorage.setItem("jevrons:theme", to); } catch {}
+  if (to === sys) delete root.dataset.theme; else root.dataset.theme = to;
+  themeWord(); repaint();
+});
+sysDark.addEventListener("change", () => { themeWord(); repaint(); });
+themeWord();
+
 // ---------- boot ----------
 
 function clear() {
@@ -815,13 +844,12 @@ async function boot() {
   { const m = document.createElementNS("http://www.w3.org/1998/Math/MathML", "math"), sp = document.createElementNS(m.namespaceURI, "mspace");
     sp.setAttribute("width", "40px"); m.append(sp); m.style.position = "absolute"; document.body.append(m);
     if (Math.abs(m.getBoundingClientRect().width - 40) > 2) document.documentElement.classList.add("no-mathml"); m.remove(); }
-  if (Q.get("theme")) document.documentElement.dataset.theme = Q.get("theme");
   if (FILM) document.body.classList.add("film");
   const r = await (await fetch("/api/models")).json();
   S.models = r.models; S.live = r.live;
   const avail = S.models.filter((m) => m.available), tasks = [...new Set(avail.map((m) => m.title))];
   const want = avail.find((m) => m.name === (Q.get("model") ?? (FILM ? "s7-jev" : "s8a-jev")));
-  $("#task").innerHTML = tasks.map((t) => `<option>${t}</option>`).join("");
+  $("#task").innerHTML = tasks.map((t) => `<option value="${t}">${t} · ${(pick(t, "jev") || pick(t, "exact")).on_jev}</option>`).join("");
   S.task = want ? want.title : tasks[0]; $("#task").value = S.task;
   if (want) S.trained = want.trained;
   S.source = ["exact", "mock", "replay", "live"].includes(Q.get("source")) ? Q.get("source") : FILM ? "mock" : S.live ? "live" : "exact";

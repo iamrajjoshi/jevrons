@@ -63,6 +63,12 @@ All controls are native elements (`button`, `select`, `input[type=range]`), with
 - The network select is a native `<select>` (appearance off) with a drawn chevron. It has a visible label.
 - The source toggle group is a `radiogroup`: one tab stop, arrow keys move and select, and a disabled option is
   skipped. It uses `aria-checked`, not colour alone.
+- The theme switch is the byline's last item ("by Raj Joshi · GitHub · dark"), a `button` styled like the byline
+  links. Its word is the theme a click switches to, and its `aria-label` says so ("Switch to dark theme"). Until the
+  first click the page follows the system; picking the system's own theme clears the stored choice, so there's no
+  visible "auto". The choice lives in `localStorage` (the page works without it), and `?theme=` in the URL wins. An
+  inline script in `<head>` sets `data-theme` on `<html>` before the first paint, so nothing flashes. A change
+  repaints the canvases, which read the colour tokens when they draw. Hidden in film mode with the byline.
 - The compare switch is `role="switch"` with `aria-checked`. Its price is in the field label and tied to it by
   `aria-describedby`.
 - Neuron tiles and output bars are buttons in two roving-tabindex grids (arrow keys, Home/End). Enter opens the

@@ -1,4 +1,4 @@
-# Stage 8g: making a Jevron behave like the neuron we meant
+# The two-question neuron: making a Jevron behave like the neuron we meant
 
 2026-09-27 · 561,000 calls · $28.99 · TypeSafe direct (27%) and Vercel gateway (73%)
 
@@ -8,23 +8,23 @@ Code: `src/jevrons/stage8g.py`. Results, weights, curves: `runs/stage8g/`. The f
 
 ## Setup
 
-Stage 5's 3 vs 8 exactly (784-32-1, 500 train and 500 validation images, same seed and initialization, 5 epochs), so stage 5 is the baseline arm. Jev's measured response curve per term count, P(fire) = Φ(k(n)·(z/spread − m0(n))) from `runs/margin`, drives the fixes:
+The two-digit 3 vs 8 setup exactly (784-32-1, 500 train and 500 validation images, same seed and initialization, 5 epochs), so the [two-digit](stage5-two-digits.md) network is the baseline arm. Jev's measured response curve per term count, P(fire) = Φ(k(n)·(z/spread − m0(n))) from `runs/margin`, drives the fixes:
 
 | Arm | Backward pass | Neuron |
 | --- | --- | --- |
-| Baseline (stage 5) | sigmoid(z/τ) slope, τ = 3 | yes/no, folded products |
+| Baseline (two digits) | sigmoid(z/τ) slope, τ = 3 | yes/no, folded products |
 | B | slope of the measured curve for that neuron's term count | same |
 | C | measured curve, symmetric | bias sent to Jev shifted by m0 × spread, to cancel the threshold drift |
 | D | as C | as C, plus three yes/no phrasings averaged in one call |
 | E | measured curve, symmetric | yes/no and a neutral choice ("above zero" / "below zero or equal") averaged in one call, no shift |
 
-The swap control, stage 5's exact-trained 3 vs 8 weights, is re-run on the C, D and E neurons, since those change the neuron itself.
+The swap control, the two-digit exact-trained 3 vs 8 weights, is re-run on the C, D and E neurons, since those change the neuron itself.
 
 ## Results (validation, 500 images)
 
 | Arm | Trained through this neuron | Exact-trained network on this neuron | Swap gap | Hidden fires as intended (trained) | Cost |
 | --- | --- | --- | --- | --- | --- |
-| Baseline | 94.2% | 67.8% | 25.0 pts | 93.0% | (stage 5) |
+| Baseline | 94.2% | 67.8% | 25.0 pts | 93.0% | (two digits) |
 | B | 94.5% | 67.8% | 25.0 pts | 95.3% | $5.78 |
 | C | 95.2% | 75.2% | 17.6 pts | 89.0% | $7.40 |
 | D | 95.3% | 74.9% | 17.9 pts | 89.0% | $7.96 |

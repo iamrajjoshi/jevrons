@@ -473,7 +473,7 @@ def stage7():
              np.mean([t["accuracy"] for t in six["swap"]]))]
     dumbbell(ax, rows, 0.3, 0.95)
     ax.axhline(-1.5, color=S.RULE, lw=0.8)
-    ax.set_xlabel("test accuracy (2,000 images; 1,000-image rows are the stage 6 mean of 3 seeds)", fontsize=9.5)
+    ax.set_xlabel("test accuracy (2,000 images; 1,000-image rows are the mean of 3 ten-digit seeds)", fontsize=9.5)
     dumbbell_key(ax)
     ax2 = fig.add_subplot(gs[1])
     digits = np.arange(10)
@@ -490,7 +490,7 @@ def stage7():
     ax2.legend([Line2D([], [], ls="", marker="o", ms=7, color=S.JEV), Line2D([], [], ls="", marker="o", ms=7, color=S.INK)],
                ["trained through Jev", "trained exact"], loc="lower left", bbox_to_anchor=(0.5, 0.02), ncol=1, fontsize=9,
                handletextpad=0.1, columnspacing=1.2)
-    ax2.text(0.0, 1.03, "per digit, on live Jev: hollow = 1,000 images (stage 6 mean), filled = 5,000 images",
+    ax2.text(0.0, 1.03, "per digit, on live Jev: hollow = 1,000 images (mean of 3 ten-digit seeds), filled = 5,000 images",
              transform=ax2.transAxes, fontsize=9, color=S.INK2)
     ax2.set_xticks(digits)
     ax2.set_xlabel("digit")

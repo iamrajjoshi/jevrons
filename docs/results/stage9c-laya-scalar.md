@@ -1,4 +1,4 @@
-# Stage 9c: a neuron that looks broken, trained through anyway
+# Laya as a neuron: a neuron that looks broken, trained through anyway
 
 2026-09-26 · ~150,000 local calls to laya (Ollaya, laya:en) · $0
 
@@ -12,12 +12,12 @@ Laya is deterministic, so its measured response is its activation function. Acro
 
 ## Setup
 
-Stage 5's 3 vs 8 (784-32-1, 500 train and 500 validation images, same seed and initialization), scalar Variant A: code computes z = w·x + b, laya answers `states.SCALAR_Q` on {"z": z} at two decimals. Backprop goes through a smoothed copy of the measured curve (Gaussian, σ = 0.5 in units of z) instead of a guessed sigmoid. Two arms:
+The two-digit 3 vs 8 task (784-32-1, 500 train and 500 validation images, same seed and initialization), scalar Variant A: code computes z = w·x + b, laya answers `states.SCALAR_Q` on {"z": z} at two decimals. Backprop goes through a smoothed copy of the measured curve (Gaussian, σ = 0.5 in units of z) instead of a guessed sigmoid. Two arms:
 
 - laya hidden: all 32 hidden neurons are laya; the single output neuron is an ordinary sigmoid in code.
 - all-laya: the output neuron is laya too, calibrated in code to [0, 1] by its two measured levels, (p − 0.718) / (0.919 − 0.718), because raw laya p only drops below 0.5 in narrow pockets near zero.
 
-The swap control is stage 5's exact-trained 3 vs 8 network, run through the same laya neurons.
+The swap control is the two-digit exact-trained 3 vs 8 network, run through the same laya neurons.
 
 ## Results
 
@@ -26,10 +26,10 @@ The swap control is stage 5's exact-trained 3 vs 8 network, run through the same
 | laya hidden | 96.0% | 95.6% | 50.0% | 92.8% |
 | all-laya | 72.6% | 88.0% | 50.0% | 92.8% |
 
-For comparison, Jev on the same task: 94.2% trained, 67.8% swapped (stage 5, full-state neurons where Jev also does the sum, so not a like-for-like comparison).
+For comparison, Jev on the same task: 94.2% trained, 67.8% swapped (two digits, full-state neurons where Jev also does the sum, so not a like-for-like comparison).
 
 Locally, against the 0.1-step table, the all-laya arm reached 92.2% and scored 89.6% on the table after live training; live it scored 72.6%. The difference is the fine-scale jitter above: 32 hidden neurons average it out, a single output neuron can't. The laya-hidden arm agrees live vs tabulated (96.0% vs 96.2%).
 
 ## What it shows
 
-The swap control is the result. Weights trained for an exact step are worthless on laya (50.0% in both arms, the output collapses to one class), while weights trained through laya's real curve work, 96.0% with laya in every hidden neuron. Laya was later found to answer the same question correctly with a neutral choice format (100% sign accuracy on z in [−10, 10], see stage 10), so this experiment is best read as a stress test: training through a deliberately bad-looking activation.
+The swap control is the result. Weights trained for an exact step are worthless on laya (50.0% in both arms, the output collapses to one class), while weights trained through laya's real curve work, 96.0% with laya in every hidden neuron. Laya was later found to answer the same question correctly with a neutral choice format (100% sign accuracy on z in [−10, 10], see [teaching laya to add](stage10-teaching-laya.md)), so this experiment is best read as a stress test: training through a deliberately bad-looking activation.

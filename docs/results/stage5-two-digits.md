@@ -1,4 +1,4 @@
-# Stage 5: full-state Jev neurons on two digits
+# Two digits: full-state Jev neurons on 0 vs 1 and 3 vs 8
 
 2026-09-26 · 297,000 calls · 330.5M input tokens · $13.88 · TypeSafe direct (27%) and Vercel gateway (73%)
 
@@ -10,7 +10,7 @@ Code: `src/jevrons/stage5.py`. Weights, curves and results: `runs/stage5/`. Jour
 
 ## Setup
 
-784-32-1, one seed per pair, 500 stratified training and 500 validation images from the training partition. Each neuron's state is the folded-bias products list of its nonzero inputs (about 150 terms for hidden neurons, 33 for the output), roughly 1,036 billed tokens per call. Straight-through with τ = 3, Adam at 0.02, batch 32, 5 epochs, weights initialized N(0, 0.3). These settings were chosen locally against `MockJevNeuron`, a stand-in fitted to stage 1's error-versus-margin curve, which predicted 3 vs 8 at 93.6% trained and 76.5% swapped. Validation averages 2 live passes.
+784-32-1, one seed per pair, 500 stratified training and 500 validation images from the training partition. Each neuron's state is the folded-bias products list of its nonzero inputs (about 150 terms for hidden neurons, 33 for the output), roughly 1,036 billed tokens per call. Straight-through with τ = 3, Adam at 0.02, batch 32, 5 epochs, weights initialized N(0, 0.3). These settings were chosen locally against `MockJevNeuron`, a stand-in fitted to the single-neuron probe's error-versus-margin curve, which predicted 3 vs 8 at 93.6% trained and 76.5% swapped. Validation averages 2 live passes.
 
 ## Results
 
@@ -25,6 +25,6 @@ Code: `src/jevrons/stage5.py`. Weights, curves and results: `runs/stage5/`. Jour
 
 ## What training changed
 
-Jev-trained neurons fire as intended far more often than the stage 1 probe would predict for 150-term sums (93-99% here versus 80-90% on random states). The swap networks, with the same architecture and inputs, sit at 87-96%. Training moved the sums away from zero, where Jev adds reliably, as well as learning weights that tolerate the misfires that remain. The mock neuron did not model this, which is why it underestimated the swap gap on 0 vs 1.
+Jev-trained neurons fire as intended far more often than the single-neuron probe would predict for 150-term sums (93-99% here versus 80-90% on random states). The swap networks, with the same architecture and inputs, sit at 87-96%. Training moved the sums away from zero, where Jev adds reliably, as well as learning weights that tolerate the misfires that remain. The mock neuron did not model this, which is why it underestimated the swap gap on 0 vs 1.
 
-This is one seed per arm. Stage 6 repeats the comparison across seeds on all ten digits.
+This is one seed per arm. The [ten-digit experiment](stage6-ten-digits.md) repeats the comparison across seeds on all ten digits.

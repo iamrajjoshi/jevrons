@@ -1,4 +1,4 @@
-# Stage 6: all ten digits with full-state Jev neurons
+# Ten digits: all ten with full-state Jev neurons
 
 2026-09-26 to 27 · ~1.7M calls · ~$70 · TypeSafe direct and Vercel gateway (one Vercel credit top-up mid-run; seed 2 resumed from its epoch-2 checkpoint)
 
@@ -34,4 +34,4 @@ The swapped networks don't degrade evenly: they nearly stop predicting 0, 3 and 
 
 ## Notes
 
-In 97-99% of test images no output neuron's p reaches 0.5; the prediction comes from the ranking of graded outputs below 0.5. That's why graded Jev outputs matter at ten classes and why the stage 0 tie-breaking correction mattered. The ceiling for an exact-neuron 784-32-10 at 1,000 images with random tie-breaking is about 77-79% (stage 4), which the exact arm reaches; the Jev-trained arm is about 8 points below it. Stage 7 tests whether more data narrows that.
+In 97-99% of test images no output neuron's p reaches 0.5; the prediction comes from the ranking of graded outputs below 0.5. That's why graded Jev outputs matter at ten classes and why the tie-breaking correction to the local capacity check mattered. The ceiling for an exact-neuron 784-32-10 at 1,000 images with random tie-breaking is about 77-79% (from [the scalar-neuron run](stage4-scalar-digits.md), where the sum was done in code), which the exact arm reaches; the Jev-trained arm is about 8 points below it. [The dense network](stage7-more-data.md) tests whether more data narrows that.

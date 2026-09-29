@@ -11,37 +11,37 @@ uv run python demo/make_replay.py                                   # re-cut dem
 
 ## Networks
 
-The default is stage 8a (`s8a-jev`, 85.3% on 1,000 test digits, on Jev): 784-64-10, where each hidden neuron is wired
+The default is the sparse network (`s8a-jev`, 85.3% on 1,000 test digits, on Jev): 784-64-10, where each hidden neuron is wired
 to 96 fixed pixels picked at random from the ones that are ever inked. Its tiles show those receptive fields, 96 dots
 on the 28 × 28 grid. A hidden call sends only the connected pixels that are nonzero in the image and whose weight
-doesn't round to zero, plus the bias, about 37 numbers instead of stage 7's 150. The mask isn't stored anywhere:
+doesn't round to zero, plus the bias, about 37 numbers instead of the dense network's 150. The mask isn't stored anywhere:
 training holds absent weights at exactly 0, so it's `W1 != 0`, and `--check` confirms that matches `stage8a.connections()`.
 
-The other network is stage 7 (`s7-jev`, 84.6% on 2,000 test digits): 784-32-10, every pixel connected. Both have an
+The other network is the dense network (`s7-jev`, 84.6% on 2,000 test digits): 784-32-10, every pixel connected. Both have an
 exact-trained twin (`s8a-swap`, `s7-swap`): same start, trained on a perfect step neuron, then run on Jev.
 
-Every neuron is stage 8g's arm E: one call carrying the folded-bias products and two questions (the v1 yes/no and
-the above/below choice), averaged into the neuron's output. Stage 4-6, 3 vs 8 and 0 vs 1 are out of `models.json`; their
-weights stay in `runs/`.
+Every neuron is arm E from the two-question neuron experiment: one call carrying the folded-bias products and two questions (the v1 yes/no and
+the above/below choice), averaged into the neuron's output. The earlier digit networks (the scalar neuron, 0 vs 1, 3 vs 8 and
+the first ten-digit runs) are out of `models.json`; their weights stay in `runs/`.
 
 ## Sources
 
 Visitors pick between two:
 
-- `live` makes real Jev calls and is billed: 74 calls, about 43,000 input tokens, $0.0018 a draw for stage 8a
-  ($0.0017 for stage 7). It's the default when the server runs with `--live`. There's no Run button: a draw starts 800 ms after the
+- `live` makes real Jev calls and is billed: 74 calls, about 43,000 input tokens, $0.0018 a draw for the sparse network
+  ($0.0017 for the dense one). It's the default when the server runs with `--live`. There's no Run button: a draw starts 800 ms after the
   last stroke (Enter on the pad starts it now), and drawing again mid-draw cancels it. The "this draw" box shows what it cost.
 - `exact` is a local step neuron, free. It's the default without `--live`, and the page says live is off.
 
 "Also run a network trained with perfect math" runs the twin next to it, so a live compare is two draws (about
 $0.0035). The verdict above the panels names them A and B. "Show a test digit they read differently" loads a recorded
-test digit the twins disagree on (`GET /api/disagree?model=s8a-jev` lists them; stage 7's twin has no recorded answers,
+test digit the twins disagree on (`GET /api/disagree?model=s8a-jev` lists them; the dense network's twin has no recorded answers,
 so it has no list).
 
 Two more stay in the code, for URL flags and as fallbacks:
 
 - `replay` plays back recorded answers keyed by the exact request. The first 12 test digits of each class from the
-  stage 7 and 8a test passes were recorded call for call ("Test digit" picks one of them), and so are the live draws
+  dense and sparse networks' test passes were recorded call for call ("Test digit" picks one of them), and so are the live draws
   in `demo/runs/journal.jsonl`.
 - `mock` resamples a recorded test call from the same network family with the same layer and a similar z / spread.
 
@@ -64,7 +64,7 @@ A draw that stops early is charged a full draw, since calls in flight can still 
 ## Film mode
 
 `/?film` hides the copy and controls, enlarges the pad and tiles, fixes the seed (7) and keeps the frame still while
-calls stream in. Film mode defaults to stage 7 and the mock. Add:
+calls stream in. Film mode defaults to the dense network and the mock. Add:
 
 | flag | effect |
 | --- | --- |

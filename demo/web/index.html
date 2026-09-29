@@ -10,12 +10,17 @@
 <link rel="preload" href="fonts/JetBrainsMono-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
+<script>/* theme before first paint: ?theme= wins, then the stored choice, else the system */
+(function () { var t = new URLSearchParams(location.search).get("theme");
+  if (!t) try { t = localStorage.getItem("jevrons:theme"); } catch (e) {}
+  if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; })();</script>
 </head>
 <body data-state="idle">
 <header class="top">
   <div class="brand">
     <h1>Jevrons</h1>
-    <p class="by">by <a href="https://rajjoshi.me">Raj Joshi</a> · <a href="https://github.com/iamrajjoshi/jevrons">GitHub</a></p>
+    <p class="by">by <a href="https://rajjoshi.me">Raj Joshi</a> · <a href="https://github.com/iamrajjoshi/jevrons">GitHub</a> · <button
+      id="theme" type="button"></button></p>
   </div>
   <div class="lede">
     <p class="lead">A small neural network where every neuron is an API call to <a href="https://typesafe.ai">Jev</a>, an AI model from TypeSafe.</p>
@@ -109,7 +114,7 @@
       <p>784 pixels feed 64 hidden neurons, 96 pixels each, which feed 10 outputs, one per digit. That's 74 Jev calls a
         digit: the 64 hidden ones at once, then the 10 outputs. The highest output wins:</p>
       <div class="eq"><math display="block" alttext="predicted digit = argmax over k of p_k"><mover><mi>y</mi><mo>^</mo></mover><mo>=</mo><munder><mrow><mi>arg</mi><mo>&#x2061;</mo><mi>max</mi></mrow><mi>k</mi></munder><mspace width="0.2em"/><msub><mi>p</mi><mi>k</mi></msub></math><code class="eq-alt">ŷ = argmaxₖ pₖ</code></div>
-      <p>Stage 7, the other network in the menu, is dense: every hidden neuron sees all 784 pixels (784 → 32 → 10, 42 calls).</p>
+      <p>The other network in the menu is dense: every hidden neuron sees all 784 pixels (784 → 32 → 10, 42 calls).</p>
     </article>
     <article>
       <h3>training</h3>

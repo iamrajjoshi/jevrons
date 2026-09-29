@@ -1,4 +1,4 @@
-# Stage 2: logic gates from Jev neurons
+# Logic gates (XOR) from Jev neurons
 
 2026-09-26 · 33,183 calls · $0.46 · model `jev-1.13.0`
 
@@ -26,7 +26,7 @@ Three arms get the same Jev-call budget: straight-through with products plus a s
 | XOR | straight-through, folded bias | 95% | 100% | 100% | 14/15 |
 | XOR | SPSA | 75% | 65% | 80% | 3/15 |
 
-Cells are pass accuracy over 5 live evaluations. Gate for stage 3: XOR correct on 3 of 3 seeds. The folded arm passes, with one of fifteen evaluation passes missing a row.
+Cells are pass accuracy over 5 live evaluations. Gate for the circle: XOR correct on 3 of 3 seeds. The folded arm passes, with one of fifteen evaluation passes missing a row.
 
 ## Jev's quirks show up in the learned weights
 
@@ -35,8 +35,8 @@ Every run also checks whether its learned weights solve the task under an exact 
 - Seed 0, folded bias: correct on live Jev (95%, 4 of 5 passes perfect), but the same weights fail XOR under an exact step neuron. The network learned a solution that works with how Jev actually behaves, not the ideal arithmetic.
 - Seed 2, separate bias: the weights solve XOR under an exact step neuron, but Jev running them gets 70%. A correct design, broken by the neuron's handling of the bias.
 
-These are single runs, not yet a measured effect. Stage 6's swap control is where the claim gets tested at scale.
+These are single runs, not yet a measured effect. The [ten-digit](stage6-ten-digits.md) swap control is where the claim gets tested at scale.
 
 ## What changes going forward
 
-The folded-bias products format is the default neuron from here on. SPSA stays in the comparison for stage 3, which is small enough, and is dropped for digits as planned. Stage 2 took about 35 minutes of wall-clock because each training step waits for the previous layer; later stages should run several seeds concurrently to use the rate limit.
+The folded-bias products format is the default neuron from here on. SPSA stays in the comparison for the circle, which is small enough, and is dropped for digits as planned. The logic-gates runs took about 35 minutes of wall-clock because each training step waits for the previous layer; later experiments should run several seeds concurrently to use the rate limit.

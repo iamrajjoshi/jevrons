@@ -1,8 +1,8 @@
-# Stage 1: probing a single Jev neuron
+# The single-neuron probe: how well one Jev neuron adds
 
 2026-09-26 · 16,299 calls · 11.5M input tokens · $0.48 · model `jev-1.13.0`
 
-A Jev neuron is a real but imperfect adder. With the bias out of the way, it gets the sign of a weighted sum right 82-93% of the time up to 75 terms, falling to 65-82% at 150-250 terms. That's the range where the local mock showed training can compensate, so the gate to stage 2 passes. Three findings overturned the audited proposal: Jev isn't deterministic, packing neurons into one request changes their answers, and the neuron over-trusts a standalone bias.
+A Jev neuron is a real but imperfect adder. With the bias out of the way, it gets the sign of a weighted sum right 82-93% of the time up to 75 terms, falling to 65-82% at 150-250 terms. That's the range where the local mock showed training can compensate, so the gate to the logic-gates experiment passes. Three findings overturned the audited proposal: Jev isn't deterministic, packing neurons into one request changes their answers, and the neuron over-trusts a standalone bias.
 
 Code: `src/jevrons/probe.py`, `src/jevrons/analyze_probe.py`. Raw journals: `runs/probe/*.jsonl.gz` (every state sent and answer received).
 
@@ -29,7 +29,7 @@ Folding the bias into the products list as one more number fixes most of it (40 
 | products + separate bias | 90% | 85% | 83% | 75% |
 | products with bias folded in | 95% | 85% | 85% | 90% |
 
-The folded format is the new default candidate; stage 2 compares both.
+The folded format is the new default candidate; the [logic-gates experiment](stage2-logic.md) compares both.
 
 ## It isn't deterministic
 
@@ -46,7 +46,7 @@ Eight paired neurons under separate keys in one request, versus the same neurons
 | 75 | 18% | 80% | 88% | 13,174 |
 | 150 | 11% | 79% | 86% | 25,314 |
 
-Eight 250-term neurons exceed the 32k state limit (`max_tokens_exceeded`). Neurons go one per request. At the 1,200 requests/min limit, that makes stage 6 about 36 hours of calls, unless its design changes.
+Eight 250-term neurons exceed the 32k state limit (`max_tokens_exceeded`). Neurons go one per request. At the 1,200 requests/min limit, that makes the ten-digit experiment about 36 hours of calls, unless its design changes.
 
 ## Scalar neuron (Variant A): wording decides everything
 

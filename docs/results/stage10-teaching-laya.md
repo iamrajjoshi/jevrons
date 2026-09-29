@@ -1,8 +1,8 @@
-# Stage 10: teaching laya to add
+# Teaching laya to add
 
 2026-09-27 · all local (PyTorch on the M5 Pro's GPU, Ollaya) · no Jev calls · $0
 
-Yes: a 421M-parameter System-1 model can be taught to be a neuron, and it ends up a better one than Jev. Base laya answers yes to every folded sum (48-53% sign accuracy). After 3,000 fine-tuning steps (1.9 hours) on synthetic and journaled states labelled with the true sign, it gets 98.7%, 97.3% and 97.5% of the margin probe's own 10-, 30- and 75-term states right, where Jev got 94.7%, 93.8% and 93.8% of the same states. Its response curve is 2-4× steeper (k 13.5 / 6.5 / 7.5 against Jev's 2.9 / 2.3 / 1.9), and it holds 97-98% at 75 and 90 terms, which it never trained on, and at 150 terms with the context raised past Ollaya's 512 tokens. It serves through Ollaya as `laya-neuron` with answers identical to the offline model. A sparse 3 vs 8 network trained on an exact neuron loses 1 point when laya-neuron replaces it (91.2% to 90.2%); on Jev, stage 5's dense network lost 25 points.
+Yes: a 421M-parameter System-1 model can be taught to be a neuron, and it ends up a better one than Jev. Base laya answers yes to every folded sum (48-53% sign accuracy). After 3,000 fine-tuning steps (1.9 hours) on synthetic and journaled states labelled with the true sign, it gets 98.7%, 97.3% and 97.5% of the margin probe's own 10-, 30- and 75-term states right, where Jev got 94.7%, 93.8% and 93.8% of the same states. Its response curve is 2-4× steeper (k 13.5 / 6.5 / 7.5 against Jev's 2.9 / 2.3 / 1.9), and it holds 97-98% at 75 and 90 terms, which it never trained on, and at 150 terms with the context raised past Ollaya's 512 tokens. It serves through Ollaya as `laya-neuron` with answers identical to the offline model. A sparse 3 vs 8 network trained on an exact neuron loses 1 point when laya-neuron replaces it (91.2% to 90.2%); on Jev, the dense two-digit network lost 25 points.
 
 It isn't a perfect adder. One trap family breaks it completely: a single large positive number against 74 small negatives, total half a spread below zero, fires 100% of the time. The pilot model had a different hole (it counted signs), which more varied training data closed.
 
@@ -28,7 +28,7 @@ Synthetic states, with term counts 2 to 60 except 10 and 30, margins m = z / spr
 - generic: heavy-tailed numbers with no MNIST structure, shifted to the target
 - mixed: the number of positive terms drawn independently of the total, two groups scaled to the target margin. Added after the pilot, below.
 
-Real states: 457,958 distinct folded states from the stage 2, 3, 5 and 6 journals (stage 6 from the 20:46 backup), the stage 1 wording probe and the backend check, 2 to 97 numbers each, with Jev's mean p. 10% are held out by state hash. The margin probe's 1,800 states are held out entirely, since they define Jev's published curve.
+Real states: 457,958 distinct folded states from the logic-gate, circle, two-digit and ten-digit journals (ten digits from the 20:46 backup), the single-neuron probe's wording test and the backend check, 2 to 97 numbers each, with Jev's mean p. 10% are held out by state hash. The margin probe's 1,800 states are held out entirely, since they define Jev's published curve.
 
 A pilot and a final run, both full fine-tunes from laya's weights, AdamW 2e-5 with warmup and cosine decay, batch 16, gradient checkpointing, bf16 autocast, loss = cross-entropy on the calibrated probability softmax(logits / 1.983), so the number Ollaya reports is the number trained:
 
@@ -69,11 +69,11 @@ Fresh states from the margin probe's generator (seed 99, 400 per count; 2 and 5 
 
 The true-math arm has a slight yes-lean (m0 −0.05 to −0.15, fires on 2-5% of negative totals) and no length decay through 150 terms. Holding out 10 and 30 terms is a weak test, since 9, 11, 29 and 31 were trained. The real length test is 75, 90 and 150, all past the longest trained sum.
 
-On 6,000 held-out real journal states (72% stage 6 output neurons, mostly 33 numbers), the true-math arm gets the sign right 99.1% of the time, against 97.6% for Jev's own recorded answers. It gains most on stage 3's small circle networks (97.5% vs 92.8%).
+On 6,000 held-out real journal states (72% ten-digit output neurons, mostly 33 numbers), the true-math arm gets the sign right 99.1% of the time, against 97.6% for Jev's own recorded answers. It gains most on the circle's small networks (97.5% vs 92.8%).
 
 ## Traps
 
-Stage 6b's trap families at their original 75 terms, and length-limited versions of the two that don't fit 512 tokens. Jev's long-list and zero-padding numbers are from 250 and 150 terms, so they aren't the same states. Misfire = yes/no disagrees with the true sign; 200 trap states and 200 matched controls per family.
+The trap families from [Jev's quirks](stage6b-jev-quirks.md) at their original 75 terms, and length-limited versions of the two that don't fit 512 tokens. Jev's long-list and zero-padding numbers are from 250 and 150 terms, so they aren't the same states. Misfire = yes/no disagrees with the true sign; 200 trap states and 200 matched controls per family.
 
 | Family | Jev: trap / control | Base laya | Pilot (1,000 steps, no mixed family)† | True-math arm |
 | --- | --- | --- | --- | --- |
@@ -95,7 +95,7 @@ The final model picked up a different hole. With one large positive number (98% 
 
 z in [−10, 10] at 0.1, never trained:
 
-| Question | Base laya | True-math arm | Jev (stage 1) |
+| Question | Base laya | True-math arm | Jev (single-neuron probe) |
 | --- | --- | --- | --- |
 | "z is a number." / greater than zero / zero or less | 51.7% | 100% | 0% on negatives (p 0.66-0.74) |
 | "Is the number z positive?" | 50.2% | 99.5% | 100% |
@@ -115,18 +115,18 @@ Ollaya 0.7.2's Modelfile accepts only `FROM <registry name>`, `PARAMETER precisi
 
 ## Payoff: sparse 3 vs 8 through the laya neuron
 
-Stage 5's recipe (784-32-1, 500 train / 500 val, straight-through with τ = 3, Adam 0.02, batch 32, 5 epochs, `stage5.init(0)`). Each hidden neuron keeps its 64 largest-magnitude initial weights among the 379 pixels that are nonzero in at least 5% of training images, and the rest stay at zero, so hidden states carry 35 terms on average and at most 54 plus the bias. Both arms share the start and the mask. laya is deterministic, so one validation pass replaces stage 5's two.
+The two-digit recipe (784-32-1, 500 train / 500 val, straight-through with τ = 3, Adam 0.02, batch 32, 5 epochs, `stage5.init(0)`). Each hidden neuron keeps its 64 largest-magnitude initial weights among the 379 pixels that are nonzero in at least 5% of training images, and the rest stay at zero, so hidden states carry 35 terms on average and at most 54 plus the bias. Both arms share the start and the mask. laya is deterministic, so one validation pass replaces the two the two-digit runs used.
 
 | Arm | Exact neuron | laya-neuron | Hidden fires as intended | Output fires as intended |
 | --- | --- | --- | --- | --- |
 | Trained through laya-neuron | 90.6% | 91.0% | 95.7% | 93.8% |
 | Trained exact, swapped to laya-neuron | 91.2% | 90.2% | 95.5% | 95.8% |
-| Stage 5, trained through Jev (dense, ~150 terms) | 94.4% | 94.2% | 93.0% | 97.5% |
-| Stage 5, trained exact, swapped to Jev | 92.8% | 67.8% | 86.9% | 91.6% |
+| Two digits, trained through Jev (dense, ~150 terms) | 94.4% | 94.2% | 93.0% | 97.5% |
+| Two digits, trained exact, swapped to Jev | 92.8% | 67.8% | 86.9% | 91.6% |
 
-The swap control is the result. On Jev, an exact-trained network lost 25 points, and training through Jev was how stage 5 got them back. On laya-neuron, it loses 1 point, and training through the neuron adds only 0.8. laya-neuron behaves close enough to the intended step neuron that nothing needs compensating.
+The swap control is the result. On Jev, an exact-trained network lost 25 points, and training through Jev was how the two-digit runs got them back. On laya-neuron, it loses 1 point, and training through the neuron adds only 0.8. laya-neuron behaves close enough to the intended step neuron that nothing needs compensating.
 
-Absolute accuracy is lower than stage 5's because the network is sparser: the exact-step ceiling with 64 weights per hidden neuron is 91.2%, against 92.8% dense. This isn't a like-for-like comparison with Jev, which was never run on the sparse network.
+Absolute accuracy is lower than in the two-digit runs because the network is sparser: the exact-step ceiling with 64 weights per hidden neuron is 91.2%, against 92.8% dense. This isn't a like-for-like comparison with Jev, which was never run on the sparse network.
 
 ## Downloads
 
@@ -136,7 +136,7 @@ From Hugging Face, only laya's code and small configs at revision `aa8c91ca` (`r
 
 - One seed per run and one payoff run. The curves use 400-600 states per term count, so an accuracy of 97.5% has a 95% interval of about ±1.3 points.
 - The synthetic distribution was changed once after looking at a trap result, and the change resembles the vote trap. The final model's vote-trap number isn't a clean held-out test. The position traps were, and the final model fails them.
-- The stage 6b comparison is uneven: Jev's long-list and zero-padding traps used 250- and 150-term lists, laya's used 90 and 60.
-- The true-math arm's p is nearly a step: mean p is 0.00 below m = −0.75 and 1.00 above m = +0.5, so its probability says little about confidence. For straight-through training that's harmless, but stage 6b's observation that Jev's graded p keeps gradients alive in the output layer doesn't carry over.
+- The comparison with Jev's quirks is uneven: Jev's long-list and zero-padding traps used 250- and 150-term lists, laya's used 90 and 60.
+- The true-math arm's p is nearly a step: mean p is 0.00 below m = −0.75 and 1.00 above m = +0.5, so its probability says little about confidence. For straight-through training that's harmless, but the observation from Jev's quirks that Jev's graded p keeps gradients alive in the output layer doesn't carry over.
 - Ollaya serves 512 tokens, so laya-neuron covers about 99 terms. The 1,024-token result at 150 terms is offline only. Dense MNIST hidden neurons (about 150 terms) need a custom server or a longer-context Ollaya model.
 - `runs/stage10/` holds two 804 MB checkpoints, and `.gitignore` doesn't cover `*.safetensors`.
