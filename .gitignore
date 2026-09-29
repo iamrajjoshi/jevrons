@@ -49,3 +49,5 @@ runs/**/*.jsonl.gz
 runs/stage10/eval-jev.*
 runs/stage10/jev.log
 video/hybrid/score.wav
+# The demo video lives outside the repo for now (latest cut: jevrons-archive, branch public-main-2026-09-28).
+video/
