@@ -907,9 +907,13 @@ def check_live_limits(pixels):
     behave["f"] = lambda n: (402, 0)
     evs, _ = draw()
     assert evs[-1] == {"type": "error", "message": UNAVAILABLE} and not any(e["type"] == "neuron" for e in evs), evs[-1]
-    until(lambda: _attempts._work_queue.empty(), 1.0)  # the rest of that layer's calls were already out
-    threading.Event().wait(0.2)
-    n0 = calls[0]
+    # let that draw wind down fully: its charge is written before its slot is released, and calls already sent may
+    # still land. On a slow runner (CI) both can trail the error event.
+    assert until(lambda: QUEUE.running == 0 and _attempts._work_queue.empty(), 10.0), "402 draw never released its slot"
+    n0 = -1
+    while n0 != calls[0]:
+        n0 = calls[0]
+        threading.Event().wait(0.5)
     behave["f"] = lambda n: (200, 0)
     SPEND.write_text(json.dumps({time.strftime("%Y-%m-%d", time.gmtime()): 1.0}))
     evs, _ = draw()
