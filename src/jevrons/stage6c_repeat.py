@@ -5,17 +5,18 @@ Usage: uv run python -m jevrons.stage6c_repeat
 from pathlib import Path
 
 import numpy as np
+
 from jevrons.digits import mnist, split
+from jevrons.net import load_params
 from jevrons.stage8g import terms_and_spread
 from jevrons.stage6c import curve_p, trained_logit_p
-from jevrons.states import r2
 
 RUNS = Path(__file__).resolve().parents[2] / "runs"
 d = dict(np.load(RUNS / "stage6c/calls.npz"))
 xtr, ytr, _, _ = mnist(); _, va = split(ytr, (3, 8), 500, 500); Xv = xtr[va]
 rng = np.random.default_rng(0)
 for arm, code in (("jev", 0), ("swap", 1)):
-    w = np.load(RUNS / f"stage5/weights-3v8-{arm}.npz"); W, b = w["arr_0"], w["arr_1"]
+    (W, b), _ = load_params(RUNS / f"stage5/weights-3v8-{arm}.npz")
     Z = Xv @ W + b; n, sp = terms_and_spread(Xv, W, b)
     m = (d["src"] == 0) & (d["arm"] == code) & (d["pair"] == 1) & (d["layer"] == 0) & (d["split"] == 1)
     i, j, ev = d["i"][m].astype(int), d["j"][m].astype(int), d["eval"][m]

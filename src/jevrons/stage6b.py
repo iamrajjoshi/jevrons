@@ -12,7 +12,6 @@ margin-dynamics, 3 vs 8 weight-map and traps figures).
 
 import json
 import sys
-from math import erf
 from pathlib import Path
 
 import matplotlib
@@ -22,6 +21,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 from jevrons import figstyle as S  # noqa: E402  (docs palette; these figures keep their own layout)
+from jevrons.net import Phi  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT, FIG = ROOT / "runs" / "stage6b", ROOT / "docs" / "figures"
@@ -29,7 +29,6 @@ ACCENT, INK, EXACT = S.JEV, S.INK, S.EXACT
 TERM_BINS = [S.TERMS[n] for n in S.TERM_COUNTS]  # one colour per KBINS band, shortest lists first
 KBINS = ((10, 30), (30, 60), (60, 120), (120, 200), (200, 1000))
 RANDOM = ("s1_full", "s1_full2", "s1_wording", "margin", "backend", "backend6000", "backend12000")
-Phi = np.vectorize(lambda t: 0.5 * (1 + erf(t / np.sqrt(2))))
 
 
 def load():

@@ -10,7 +10,7 @@ import numpy as np
 
 from jevrons.digits import mnist, split, test_subset
 from jevrons.jev import Jev
-from jevrons.net import ScalarJevNeuron, StepNeuron, decide, fit, forward, predict
+from jevrons.net import ScalarJevNeuron, StepNeuron, decide, fit, forward, predict, save_params
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "runs" / "stage4"
@@ -40,7 +40,7 @@ def main():
         print(name, res[name], flush=True)
     res["spend"] = {"calls": jev.calls, "tokens": jev.tokens, "usd": round(jev.usd, 4), "by_backend": jev.by_backend}
     (OUT / "summary.json").write_text(json.dumps(res, indent=1))
-    np.savez(OUT / "weights.npz", *[a for layer in params for a in layer])
+    save_params(OUT / "weights.npz", params)
     print(res["spend"])
 
 

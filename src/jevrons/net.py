@@ -6,6 +6,7 @@ sum: dL/dz = dL/da * sigmoid'(z / tau) / tau. SPSA is the derivative-free altern
 
 import pickle
 from concurrent.futures import ThreadPoolExecutor
+from math import erf
 from pathlib import Path
 
 import numpy as np
@@ -13,6 +14,8 @@ import numpy as np
 from jevrons.states import neuron_question, neuron_state
 
 sig = lambda z: 1 / (1 + np.exp(-np.clip(z, -30, 30)))  # noqa: E731
+Phi = np.vectorize(lambda t: 0.5 * (1 + erf(t / np.sqrt(2))))  # Jev's measured curve is Phi(k(n) * (z / spread - m0(n)))
+phi = lambda t: np.exp(-0.5 * t * t) / np.sqrt(2 * np.pi)  # noqa: E731  (normal density)
 
 
 class StepNeuron:
@@ -159,17 +162,6 @@ def train_spsa(params, X, Y, neuron, steps, lr=0.1, c=0.3, seed=0, log=None):
     return params
 
 
-if __name__ == "__main__":
-    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], float)
-    Y = np.array([[0], [1], [1], [0]], float)
-    solved = 0
-    for seed in range(10):
-        p = train_ste(init([2, 4, 1], seed), X, Y, StepNeuron(), 300)
-        out = forward(p, X, StepNeuron())[0][-1]
-        solved += bool(np.all(out == Y))
-    print(f"local step XOR solved {solved}/10 seeds")
-    assert solved >= 7
-
 
 def fit(params, X, Y, neuron, epochs, batch=32, lr=0.01, tau=1.0, seed=0, log=None, tag=None, output="logit",
         on_epoch=None, checkpoint=None, slope=None, mask=None):
@@ -218,3 +210,31 @@ def decide(out, seed=0):
 
 def predict(params, X, neuron, tag=None):
     return decide(forward(params, X, neuron, tag)[0][-1])
+
+
+def save_params(path, params):
+    """Weights as arr_0.. in layer order (W1, b1, W2, b2, ...), the layout of every runs/*/weights*.npz."""
+    np.savez(path, *[a for layer in params for a in layer])
+
+
+def load_params(path):
+    w = np.load(path)
+    flat = [w[f"arr_{i}"] for i in range(len(w.files))]
+    return list(zip(flat[::2], flat[1::2]))
+
+
+if __name__ == "__main__":
+    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], float)
+    Y = np.array([[0], [1], [1], [0]], float)
+    solved = 0
+    for seed in range(10):
+        p = train_ste(init([2, 4, 1], seed), X, Y, StepNeuron(), 300)
+        out = forward(p, X, StepNeuron())[0][-1]
+        solved += bool(np.all(out == Y))
+    print(f"local step XOR solved {solved}/10 seeds")
+    assert solved >= 7
+    import io
+    buf = io.BytesIO()
+    save_params(buf, p)
+    buf.seek(0)
+    assert all(np.array_equal(a, b) for layer, back in zip(p, load_params(buf)) for a, b in zip(layer, back))

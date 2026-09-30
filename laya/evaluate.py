@@ -16,7 +16,6 @@ Usage: uv run python evaluate.py base|<run name>   -> runs/stage10/eval-<name>.j
 import json
 import sys
 import time
-from math import erf
 
 import numpy as np
 import torch
@@ -24,11 +23,11 @@ import torch
 import data
 import laya_model as L
 from jevrons.margin_probe import neurons
+from jevrons.net import Phi
 from jevrons.stage6b_traps import affine, build, r2
 from jevrons.states import SCALAR_Q, SCALAR_Q_ALT
 
 OUT = data.ROOT / "runs/stage10"
-Phi = np.vectorize(lambda t: 0.5 * (1 + erf(t / np.sqrt(2))))
 CURVE_K = (2, 5, 10, 20, 30, 45, 60, 75, 90)
 
 

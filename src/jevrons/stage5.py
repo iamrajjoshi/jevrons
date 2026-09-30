@@ -13,7 +13,7 @@ import numpy as np
 
 from jevrons.digits import mnist, split
 from jevrons.jev import Jev
-from jevrons.net import JevNeuron, StepNeuron, fit, forward
+from jevrons.net import JevNeuron, StepNeuron, fit, forward, save_params
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "runs" / "stage5"
@@ -61,7 +61,7 @@ def main():
             params = fit(init(SEED), X, Y, train_neuron, EPOCHS, BATCH, LR, TAU, SEED, log, {**tag, "split": "train"})
             res = {"pair": name, "arm": arm, "val_jev": evaluate(params, Xv, yv, neuron, {**tag, "split": "val"}),
                    "val_exact_step": float(np.mean((forward(params, Xv, StepNeuron())[0][-1][:, 0] >= 0.5) == (yv >= 0.5)))}
-            np.savez(OUT / f"weights-{name}-{arm}.npz", *[a for layer in params for a in layer])
+            save_params(OUT / f"weights-{name}-{arm}.npz", params)
             (OUT / f"curve-{name}-{arm}.json").write_text(json.dumps(log))
             done.write_text(json.dumps(res))
             summary.append(res)

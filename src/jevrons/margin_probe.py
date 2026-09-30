@@ -9,18 +9,17 @@ Usage: uv run python -m jevrons.margin_probe
 import gzip
 import json
 from concurrent.futures import ThreadPoolExecutor
-from math import erf
 from pathlib import Path
 
 import numpy as np
 
 from jevrons.jev import BACKENDS, Jev
+from jevrons.net import Phi
 from jevrons.states import neuron_question, neuron_state
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "runs" / "margin"
 TERMS, PER_TERM, REPEATS = (10, 30, 75, 150, 250), 600, 2
-Phi = np.vectorize(lambda t: 0.5 * (1 + erf(t / np.sqrt(2))))
 
 
 def neurons(rng, pool, k, n):

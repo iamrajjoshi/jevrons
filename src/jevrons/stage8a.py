@@ -22,10 +22,10 @@ import numpy as np
 
 from jevrons.digits import mnist, split, test_subset
 from jevrons.jev import USD_PER_INPUT_TOKEN, Jev
-from jevrons.net import StepNeuron, fit, forward
+from jevrons.net import StepNeuron, fit, forward, load_params, phi, save_params
 from jevrons.stage6 import evaluate, exact_accuracy
 from jevrons.stage6c import Phi
-from jevrons.stage8g import QUESTIONS, curve, phi
+from jevrons.stage8g import QUESTIONS, curve
 from jevrons.states import r2
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -226,8 +226,7 @@ def pilot():
     """Stage 10's exact-trained sparse 3 vs 8 net (runs/stage10/payoff-truth-n64) on the arm E Jev neuron, 500 val images."""
     from jevrons.stage8g import data as data38, evaluate as evaluate38
     _, _, Xv, yv = data38()
-    w = np.load(ROOT / "runs/stage10/payoff-truth-n64/weights-swap.npz")
-    params = [(w["arr_0"], w["arr_1"]), (w["arr_2"], w["arr_3"])]
+    params = load_params(ROOT / "runs/stage10/payoff-truth-n64/weights-swap.npz")
     n1 = terms_and_spread(Xv, *params[0])[0]
     est = ((TOKENS_FIXED + TOKENS_PER_TERM * n1).sum() + len(Xv) * (TOKENS_FIXED + TOKENS_PER_TERM * 33)) * USD_PER_INPUT_TOKEN
     print(f"hidden terms mean {n1.mean():.1f}, max {n1.max():.0f}; estimated ${est:.2f}", flush=True)
@@ -291,7 +290,7 @@ def run():
             res["val"][str(EPOCHS)] = summarize(params, Xv, yv, neuron, {**tag, "split": "val"})
         res["test"] = summarize(params, Xt, yt, neuron, {**tag, "split": "test"})
         res["spend_process"] = {"calls": jev.calls, "tokens": jev.tokens, "usd": round(jev.usd, 4)}
-        np.savez(OUT / f"weights-{arm}.npz", *[a for layer in params for a in layer])
+        save_params(OUT / f"weights-{arm}.npz", params)
         (OUT / f"curve-{arm}.json").write_text(json.dumps(log))
         done.write_text(json.dumps(res))
         print(f"{arm}: val {res['val'][str(EPOCHS)]['accuracy']:.3f}, test on Jev {res['test']['accuracy']:.3f}, "

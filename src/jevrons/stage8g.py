@@ -19,14 +19,13 @@ Usage: uv run python -m jevrons.stage8g [local]
 import json
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from math import erf
 from pathlib import Path
 
 import numpy as np
 
 from jevrons.digits import mnist, split
 from jevrons.jev import noul
-from jevrons.net import StepNeuron, fit, forward
+from jevrons.net import Phi, StepNeuron, fit, forward, load_params, phi, save_params
 from jevrons.stage5 import BATCH, EPOCHS, LR, SEED, init
 from jevrons.states import FALSE, INSTRUCTIONS, TRUE, r2
 
@@ -36,8 +35,6 @@ CURVE = json.loads((ROOT / "runs/margin/summary.json").read_text())["offset_fit"
 _N = np.log([int(n) for n in CURVE])
 _K = np.array([v["k"] for v in CURVE.values()])
 _M0 = np.array([v["threshold_m0"] for v in CURVE.values()])
-Phi = np.vectorize(lambda t: 0.5 * (1 + erf(t / np.sqrt(2))))
-phi = lambda t: np.exp(-0.5 * t * t) / np.sqrt(2 * np.pi)  # noqa: E731
 
 QUESTIONS = {
     "v1": noul(INSTRUCTIONS["folded"], TRUE, FALSE),
@@ -136,7 +133,7 @@ def data():
 
 def local_check():
     X, Y, Xv, yv = data()
-    swap = [tuple(np.load(ROOT / "runs/stage5/weights-3v8-swap.npz")[f"arr_{i}"] for i in pair) for pair in ((0, 1), (2, 3))]
+    swap = load_params(ROOT / "runs/stage5/weights-3v8-swap.npz")
     for comp in (False, True):
         acc = np.mean([np.mean((forward(swap, Xv, ShiftedMock(comp, s))[0][-1][:, 0] >= 0.5) == (yv >= 0.5)) for s in range(3)])
         print(f"swap weights on the quirky mock, compensate={comp}: {acc:.3f}")
@@ -151,7 +148,7 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     X, Y, Xv, yv = data()
     jev = Jev(OUT / "journal.jsonl")
-    swap = [tuple(np.load(ROOT / "runs/stage5/weights-3v8-swap.npz")[f"arr_{i}"] for i in pair) for pair in ((0, 1), (2, 3))]
+    swap = load_params(ROOT / "runs/stage5/weights-3v8-swap.npz")
     arms = {"B": (False, ["v1"]), "C": (True, ["v1"]), "D": (True, ["v1", "v2", "v3"]), "E": ("none", ["v1", "choice"])}
     for name, (comp, phrasings) in arms.items():
         done = OUT / f"result-{name}.json"
@@ -167,7 +164,7 @@ def main():
                "trained_exact_step": float(np.mean((forward(params, Xv, StepNeuron())[0][-1][:, 0] >= 0.5) == (yv >= 0.5)))}
         if comp is not False:  # the neuron itself changed, so the swap control changes too
             res["swap"] = evaluate(swap, Xv, yv, neuron, {**tag, "split": "val", "swap": True})
-        np.savez(OUT / f"weights-{name}.npz", *[a for layer in params for a in layer])
+        save_params(OUT / f"weights-{name}.npz", params)
         (OUT / f"curve-{name}.json").write_text(json.dumps(log))
         done.write_text(json.dumps(res))
         print(name, json.dumps(res), f"(${jev.usd:.2f})", flush=True)

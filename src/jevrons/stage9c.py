@@ -14,9 +14,9 @@ from pathlib import Path
 
 import numpy as np
 
-from jevrons.digits import mnist, split
-from jevrons.net import ScalarJevNeuron, StepNeuron, fit, forward, sig
+from jevrons.net import ScalarJevNeuron, StepNeuron, fit, forward, load_params, save_params, sig
 from jevrons.stage5 import BATCH, EPOCHS, LR, SEED, init
+from jevrons.stage8g import data
 from jevrons.states import SCALAR_Q
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -47,20 +47,13 @@ class TabulatedLaya:
         return laya_curve(X @ W + b)
 
 
-def data():
-    xtr, ytr, _, _ = mnist()
-    tr, va = split(ytr, (3, 8), 500, 500)
-    return xtr[tr], (ytr[tr] == 8).astype(float)[:, None], xtr[va], (ytr[va] == 8).astype(float)
-
-
 def accuracy(params, X, y, neuron, tag=None):
     out = forward(params, X, neuron, tag)[0][-1][:, 0]
     return float(np.mean((out >= 0.5) == (y >= 0.5))), out
 
 
 def swap_weights():
-    w = np.load(ROOT / "runs/stage5/weights-3v8-swap.npz")
-    return [(w["arr_0"], w["arr_1"]), (w["arr_2"], w["arr_3"])]
+    return load_params(ROOT / "runs/stage5/weights-3v8-swap.npz")
 
 
 def local():
@@ -115,10 +108,9 @@ def main():
             log = []
             params = fit(init(SEED), X, Y, live, EPOCHS, BATCH, LR, 3.0, SEED, log, {"arm": arm, "split": "train"},
                          output="bce", slope=net_slope(output_mode), checkpoint=OUT / f"checkpoint-{arm}.pkl")
-            np.savez(wpath, *[a for layer in params for a in layer])
+            save_params(wpath, params)
             (OUT / f"curve-{arm}.json").write_text(json.dumps(log))
-        w = np.load(wpath)
-        params = [(w["arr_0"], w["arr_1"]), (w["arr_2"], w["arr_3"])]
+        params = load_params(wpath)
         for which, p in (("trained", params), ("swap", swap_weights())):
             acc, out = accuracy(p, Xv, yv, live, {"arm": arm, "which": which, "split": "val"})
             res[f"{arm}/{which}"] = {"val_on_laya": acc, "val_on_tabulated_laya": accuracy(p, Xv, yv, tabulated)[0],

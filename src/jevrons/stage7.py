@@ -14,7 +14,7 @@ import numpy as np
 
 from jevrons.digits import mnist, split, test_subset
 from jevrons.jev import Jev
-from jevrons.net import StepNeuron, fit
+from jevrons.net import StepNeuron, fit, save_params
 from jevrons.stage8g import CalibratedJevNeuron, slope_for
 from jevrons.stage6 import BATCH, LR, TAU, evaluate, exact_accuracy, init
 
@@ -59,7 +59,7 @@ def main():
             res["val"][str(EPOCHS)] = r
         res["test"] = evaluate(params, Xt, yt, neuron, {**tag, "split": "test"})
         res["test"]["exact_step"] = exact_accuracy(params, Xt, yt)
-        np.savez(OUT / f"weights-{arm}.npz", *[a for layer in params for a in layer])
+        save_params(OUT / f"weights-{arm}.npz", params)
         (OUT / f"curve-{arm}.json").write_text(json.dumps(log))
         done.write_text(json.dumps(res))
         print(f"{arm}: val {res['val'][str(EPOCHS)]['accuracy']:.3f}, test on Jev {res['test']['accuracy']:.3f}, "

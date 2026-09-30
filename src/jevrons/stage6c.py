@@ -28,7 +28,7 @@ from jevrons import figstyle as S  # noqa: E402  (docs palette; these figures ke
 from jevrons import stage5, stage6  # noqa: E402
 from jevrons.digits import mnist, split  # noqa: E402
 from jevrons.net import StepNeuron, fit, forward  # noqa: E402
-from jevrons.stage6b import hidden_margins, mosaic  # noqa: E402
+from jevrons.stage6b import hidden_margins  # noqa: E402
 from jevrons.stage8g import curve, slope_for, terms_and_spread  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -331,7 +331,6 @@ def plot_misfire(res, scatter):
         meas, pred = scatter[label][:2]
         axes[0].plot(100 * pred, 100 * meas, mk, color=color, ms=3.5, alpha=0.7, mfc="none" if "s6" in label else color,
                      label=label if "seed1" not in label and "seed2" not in label else None)
-    lim = axes[0].get_xlim()[1]
     axes[0].plot([0, 60], [0, 60], color=S.MUTE, lw=0.7)  # guide
     axes[0].set_xlim(0, 60)
     axes[0].set_ylim(0, 60)

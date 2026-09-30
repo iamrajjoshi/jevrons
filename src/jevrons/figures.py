@@ -15,10 +15,10 @@ from pathlib import Path
 import numpy as np
 
 from jevrons import figstyle as S
+from jevrons.net import Phi
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNS = ROOT / "runs"
-Phi = np.vectorize(lambda t: 0.5 * (1 + erf(t / np.sqrt(2))))
 
 
 def js(rel):

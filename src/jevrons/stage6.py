@@ -13,7 +13,7 @@ import numpy as np
 
 from jevrons.digits import mnist, split, test_subset
 from jevrons.jev import Jev
-from jevrons.net import JevNeuron, StepNeuron, decide, fit, forward
+from jevrons.net import JevNeuron, StepNeuron, decide, fit, forward, save_params
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "runs" / "stage6"
@@ -79,7 +79,7 @@ def main():
                 res["val"][str(EPOCHS)] = r
             res["test"] = evaluate(params, Xt, yt, neuron, {**tag, "split": "test"})
             res["test"]["exact_step"] = exact_accuracy(params, Xt, yt)
-            np.savez(OUT / f"weights-seed{seed}-{arm}.npz", *[a for layer in params for a in layer])
+            save_params(OUT / f"weights-seed{seed}-{arm}.npz", params)
             (OUT / f"curve-seed{seed}-{arm}.json").write_text(json.dumps(log))
             done.write_text(json.dumps(res))
             print(f"seed={seed} {arm}: val {res['val'][str(EPOCHS)]['accuracy']:.3f}, test on Jev {res['test']['accuracy']:.3f}, "

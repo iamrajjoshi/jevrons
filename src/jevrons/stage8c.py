@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 
 from jevrons.jev import Jev
-from jevrons.net import fit, forward
+from jevrons.net import fit, forward, load_params, save_params
 from jevrons.stage8a import (BATCH, EPOCHS, KIND, K, H, LR, SEED, SIM_E, TAU, SimE, SparseENeuron, active_pixels, budget,
                              connections, data, init, slope, summarize)
 
@@ -53,11 +53,10 @@ def run():
     mask = connections(KIND, K, H, active_pixels(X))
     pre_path = OUT / "weights-pretrained.npz"
     if pre_path.exists():
-        w = np.load(pre_path)
-        pre = [(w["arr_0"], w["arr_1"]), (w["arr_2"], w["arr_3"])]
+        pre = load_params(pre_path)
     else:
         pre = pretrain(X, Y, mask)
-        np.savez(pre_path, *[a for layer in pre for a in layer])
+        save_params(pre_path, pre)
     jev = Jev(OUT / "journal.jsonl", max_usd=budget())
     neuron = SparseENeuron(jev)
     tag = {"seed": SEED, "arm": "pretrain-ft"}
@@ -85,7 +84,7 @@ def run():
                  checkpoint=OUT / "checkpoint.pkl", slope=slope, mask=mask)
     res["test"] = summarize(params, Xt, yt, neuron, {**tag, "split": "test"})
     res["spend_process"] = {"calls": jev.calls, "tokens": jev.tokens, "usd": round(jev.usd, 4)}
-    np.savez(OUT / "weights-finetuned.npz", *[a for layer in params for a in layer])
+    save_params(OUT / "weights-finetuned.npz", params)
     (OUT / "curve.json").write_text(json.dumps(log))
     (OUT / "result.json").write_text(json.dumps(res))
     print(f"test on Jev {res['test']['accuracy']:.3f}, exact {res['test']['exact_step']:.3f}  (${jev.usd:.2f})", flush=True)
@@ -95,8 +94,7 @@ def run():
 def pretest():
     """The pretrained network, before any Jev training, on the test set through Jev (after `run`)."""
     X, Y, Xv, yv, Xt, yt = data()
-    w = np.load(OUT / "weights-pretrained.npz")
-    pre = [(w["arr_0"], w["arr_1"]), (w["arr_2"], w["arr_3"])]
+    pre = load_params(OUT / "weights-pretrained.npz")
     jev = Jev(OUT / "journal-pretest.jsonl", max_usd=min(2.5, budget()))
     r = summarize(pre, Xt, yt, SparseENeuron(jev), {"seed": SEED, "arm": "pretrained", "split": "test"})
     r["sim_accuracy"] = float(np.mean(np.argmax(forward(pre, Xt, SimE(*SIM_E))[0][-1], 1) == yt))

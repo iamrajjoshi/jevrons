@@ -20,7 +20,7 @@ import torch
 import data
 import laya_model as L
 from jevrons.digits import mnist, split
-from jevrons.net import Adam, StepNeuron, bce, forward, ste_grads
+from jevrons.net import Adam, StepNeuron, bce, forward, save_params, ste_grads
 from jevrons.stage5 import BATCH, EPOCHS, LR, SEED, TAU, init
 from jevrons.states import neuron_state
 
@@ -108,7 +108,7 @@ def main():
                "val_exact_step": float(np.mean((forward(params, Xv, StepNeuron())[0][-1][:, 0] >= 0.5) == (yv >= 0.5))),
                "minutes": round((time.time() - t0) / 60, 1)}
         results[arm] = res
-        np.savez(out / f"weights-{arm}.npz", *[a for layer in params for a in layer])
+        save_params(out / f"weights-{arm}.npz", params)
         (out / f"curve-{arm}.json").write_text(json.dumps(log))
         print(arm, res, flush=True)
     results["laya_calls"], results["laya_seconds"] = neuron.calls, round(neuron.seconds)
