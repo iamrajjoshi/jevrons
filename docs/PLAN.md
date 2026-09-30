@@ -6,7 +6,7 @@ Inspiration: [Mustafa Akın's NAND-gate ALU made of Jev calls](https://x.com/mus
 
 ## Decisions (2026-09-26, Raj)
 
-- Deliverables: a live draw-a-digit demo, a short screen-recorded video of it for Twitter, and a long-form post for Raj's engineering blog. Blog figures and the video need saved artifacts from every experiment, so every paid call is journaled.
+- Deliverables: a live draw-a-digit demo and a long-form post for Raj's engineering blog. The blog's figures need saved artifacts from every experiment, so every paid call is journaled.
 - Budget: no cap for now. Spend is still tracked per call and per experiment; an experiment can set `max_usd` if needed.
 - Model: `jev-1.13.0`, pinned. A model change starts a new baseline.
 - Credits: use the existing Jev credits; no top-ups and no rate-limit increase request.
@@ -18,7 +18,7 @@ Inspiration: [Mustafa Akın's NAND-gate ALU made of Jev calls](https://x.com/mus
 - Neurons go one per request. Packing 8 into a request flipped 11-18% of answers.
 - The neuron state is the folded-bias products list: `{"products": [x1*w1, ..., xk*wk, bias]}` with "Add all the numbers in products together." Separate-bias formats over-weight the bias and fail XOR.
 - Variant A (scalar) needs the question "Is the number z positive?"; the first wording answered yes for every z.
-- Spend so far: $17.40 over ~532,000 calls (the single-neuron probe through two digits, plus backend check).
+- Spend: about $230 in Jev calls across every experiment.
 
 ## Experiments
 
@@ -42,7 +42,7 @@ Inspiration: [Mustafa Akın's NAND-gate ALU made of Jev calls](https://x.com/mus
 | Laya as a neuron | 9c | Done | [stage9c-laya-scalar.md](results/stage9c-laya-scalar.md) |
 | Teaching laya to add | 10 | Done | [stage10-teaching-laya.md](results/stage10-teaching-laya.md) |
 | Demo | | Live at [jevrons.rajjoshi.me](https://jevrons.rajjoshi.me) (`demo/`) | |
-| Blog post | | Drafting on rajjoshi.me (github.io repo, `src/content/blog/jevrons.mdx`) | |
+| Blog post | | Drafting, for [rajjoshi.me/blog/jevrons](https://rajjoshi.me/blog/jevrons) | |
 
 ## The single-neuron probe
 
@@ -55,23 +55,23 @@ Gate: the go/no-go rules for stage 1 in proposal.md.
 
 ## Jev's quirks: what Jev's behaviour reveals
 
-Mostly offline, over journals already paid for (backed up to `~/jevrons-journal-backup/`). Error model of misfires (margin, term count, sign mix, where the big terms sit, whether Jev skims the list); calibration of p; margin distributions by epoch for Jev-trained vs swap runs; about 5 adversarial trap families with matched controls (live, $1 cap); weight maps for Jev-trained vs exact-trained networks from the same start; repeat noise and backend equivalence at scale. Framing: optimization finds quirks you didn't know to look for, led by the bias-trust story. Output: `docs/results/stage6b-jev-quirks.md`.
+Mostly offline, over journals already paid for (kept outside git, not published). Error model of misfires (margin, term count, sign mix, where the big terms sit, whether Jev skims the list); calibration of p; margin distributions by epoch for Jev-trained vs swap runs; about 5 adversarial trap families with matched controls (live, $1 cap); weight maps for Jev-trained vs exact-trained networks from the same start; repeat noise and backend equivalence at scale. Framing: optimization finds quirks you didn't know to look for, led by the bias-trust story. Output: `docs/results/stage6b-jev-quirks.md`.
 
-## The two-question neuron: make a Jevron behave like a real neuron (queued)
+## The two-question neuron: make a Jevron behave like a real neuron (done)
 
-The two-digit 3 vs 8 setup, so the two-digit network is the baseline. Uses the measured response curve P(fire) = Φ(k(n)(z/spread − m0(n))). Arms: B backprops through the measured curve; C also pre-compensates the threshold by shifting the sent bias by m0 × spread; D also averages three phrasings asked about the same state in one call. The swap gap (exact-trained network: accuracy on an exact neuron minus accuracy on Jev) is re-measured on the C and D neurons; if Jev now behaves like the intended neuron, it shrinks. A quirk-matched local mock checked the code (swap 86.1% → 88.4% with compensation); real Jev is harsher than the mock. ~$17, ~2 h.
+The two-digit 3 vs 8 setup, so the two-digit network is the baseline. Uses the measured response curve P(fire) = Φ(k(n)(z/spread − m0(n))). Arms: B backprops through the measured curve; C also pre-compensates the threshold by shifting the sent bias by m0 × spread; D also averages three phrasings asked about the same state in one call. The swap gap (exact-trained network: accuracy on an exact neuron minus accuracy on Jev) is re-measured on the C and D neurons; if Jev now behaves like the intended neuron, it shrinks. A quirk-matched local mock checked the code (swap 86.1% → 88.4% with compensation); real Jev is harsher than the mock. Planned at ~$17; the run cost $28.99.
 
-## Improvements (planned)
+## Improvements (8a and 8c run; 8b, 8d and 8e not run)
 
 Each arm is compared against the ten-digit baseline on the same split, seeds and test set, and reports accuracy, misfire rate, tokens per inference and training cost.
 
-- 8a, the sparse network. L1 or top-k on first-layer weights so each hidden neuron sums ~30 terms instead of ~150. The single-neuron probe says Jev is more accurate on shorter sums (90% at 75 terms vs 80% at 150), and tokens drop ~4x. Target: equal or better accuracy at a quarter of the cost per call.
+- 8a, the sparse network. L1 or top-k on first-layer weights so each hidden neuron sums ~30 terms instead of ~150. The single-neuron probe says Jev is more accurate on shorter sums (90% at 75 terms vs 80% at 150), and tokens drop ~4x. Target: equal or better accuracy at a quarter of the cost per call. What ran instead of L1 or top-k: a fixed random mask of 96 pixels per neuron.
 - 8b Margin training. Add a hinge term that pushes each neuron's intended sum at least m spreads away from zero. The two-digit runs found training does this implicitly; doing it explicitly should cut misfires further.
 - 8c, pretraining on a fake Jev. Pretrain on the stand-in, fine-tune on Jev. Train most epochs locally against the graded mock neuron (free), then 1-2 epochs through live Jev. Target: ten-digit accuracy at ~20% of its training cost.
 - 8e Learn the neuron from the journals (Raj's idea). Every paid call is a labeled example of Jev's behavior: (products list, true total, term count) in, p out. ~2M such pairs exist after the ten-digit runs. Fit a small local model of the Jev neuron on them (features such as margin = total/spread, term count, bias share, largest terms) and validate it on held-out calls. A good fit replaces the hand-tuned stand-in: train networks against it for free, fine-tune briefly on live Jev (as in 8c), and use it to predict which neurons Jev will get wrong. Stretch goal: fine-tune an open-weight System-1 model (see local models, below) on the same pairs to get a local, free, Jev-like neuron.
 - 8d Test-time voting. Jev is stochastic, so average k live passes per image. Measure accuracy against cost for k = 1, 3, 5.
 
-## Local models (Ollaya): open-weight neurons (planned)
+## Local models (Ollaya): open-weight neurons (done)
 
 [Ollaya](https://ollaya.dev/) ([source](https://github.com/ollaya-dev/ollaya), Apache-2.0) runs open-weight System-1 models locally (laya 322-421M, nli, decider 0.75-4.2B, others) behind the same `/v1/systemone` API, so it is one more `Backend` entry (`http://127.0.0.1:11435`, no key). Runs on this Mac's CPU via ONNX Runtime; free per call.
 
