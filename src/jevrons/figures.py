@@ -4,7 +4,7 @@ Offline: reads runs/ and replays local exact-neuron training where a journal lac
 Every number drawn comes from a data file; where a figure labels a value the post cites, it's asserted.
 Usage: uv run python -m jevrons.figures [--theme docs|light|dark|both] [name ...]
   (default: every figure, docs theme into docs/figures; light/dark/both write the blog's variants to
-  docs/figures/site/ as name.png and name-dark.png; names are the keys of FIGURES)
+  docs/figures/site/ as name.png/.svg and name-dark.png/.svg; names are the keys of FIGURES)
 """
 
 import json
@@ -209,7 +209,7 @@ def stage3_boundary():
         p = np.array(r["grid_p"]).reshape(len(GRID), len(GRID))
         step = GRID[1] - GRID[0]
         im = ax.imshow(p, origin="lower", extent=(-1 - step / 2, 1 + step / 2) * 2, cmap=S.FIRE, vmin=0, vmax=1,
-                       interpolation="nearest")
+                       interpolation="none")
         ax.plot(0.8 * np.cos(th), 0.8 * np.sin(th), color=S.INK, lw=1.2, ls=(0, (4, 3)))
         inside = YTE.ravel() > 0.5
         ax.scatter(*XTE[inside].T, s=5, color=S.INK, lw=0, alpha=0.75)
@@ -435,7 +435,7 @@ def stage6_digits():
             assert np.allclose(per, r["per_digit"], atol=0.021), "recomputed predictions drift from the logged ones"
         conf /= conf.sum(1, keepdims=True)
         axc = fig.add_subplot(gs[1, c])
-        axc.imshow(conf, cmap=cmap, vmin=0, vmax=1)
+        axc.imshow(conf, cmap=cmap, vmin=0, vmax=1, interpolation="none")
         for i in range(10):
             for j in range(10):
                 if conf[i, j] >= 0.1:
@@ -639,7 +639,7 @@ def sparse_confusion():
             for j in range(10):
                 cmap = S.SEQ_INK if i == j else S.SEQ_JEV
                 rgb[i, j] = cmap(frac[i, j] if i == j else min(frac[i, j] / 0.4, 1) * 0.6)[:3]
-        ax.imshow(rgb, interpolation="nearest")
+        ax.imshow(rgb, interpolation="none")
         for i in range(10):
             for j in range(10):
                 if counts[i, j] and (i == j or frac[i, j] >= 0.05):
@@ -743,7 +743,7 @@ def weights_3v8():
         img = np.ma.masked_invalid(mosaic(W))
         cmap = S.DIVERGING.copy()
         cmap.set_bad(S.PAPER)
-        im = ax.imshow(img, cmap=cmap, vmin=-v, vmax=v, interpolation="nearest")
+        im = ax.imshow(img, cmap=cmap, vmin=-v, vmax=v, interpolation="none")
         ax.set_title(title, fontsize=10)
         ax.axis("off")
         if W is dJ or W is dS:
@@ -1035,7 +1035,7 @@ def pixels():
             lo = -hi if sym else 0
         cm = cmap.copy()
         cm.set_bad(S.PAPER)
-        ax.imshow(img.reshape(28, 28), cmap=cm, vmin=lo, vmax=hi, interpolation="nearest")
+        ax.imshow(img.reshape(28, 28), cmap=cm, vmin=lo, vmax=hi, interpolation="none")
         ax.set_title(title, fontsize=9, loc="center", linespacing=1.3)
 
     def r_(v):

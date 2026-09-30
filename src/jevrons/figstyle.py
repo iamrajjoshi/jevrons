@@ -103,8 +103,9 @@ def pct(ax, axis="y", decimals=0):
 
 def save(fig, name, svg=True, colors=None):
     """PNG at 2x (plus SVG when the figure is mostly vector). `colors` quantizes the PNG to a palette,
-    for pixel-map figures whose noise defeats PNG compression. The site themes write PNG only, to
-    docs/figures/site/, as name.png (light) and name-dark.png (dark)."""
+    for pixel-map figures whose noise defeats PNG compression. The site themes write to docs/figures/site/
+    as name.png/.svg (light) and name-dark.png/.svg (dark); their SVG is written for every figure, with
+    text as paths, pixel maps embedded unscaled (drawn pixelated), and its size in CSS px at the column's 100 px/in."""
     site = THEME != "docs"
     out = (SITE / (name.replace(".png", "-dark.png") if THEME == "dark" else name)) if site else FIG / name
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -112,9 +113,17 @@ def save(fig, name, svg=True, colors=None):
     if colors and not site:  # the site re-encodes every image anyway
         from PIL import Image
         Image.open(out).convert("RGB").quantize(colors, method=Image.Quantize.MEDIANCUT).save(out, optimize=True)
-    if svg and not site:
+    svg = svg or site
+    if svg:
+        vec = out.with_suffix(".svg")
         with plt.rc_context({"svg.hashsalt": name}):  # stable ids and no date, so unchanged figures stay unchanged
-            fig.savefig(out.with_suffix(".svg"), bbox_inches="tight", pad_inches=0.12, metadata={"Date": None})
+            fig.savefig(vec, bbox_inches="tight", pad_inches=0.06 if site else 0.12, metadata={"Date": None})
+        if site:  # matplotlib sizes SVGs in pt (72/in); the page is laid out at 100 px/in, like the PNG at 2x
+            import re
+            px = lambda m: f'{m[1]}="{float(m[2]) * 100 / 72:.2f}px"'
+            head, body = vec.read_text().split("<svg", 1)
+            tag, rest = body.split(">", 1)
+            vec.write_text(head + "<svg" + re.sub(r'(width|height)="([\d.]+)pt"', px, tag) + ">" + rest)
     plt.close(fig)
-    kb = out.stat().st_size / 1024
-    print(f"{out.relative_to(FIG.parents[1])}  {kb:.0f} KB" + (f", svg {out.with_suffix('.svg').stat().st_size / 1024:.0f} KB" if svg and not site else ""))
+    kb = lambda p: f"{p.stat().st_size / 1024:.0f} KB"
+    print(f"{out.relative_to(FIG.parents[1])}  {kb(out)}" + (f", svg {kb(out.with_suffix('.svg'))}" if svg else ""))
