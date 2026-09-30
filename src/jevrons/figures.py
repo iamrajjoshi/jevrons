@@ -86,7 +86,7 @@ def margin_by_terms():
     for n, (k, m0) in {10: (3.2, 0.20), 250: (1.5, -1.10)}.items():  # the post's table
         assert (fits[str(n)]["k"], fits[str(n)]["threshold_m0"]) == (k, m0)
     terms = sorted({r[0] for r in rows})
-    lo = 0.45 if S.THEME == "dark" else 0.28  # the pale end of the ramp fades into dark paper sooner
+    lo = 0.45 if S.THEME == "dark" else 0.4  # the pale end of the ramp fades into dark paper sooner
     colors = [S.SEQ_JEV(v) for v in np.linspace(lo, 0.92, len(terms))]
     edges = np.linspace(-3, 3, 25)
     mid = (edges[1:] + edges[:-1]) / 2
@@ -440,7 +440,7 @@ def stage6_digits():
             for j in range(10):
                 if conf[i, j] >= 0.1:
                     axc.text(j, i, f"{conf[i, j] * 100:.0f}", ha="center", va="center", fontsize=9,
-                             color=S.text_on(cmap(conf[i, j])))
+                             **S.text_on(cmap(conf[i, j])))
         axc.set_xticks(digits)
         axc.set_yticks(digits)
         axc.tick_params(length=0, labelsize=9)
@@ -645,7 +645,7 @@ def sparse_confusion():
                 if counts[i, j] and (i == j or frac[i, j] >= 0.05):
                     faint = i != j and frac[i, j] < 0.2
                     ax.text(j, i, str(counts[i, j]), ha="center", va="center", fontsize=9,
-                            color=S.JEV_TEXT if faint else S.text_on(rgb[i, j]))
+                            **S.text_on(rgb[i, j], S.JEV_TEXT if faint else None))
         ax.set_xticks(range(10))
         ax.set_yticks(range(10))
         ax.tick_params(length=0, labelsize=9)
@@ -655,7 +655,7 @@ def sparse_confusion():
         ax.set_xlabel("predicted", fontsize=10)
     for ax in axes:
         ax.set_ylabel("true digit", fontsize=10)
-    fig.text(0.5, -0.01, "cells: image counts; diagonal shaded grey, off-diagonal shaded pink by share of the row;\n"
+    fig.text(0.5, -0.01, "cells: image counts; diagonal shaded grey, off-diagonal shaded teal by share of the row;\n"
              "off-diagonal counts shown at 5% of the row or more", ha="center", va="top", fontsize=9, color=S.MUTE)
     S.save(fig, "stage8a-confusion.png")
 

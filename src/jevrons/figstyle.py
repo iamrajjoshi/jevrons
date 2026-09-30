@@ -1,9 +1,9 @@
 """One visual system for every Jevrons figure.
 
-Colour has one meaning everywhere: pink is Jev (a network trained through Jev, or Jev's own answers),
-ink is the exact neuron or the exact-trained network, and a lighter tint of either is the secondary
-case (the swapped twin, an earlier stage, a simulation). Diverging maps (weights) use slate and brick
-so they never borrow Jev's pink.
+Colour has one meaning everywhere: teal (the site's link colour) is Jev (a network trained through Jev,
+or Jev's own answers), ink is the exact neuron or the exact-trained network, and a lighter tint of either
+is the secondary case (the swapped twin, an earlier stage, a simulation). Diverging maps (weights) use
+slate and brick so they never borrow Jev's teal; Jev's own p runs from the site's amber (false) to teal (true).
 
 Three themes. "docs" is opaque on the demo's cool paper, for docs/figures, which GitHub shows on white.
 "light" and "dark" are for rajjoshi.me: transparent, in the site's warm ink and cream, and drawn at the
@@ -24,16 +24,17 @@ WIDTH = 6.72  # inches; the blog's 672 px column at 100 px/in, exported at 200 d
 DPI = 200
 
 THEMES = {
-    "docs": dict(paper="#f6f6f3", bg="#f6f6f3", ink="#141414", ink2="#4d4d4a", mute="#8f8f8a", rule="#d9d9d4",
-                 faint="#e9e9e4", jev="#e0467a", jev_text="#b8285a", jev_light="#f2a9c1", jev_deep="#5e1230",
-                 grey="#b4b4ae", slate="#3f6e9a", brick="#b5553c"),
-    # The site's paper (#fff9eb) and ink (#28221c); ink2 and mute are its muted and faint text colours.
+    "docs": dict(paper="#f6f6f3", bg="#f6f6f3", ink="#141414", ink2="#4d4d4a", mute="#6f6f6a", rule="#d9d9d4",
+                 faint="#e9e9e4", jev="#0f766e", jev_text="#0f766e", jev_light="#3a9c92", jev_deep="#0a3f3a",
+                 grey="#b4b4ae", slate="#3f6e9a", brick="#b5553c", amber="#765018"),
+    # The site's paper (#fff9eb) and ink (#28221c); ink2 and mute are its muted and faint text colours,
+    # jev its link teal and amber its warning callout.
     "light": dict(paper="#fff9eb", bg="none", ink="#28221c", ink2="#56534d", mute="#756f67", rule="#d9cdb8",
-                  faint="#efe5d2", jev="#dc3f74", jev_text="#b0245a", jev_light="#f0a2bd", jev_deep="#5e1230",
-                  grey="#aea390", slate="#3f6e9a", brick="#b5553c"),
+                  faint="#efe5d2", jev="#0f766e", jev_text="#0f766e", jev_light="#3d9f95", jev_deep="#0a3f3a",
+                  grey="#aea390", slate="#3f6e9a", brick="#b5553c", amber="#765018"),
     "dark": dict(paper="#28221c", bg="none", ink="#fff9eb", ink2="#b9ad9a", mute="#9a8f80", rule="#4d443a",
-                 faint="#352e27", jev="#f2769c", jev_text="#f590b2", jev_light="#a95574", jev_deep="#ffd6e3",
-                 grey="#786e61", slate="#6f9bc6", brick="#d27a5f"),
+                 faint="#352e27", jev="#67c7ba", jev_text="#83d4ca", jev_light="#3f8a80", jev_deep="#a3ddd4",
+                 grey="#786e61", slate="#6f9bc6", brick="#d27a5f", amber="#d4a45e"),
 }
 THEME = "docs"
 
@@ -50,18 +51,31 @@ def use(theme):
     SEQ_INK = LinearSegmentedColormap.from_list("seq_ink", [PAPER, INK])
     SEQ_JEV = LinearSegmentedColormap.from_list("seq_jev", [PAPER, JEV, T["jev_deep"]])
     DIVERGING = LinearSegmentedColormap.from_list("div", [SLATE, PAPER, BRICK])  # signed values: weights
-    FIRE = LinearSegmentedColormap.from_list("fire", [SLATE, PAPER, JEV])  # Jev's p, 0.5 at the midpoint
+    FIRE = LinearSegmentedColormap.from_list("fire", [T["amber"], PAPER, JEV])  # Jev's p, 0.5 at the midpoint
 
 
 use(THEME)
 
 
-def text_on(rgb):
-    """INK or PAPER, whichever reads on a cell of colour `rgb` (0-1 floats)."""
+def contrast(a, b):
+    """WCAG contrast ratio of two colours."""
     from matplotlib.colors import to_rgb
     lum = lambda c: sum(w * (v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4) for w, v in zip((0.2126, 0.7152, 0.0722), to_rgb(c)))
-    dark, light = sorted((INK, PAPER), key=lum)
-    return dark if lum(rgb) > 0.18 else light
+    hi, lo = sorted((lum(a), lum(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def text_on(rgb, prefer=None):
+    """Text kwargs for a number on a cell of colour `rgb`: `prefer` if it reads at 4.5:1, else INK or PAPER,
+    whichever reads better. Mid-tone cells where neither reaches 4.5:1 get a thin halo of the other one."""
+    from matplotlib import patheffects
+    rgb = tuple(rgb[:3])
+    if prefer and contrast(prefer, rgb) >= 4.5:
+        return dict(color=prefer)
+    color, halo = sorted((INK, PAPER), key=lambda c: contrast(c, rgb), reverse=True)
+    if contrast(color, rgb) >= 4.5:
+        return dict(color=color)
+    return dict(color=color, path_effects=[patheffects.withStroke(linewidth=1.6, foreground=halo)])
 
 
 def apply():
