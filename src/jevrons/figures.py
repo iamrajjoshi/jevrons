@@ -1,4 +1,4 @@
-"""Every figure in docs/blog/jevrons.mdx, in one style (jevrons.figstyle), from the run files.
+"""Every figure in the blog post (rajjoshi.me/blog/jevrons), in one style (jevrons.figstyle), from the run files.
 
 Offline: reads runs/ and replays local exact-neuron training where a journal lacks a run. No API calls.
 Every number drawn comes from a data file; where a figure labels a value the post cites, it's asserted.
@@ -13,6 +13,7 @@ from math import erf
 from pathlib import Path
 
 import numpy as np
+from matplotlib.ticker import PercentFormatter
 
 from jevrons import figstyle as S
 from jevrons.net import Phi
@@ -1002,7 +1003,7 @@ def bend():
     S.ygrid(axes[2])
     for ax in axes[1:]:
         ax.set_xlim(0, 72)
-        ax.xaxis.set_major_formatter(__import__("matplotlib").ticker.PercentFormatter(100, decimals=0))
+        ax.xaxis.set_major_formatter(PercentFormatter(100, decimals=0))
     for ax in axes:
         ax.tick_params(labelsize=9)
     S.save(fig, "stage6c-bend.png")

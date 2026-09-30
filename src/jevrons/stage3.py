@@ -50,20 +50,6 @@ def train(neuron, seed, log):
     return params
 
 
-def train_spsa(neuron, seed, log, c=0.3, lr=0.3):
-    params, rng = start(seed), np.random.default_rng(seed)
-    for s in range(STEPS // 2):
-        i = rng.choice(len(XTR), BATCH, replace=False)
-        d = [(rng.choice([-1.0, 1.0], W.shape), rng.choice([-1.0, 1.0], b.shape)) for W, b in params]
-        lp = bce(forward([(W + c * dW, b + c * db) for (W, b), (dW, db) in zip(params, d)], XTR[i], neuron)[0][-1], YTR[i])
-        lm = bce(forward([(W - c * dW, b - c * db) for (W, b), (dW, db) in zip(params, d)], XTR[i], neuron)[0][-1], YTR[i])
-        g = (lp - lm) / (2 * c)
-        params = [(np.clip(W - lr * g / dW, -9.99, 9.99), np.clip(b - lr * g / db, -9.99, 9.99))
-                  for (W, b), (dW, db) in zip(params, d)]
-        log.append({"step": s, "loss": (lp + lm) / 2})
-    return params
-
-
 def accuracy(params, neuron, X, Y, repeats, tag=None):
     ps = np.array([forward(params, X, neuron, {**(tag or {}), "eval": r})[0][-1].ravel() for r in range(repeats)])
     return float(np.mean((ps >= 0.5) == (Y.ravel() >= 0.5))), ps.mean(0)

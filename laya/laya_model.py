@@ -45,10 +45,6 @@ def encode(tok, state, question: dict):
             "episode": 0, "ep_step": 0, "ep_len": 1, "src": ""}
 
 
-def n_state_tokens(tok, state) -> int:
-    return len(tok(json.dumps(state, ensure_ascii=False), add_special_tokens=False)["input_ids"])
-
-
 def logits(model, batch_items, pad_id):
     b = collate_items([batch_items], pad_id)
     dev = next(model.parameters()).device
