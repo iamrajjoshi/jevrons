@@ -76,7 +76,7 @@ Each experiment's script resumes from the result files already in `runs/stageN/`
 
 | Experiment | Question | Result | Cost |
 | --- | --- | --- | --- |
-| 0. [Local capacity](spikes/) | Can a hard-step 784-32-10 net learn MNIST from 1,000 images? | 83.4% validation with step units; swapping sigmoid for step costs under 1 point | $0 |
+| [The local capacity check](spikes/) | Can a hard-step 784-32-10 net learn MNIST from 1,000 images? | 83.4% validation with step units; swapping sigmoid for step costs under 1 point | $0 |
 | [The single-neuron probe](docs/results/stage1-probe.md) (`stage1`) | Does one Jev call add up a weighted sum? | 82-93% sign accuracy up to 75 terms; not deterministic; over-trusts a separate bias | $0.48 |
 | [Logic gates (XOR)](docs/results/stage2-logic.md) (`stage2`) | Can a Jev network learn XOR? | 3 of 3 seeds, only with the bias folded into the list | $0.46 |
 | [The circle](docs/results/stage3-circle.md) (`stage3`) | Does training through Jev beat swapping Jev in? | 84-88% trained through Jev, 47-70% swapped | $1.16 |

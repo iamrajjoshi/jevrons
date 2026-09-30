@@ -252,7 +252,7 @@ The first milestone is a repeatable learning signal. Scale the dataset only afte
 
 5. Classify two digits. Use native 28 by 28 images of two MNIST classes, such as 0 and 1, with scalar neurons. Compare soft, hard, and sampled activations. Check held-out performance before expanding the number of outputs.
 
-6. Classify all ten digits. Begin with 1,000 training and 1,000 validation examples from MNIST's training partition, stratified by digit. Freeze sampling and preprocessing. Reserve the official 10,000-image test set for final evaluation. MNIST supplies 60,000 training images at 28 by 28 resolution. [6](https://yann.lecun.org/exdb/mnist/index.html)
+6. Classify all ten digits. Begin with 1,000 training and 1,000 validation examples from MNIST's training partition, stratified by digit. Freeze sampling and preprocessing. Reserve the official 10,000-image test set for final evaluation. MNIST supplies 60,000 training images at 28 by 28 resolution. [6](http://yann.lecun.com/exdb/mnist/)
 
 7. Scale only after validation improves. Compare scalar and full-state neurons on identical splits, topology, and resolution. Reduced-resolution full-state pilots need matched scalar controls. Change data volume or width one at a time and measure the accuracy gained per additional evaluation.
 
@@ -389,7 +389,7 @@ Relevant foundation for surrogate and straight-through gradient estimators.
 
 Primary paper for SPSA, which estimates an update using two perturbed objective evaluations.
 
-**6. LeCun, Cortes, and Burges.** [The MNIST Database](https://yann.lecun.org/exdb/mnist/index.html)
+**6. LeCun, Cortes, and Burges.** [The MNIST Database](http://yann.lecun.com/exdb/mnist/)
 
 Dataset reference for 60,000 training images and 10,000 test images, originally 28 by 28 pixels.
 
