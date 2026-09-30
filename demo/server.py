@@ -38,6 +38,56 @@ from jevrons.net import StepNeuron, decide, forward
 from jevrons.stage8g import QUESTIONS
 from jevrons.states import SCALAR_Q_ALT, neuron_question, neuron_state, r2
 
+try:
+    import sentry_sdk
+except ImportError:  # local runs and CI don't need it
+    sentry_sdk = None
+
+
+# ---------- telemetry ----------
+# Sentry, only where SENTRY_DSN is set (the Fly app): errors, plus one span per draw tagged with its network, source
+# and outcome, which is the usage count. Nothing from the request is attached: no drawing, no IP.
+
+def init_telemetry():
+    if not (sentry_sdk and os.environ.get("SENTRY_DSN")):
+        return
+    from sentry_sdk.integrations.stdlib import StdlibIntegration
+    sentry_sdk.init(dsn=os.environ["SENTRY_DSN"], environment=os.environ.get("SENTRY_ENVIRONMENT", "production"),
+                    release=os.environ.get("FLY_IMAGE_REF"), send_default_pii=False, traces_sample_rate=1.0,
+                    disabled_integrations=[StdlibIntegration()])  # no span per Jev call: 74 a draw is noise
+
+
+def report(e: BaseException | str, **tags):
+    """An error or warning to Sentry, if it's on. TypeSafe rate limits group into one issue, not thousands."""
+    if not (sentry_sdk and sentry_sdk.is_initialized()):
+        return
+    with sentry_sdk.new_scope() as scope:
+        for k, v in tags.items():
+            scope.set_tag(k, v)
+        if "429" in str(e):
+            scope.fingerprint = ["typesafe-rate-limited"]
+        if isinstance(e, BaseException):
+            sentry_sdk.capture_exception(e)
+        else:
+            sentry_sdk.capture_message(e, level="warning")
+
+
+class _NoSpan:
+    def set_tag(self, *a):
+        pass
+
+    def finish(self):
+        pass
+
+
+def draw_span(model: str, source: str):
+    if not (sentry_sdk and sentry_sdk.is_initialized()):
+        return _NoSpan()
+    span = sentry_sdk.start_transaction(op="draw", name=f"draw {model} {source}")
+    span.set_tag("model", model)
+    span.set_tag("source", source)
+    return span
+
 DEMO = Path(__file__).resolve().parent
 ROOT = DEMO.parent
 JOURNAL = DEMO / "runs" / "journal.jsonl"
@@ -211,6 +261,7 @@ def upstream(ok: bool):
     if not h["on"] and len(h["errs"]) == 3 and now - h["errs"][0] < 60:
         h["on"] = True
         print("upstream degraded: live calls are hitting rate limits or errors", flush=True)
+        report("TypeSafe upstream degraded: live calls are hitting rate limits or errors", upstream="typesafe")
 
 
 def degraded() -> bool:
@@ -234,11 +285,12 @@ def fetch_status() -> dict | None:
         inc = d.get("included") or []
         api = next((i["attributes"].get("status") for i in inc if i.get("type") == "status_page_resource"
                     and i["attributes"].get("public_name") == "api.typesafe.ai"), "operational")
-        report = next((i["attributes"].get("title") for i in inc if i.get("type") == "status_report"
+        report_title = next((i["attributes"].get("title") for i in inc if i.get("type") == "status_report"
                        and i["attributes"].get("aggregate_state") != "resolved"), None)
         state = d["data"]["attributes"]["aggregate_state"]
-        return {"state": state if state != "operational" else api, "report": report}
-    except Exception:
+        return {"state": state if state != "operational" else api, "report": report_title}
+    except Exception as e:
+        report(e, where="status-page")
         return None
 
 
@@ -686,6 +738,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache")
         self.end_headers()
         last, shown = [0.0], {"health": None, "wait": (None, None)}
+        span, outcome = draw_span(str(req["model"]), req["source"]), "error"
 
         def send(ev=None):  # None: a keepalive comment, if the stream has been quiet for KEEPALIVE_S
             if ev is None and time.monotonic() - last[0] < KEEPALIVE_S:
@@ -732,11 +785,14 @@ class Handler(SimpleHTTPRequestHandler):
                     usd += ev["tokens"] * USD_PER_INPUT_TOKEN
                 done = ev["type"] == "result"
                 send(ev)
+            outcome = "done" if done else outcome
         except (BrokenPipeError, ConnectionResetError, Cancelled):
-            pass  # the visitor left: the finally below stops the draw's remaining calls
+            outcome = "left"  # the visitor left: the finally below stops the draw's remaining calls
         except Exception as e:
+            outcome = "refused" if isinstance(e, LiveRefused) and not e.__cause__ else "error"
             if not isinstance(e, LiveRefused) or e.__cause__:
                 print(f"run failed: {e!r}" + (f" from {e.__cause__!r}" if e.__cause__ else ""), flush=True)
+                report(e.__cause__ or e, model=str(req["model"]), source=req["source"])
             try:
                 send({"type": "error", "message": public_error(e) if live else str(e)})
             except OSError:
@@ -749,6 +805,8 @@ class Handler(SimpleHTTPRequestHandler):
                 # a failed or abandoned draw can still bill calls that were in flight: charge it a full draw
                 charge_live(usd if done else max(usd, DRAW_USD))
                 QUEUE.release()
+            span.set_tag("outcome", outcome)
+            span.finish()
 
 
 def check():
@@ -989,6 +1047,7 @@ if __name__ == "__main__":
         print(f"fake Jev at http://127.0.0.1:{ARGS.port}/  {spec}", flush=True)
         threading.Event().wait()
     else:
+        init_telemetry()
         QUEUE, PACER = Admission(ARGS.max_live), Pacer(ARGS.calls_per_min)
         if ARGS.upstream:  # stub calls cost nothing: keep them off the real spend counter
             import tempfile

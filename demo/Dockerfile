@@ -5,7 +5,7 @@
 #   fly deploy . --config demo/fly.toml --dockerfile demo/Dockerfile --ha=false
 FROM python:3.12-slim
 WORKDIR /app
-RUN pip install --no-cache-dir "numpy>=2.2,<3"
+RUN pip install --no-cache-dir "numpy>=2.2,<3" "sentry-sdk>=2,<3"
 COPY src/jevrons ./src/jevrons
 COPY data/t10k-images-idx3-ubyte.gz data/t10k-labels-idx1-ubyte.gz ./data/
 COPY runs/stage8a/weights-*.npz ./runs/stage8a/
