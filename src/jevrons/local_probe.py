@@ -6,7 +6,6 @@ same seed as stage 1, so the numbers line up with Jev's. Usage:
   uv run python -m jevrons.local_probe ollaya-von [terms...]
 """
 
-import gzip
 import json
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -14,6 +13,7 @@ from pathlib import Path
 
 import numpy as np
 
+from jevrons.digits import pixel_pool
 from jevrons.jev import Jev
 from jevrons.states import SCALAR_Q, SCALAR_Q_ALT, neuron_question, neuron_state
 
@@ -34,8 +34,7 @@ def main(backend, terms):
                         "mean_p_pos": float(np.mean([p for z, p in zip(zs, ps) if z > 0]))}
         print(backend, "scalar", name, scalar[name], flush=True)
 
-    imgs = np.frombuffer(gzip.open(ROOT / "data/train-images-idx3-ubyte.gz").read(), np.uint8, offset=16)
-    pool, rng = imgs[imgs > 0] / 255.0, np.random.default_rng(3)
+    pool, rng = pixel_pool(), np.random.default_rng(3)
     full = []
     for k in terms:
         cells = []

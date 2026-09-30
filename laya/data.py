@@ -21,6 +21,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+from jevrons import digits  # noqa: E402
 from jevrons.stage6b_traps import two_groups  # noqa: E402
 from jevrons.states import neuron_question, neuron_state  # noqa: E402
 
@@ -34,8 +35,7 @@ _POOL = None
 def pixel_pool():
     global _POOL
     if _POOL is None:
-        imgs = np.frombuffer(gzip.open(ROOT / "data/train-images-idx3-ubyte.gz").read(), np.uint8, offset=16)
-        _POOL = imgs[imgs > 0] / 255.0
+        _POOL = digits.pixel_pool()
     return _POOL
 
 

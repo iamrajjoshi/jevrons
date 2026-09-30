@@ -20,6 +20,12 @@ def mnist():
     return xtr, ytr, xte, yte
 
 
+def pixel_pool():
+    """Every nonzero pixel value in the training images, scaled to (0, 1]. The probes draw neuron inputs from it."""
+    imgs = _load("train-images-idx3-ubyte.gz", 16)
+    return imgs[imgs > 0] / 255.0
+
+
 def split(labels, digits, n_train, n_val, seed=0):
     """Stratified train/val indices from the training partition, disjoint, frozen by seed."""
     rng = np.random.default_rng(seed)

@@ -6,13 +6,13 @@ twice. Fits P(fire) = Phi(k m) per term count. Paced slowly so a running stage i
 Usage: uv run python -m jevrons.margin_probe
 """
 
-import gzip
 import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
 
+from jevrons.digits import pixel_pool
 from jevrons.jev import BACKENDS, Jev
 from jevrons.net import Phi
 from jevrons.states import neuron_question, neuron_state
@@ -48,8 +48,7 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     BACKENDS["typesafe"].per_min, BACKENDS["vercel"].per_min = 150, 450  # leave the rest for stage 6
     jev = Jev(OUT / "journal.jsonl")
-    imgs = np.frombuffer(gzip.open(ROOT / "data/train-images-idx3-ubyte.gz").read(), np.uint8, offset=16)
-    pool, rng = imgs[imgs > 0] / 255.0, np.random.default_rng(11)
+    pool, rng = pixel_pool(), np.random.default_rng(11)
     q = neuron_question("folded")
     rows, summary = [], {}
     for k in TERMS:

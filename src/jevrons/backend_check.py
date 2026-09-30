@@ -5,7 +5,6 @@
 2. Throughput: 1,000 calls to the named backend alone, paced at 3,000/min, counting retries.
 """
 
-import gzip
 import json
 import sys
 import time
@@ -14,6 +13,7 @@ from pathlib import Path
 
 import numpy as np
 
+from jevrons.digits import pixel_pool
 from jevrons.jev import BACKENDS, Jev
 from jevrons.states import neuron_question, neuron_state
 
@@ -22,8 +22,7 @@ OUT = ROOT / "runs" / "backend_check"
 
 
 def neurons(n=100):
-    imgs = np.frombuffer(gzip.open(ROOT / "data/train-images-idx3-ubyte.gz").read(), np.uint8, offset=16)
-    pool, rng = imgs[imgs > 0] / 255.0, np.random.default_rng(7)
+    pool, rng = pixel_pool(), np.random.default_rng(7)
     out = []
     for i in range(n):
         k = (10, 30, 75, 150)[i % 4]

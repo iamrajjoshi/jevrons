@@ -1,6 +1,5 @@
 """Stage 1 probe. Usage: uv run python -m jevrons.probe {scalar,full,full2,all}"""
 
-import gzip
 import json
 import os
 import sys
@@ -9,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
+from jevrons.digits import pixel_pool
 from jevrons.jev import Jev
 from jevrons.states import (SCALAR_Q, SCALAR_Q_ALT, neuron_question, neuron_state,
                             packed_questions, sample_neuron)
@@ -78,8 +78,7 @@ def run_scalar(jev: Jev):
 
 
 def run_full(jev: Jev):
-    imgs = np.frombuffer(gzip.open(ROOT / "data/train-images-idx3-ubyte.gz").read(), np.uint8, offset=16)
-    pool = imgs[imgs > 0] / 255.0
+    pool = pixel_pool()
     rng = np.random.default_rng(1)
     neurons = []  # (fmt, k, idx, margin, x, w, b)
     for k in TERMS:
@@ -139,8 +138,7 @@ def run_full(jev: Jev):
 
 def run_full_unconfounded(jev: Jev):
     """Bias either 0 or independent of the terms, so the bias can't stand in for the sum."""
-    imgs = np.frombuffer(gzip.open(ROOT / "data/train-images-idx3-ubyte.gz").read(), np.uint8, offset=16)
-    pool = imgs[imgs > 0] / 255.0
+    pool = pixel_pool()
     rng = np.random.default_rng(2)
     jobs = []
     for mode in ("bias0", "bias_indep"):
@@ -179,8 +177,7 @@ def run_full_unconfounded(jev: Jev):
 
 def run_wording(jev: Jev):
     """v1 vs v2 question wording on bias-0 and independent-bias neurons, products and folded formats."""
-    imgs = np.frombuffer(gzip.open(ROOT / "data/train-images-idx3-ubyte.gz").read(), np.uint8, offset=16)
-    pool = imgs[imgs > 0] / 255.0
+    pool = pixel_pool()
     rng = np.random.default_rng(3)
     jobs = []
     for k in (10, 30, 75, 150):
