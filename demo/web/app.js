@@ -21,6 +21,7 @@ const $ = (s, el = document) => el.querySelector(s);
 const USD_PER_TOKEN = 0.042 / 1e6;
 const Q = new URLSearchParams(location.search);
 const FILM = Q.has("film");
+const EMBED = Q.has("embed");  // inside the blog post: no header or explainer, and the frame follows the page height
 const SOURCE_NAME = { exact: "exact math", mock: "simulated Jev", replay: "recorded Jev", live: "live Jev" };
 // what answered a neuron, as the visitor should read it
 const answeredBy = (e) => e.backend === "simulated" ? "simulated answer" : e.backend.startsWith("recorded") ? "recorded answer"
@@ -876,6 +877,14 @@ async function boot() {
     sp.setAttribute("width", "40px"); m.append(sp); m.style.position = "absolute"; document.body.append(m);
     if (Math.abs(m.getBoundingClientRect().width - 40) > 2) document.documentElement.classList.add("no-mathml"); m.remove(); }
   if (FILM) document.body.classList.add("film");
+  if (EMBED) {
+    document.body.classList.add("embed");
+    new ResizeObserver(() => parent.postMessage({ jevrons: "height", px: document.documentElement.scrollHeight }, "*"))
+      .observe(document.body);
+    addEventListener("message", (e) => {  // the post's theme toggle
+      if (e.data?.jevrons === "theme" && ["light", "dark"].includes(e.data.theme)) document.documentElement.dataset.theme = e.data.theme;
+    });
+  }
   const r = await (await fetch("/api/models")).json();
   S.models = r.models; S.live = r.live; setHealth(r);
   // an open page learns when TypeSafe's load comes and goes: a draw's stream says so, and so does a light poll

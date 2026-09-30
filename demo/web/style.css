@@ -470,3 +470,9 @@ body.film .calls-track { pointer-events: none; }
   .toast { left: var(--s4); max-width: none; }
   @keyframes slide { from { transform: translateY(var(--s4)); opacity: 0; } }
 }
+
+/* ?embed: the demo inside the blog post, which already explains it */
+body.embed .top, body.embed .how, body.embed .controls, body.embed .bill, body.embed .calls, body.embed .seen { display: none !important; }
+body.embed .layout { padding-top: var(--s4); padding-bottom: var(--s4); }
+body.embed .pad-win { width: min(100%, 300px); align-self: center; }
+body.embed .hidden-grid { grid-template-columns: repeat(16, minmax(0, 1fr)); gap: var(--s1) 3px; }
