@@ -6,7 +6,7 @@ A network where every neuron is a live Jev call that adds up about 150 raw pixel
 
 ![Swap comparison](../figures/stage5-swap.png)
 
-Code: `src/jevrons/stage5.py`. Weights, curves and results: `runs/stage5/`. Journal: `runs/stage5/journal.jsonl.gz`.
+Code: `src/jevrons/stage5.py`. Weights, curves and results: `runs/stage5/`.
 
 ## Setup
 

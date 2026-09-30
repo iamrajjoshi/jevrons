@@ -3,7 +3,7 @@
 Every trap instance has a control with the same term count, true total and spread (so the same |m|),
 differing only in the trap feature. Folded format, standard question. Spend is capped at $1 and the
 client is paced slowly so stage 6 keeps its rate limit. A rerun reuses answers already journaled.
-Usage: uv run python -m jevrons.stage6b_traps [--dry | --plot]
+Usage: uv run python -m jevrons.stage6b_traps [--dry]   (figure: jevrons.figures traps)
 """
 
 import json
@@ -11,18 +11,13 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import matplotlib
+import numpy as np
 
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-
-from jevrons import figstyle as S  # noqa: E402
-from jevrons.jev import BACKENDS, USD_PER_INPUT_TOKEN, Jev  # noqa: E402
-from jevrons.states import neuron_question  # noqa: E402
+from jevrons.jev import BACKENDS, USD_PER_INPUT_TOKEN, Jev
+from jevrons.states import neuron_question
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT, FIG = ROOT / "runs" / "stage6b", ROOT / "docs" / "figures"
+OUT = ROOT / "runs" / "stage6b"
 N = 200
 
 
@@ -145,33 +140,7 @@ def main(dry=False):
                               "control_mean_m": float(np.mean([stats(v)[1] for ff, a, _, v in js if ff == cf and a == "control"]))}
     (OUT / "traps.json").write_text(json.dumps(res, indent=1))
     print(json.dumps(res, indent=1))
-    plot(res)
-
-
-def plot(res):
-    labels = {"last": "one big + last\n(control: same list, big + mid)", "first": "one big + first\n(same control)", "vote": "sign vote says yes\n(60 small +, 15 big −)",
-              "long": "250 terms, m = −1\n(control: mirror, m = +1)", "zeros": "110 zeros padding\n40 real terms, m = +0.3"}
-    fams = list(labels)
-    fig, ax = plt.subplots(figsize=(8.5, 4), constrained_layout=True)
-    x = np.arange(len(fams))
-    from jevrons.stage6b import wilson
-    for off, key, color, name in ((-0.18, "control_misfire", S.INK, "matched control"), (0.18, "trap_misfire", S.JEV, "trap")):
-        v = np.array([res["families"][f][key] for f in fams])
-        ci = np.array([wilson(round(val * N), N) for val in v])
-        ax.bar(x + off, v, 0.34, color=color, label=name, yerr=[v - ci[:, 0], ci[:, 1] - v], capsize=3)
-        for xi, vi, hi in zip(x + off, v, ci[:, 1]):
-            ax.text(xi, hi + 0.015, f"{vi:.0%}", ha="center", fontsize=8)
-    ax.set_xticks(x, [labels[f] for f in fams], fontsize=8)
-    ax.set_ylabel(f"misfire rate ({N} states per bar, 95% CI)")
-    ax.set_ylim(0, 1.05)
-    ax.legend(frameon=False, fontsize=8, loc="upper left")
-    FIG.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIG / "stage6b-traps.png", dpi=160)
-    print(FIG / "stage6b-traps.png")
 
 
 if __name__ == "__main__":
-    if "--plot" in sys.argv:  # redraw from traps.json, no calls
-        plot(json.loads((OUT / "traps.json").read_text()))
-    else:
-        main("--dry" in sys.argv)
+    main("--dry" in sys.argv)

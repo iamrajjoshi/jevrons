@@ -6,7 +6,7 @@ Giving each hidden neuron 96 random pixels instead of all 784 cuts its sums from
 
 Calls cost 43% less (593 input tokens against the dense network's 1,037), but the network has twice as many hidden neurons, so an image costs the same as on the dense network: $1.85 per 1,000 forward passes.
 
-Code: `src/jevrons/stage8a.py` (and a one-line `mask` option in `net.fit`). Results, weights, curves: `runs/stage8a/`. Journals are gitignored and backed up outside git (`~/jevrons-journal-backup/20260927-2158-stage8a/`).
+Code: `src/jevrons/stage8a.py` (and a one-line `mask` option in `net.fit`). Results, weights, curves: `runs/stage8a/`. The journals aren't published.
 
 ## Setup
 

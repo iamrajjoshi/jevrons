@@ -6,7 +6,7 @@ A network trained only on a simulated Jev neuron, with no Jev calls at all in tr
 
 The simulated neuron is the reason. An exact-trained network with the same start keeps only 65.8% on Jev (the sparse network's swap arm). Training through a neuron that answers like Jev's arm E (graded, blurred, leaning slightly toward "no") gets 18 points of that back for free.
 
-Code: `src/jevrons/stage8c.py` (`SimE` and the shared pieces are in `stage8a.py`). Results, weights, curves: `runs/stage8c/`. Journals are gitignored and backed up outside git (`~/jevrons-journal-backup/20260928-0020-stage8c/`).
+Code: `src/jevrons/stage8c.py` (`SimE` and the shared pieces are in `stage8a.py`). Results, weights, curves: `runs/stage8c/`. The journals aren't published.
 
 ## Setup
 

@@ -6,7 +6,8 @@
   weights   weight maps, net change from init, biases, margins, output-layer use
   repeats   repeat-call noise by margin and term count; typesafe vs vercel at scale
 Usage: uv run python -m jevrons.stage6b [error calib dynamics weights repeats]  (default: all)
-Numbers go to runs/stage6b/<part>.json, figures to docs/figures/stage6b-*.png.
+Numbers go to runs/stage6b/<part>.json, figures to docs/figures/stage6b-*.png (jevrons.figures draws the
+margin-dynamics, 3 vs 8 weight-map and traps figures).
 """
 
 import json
@@ -333,7 +334,7 @@ def replay_swap(stage, seed_or_pair):
 
 def dynamics():
     d = load()
-    res, panels = {}, []
+    res = {}
     runs = [(6, s) for s in (0, 1, 2)] + [(5, p) for p in ("0v1", "3v8")]
     for stage, run in runs:
         if stage == 6:
@@ -372,30 +373,7 @@ def dynamics():
                                   "curve_predicted": float(p_intended(d["m"][jv], d["z"][jv], d["k"][jv]).mean()),
                                   "median_abs_m": float(np.median(np.abs(d["m"][jv])))}
         res[label] = rows
-        panels.append((label, rows))
     save("dynamics", res)
-    fig, axes = plt.subplots(2, len(panels), figsize=(3.3 * len(panels), 6.2), constrained_layout=True, squeeze=False)
-    for c, (label, rows) in enumerate(panels):
-        for arm, color, name in (("jev", ACCENT, "trained through Jev"), ("swap", EXACT, "trained exact")):
-            if not rows[arm]:
-                continue
-            ep = [r["epoch"] for r in rows[arm]]
-            axes[0, c].plot(ep, [r["median_abs_m"] for r in rows[arm]], "o-", color=color, ms=3, label=name)
-            axes[0, c].fill_between(ep, [r["q10_abs_m"] for r in rows[arm]], [r["median_abs_m"] for r in rows[arm]], color=color, alpha=0.12)
-            axes[1, c].plot(ep, [r["curve_predicted"] for r in rows[arm]], "--", color=color, lw=1.2, label=f"{name}, predicted by margin curve")
-            if arm == "jev":
-                axes[1, c].plot(ep, [r["fires_as_intended"] for r in rows[arm]], "o-", color=color, ms=3, label=f"{name}, measured")
-        if "swap_val_on_jev" in rows:
-            axes[1, c].plot([ep[-1]], [rows["swap_val_on_jev"]["fires_as_intended"]], "x", color=EXACT, ms=7, label="trained exact, measured on val")
-        axes[0, c].set_title(label, fontsize=10)
-        axes[0, c].set_ylim(bottom=0)
-        axes[1, c].set_ylim(0.75, 1.0)
-        axes[1, c].set_xlabel("epoch")
-    axes[0, 0].set_ylabel("hidden |m| (median; band from 10th pct)")
-    axes[1, 0].set_ylabel("hidden fires as intended")
-    axes[0, 0].legend(fontsize=7, frameon=False)
-    axes[1, 0].legend(fontsize=6.5, frameon=False, loc="lower right")
-    savefig(fig, "stage6b-margin-dynamics.png")
 
 
 # ---------------------------------------------------------------- 5. weight maps and net change
@@ -514,18 +492,19 @@ def weights():
 
 
 def plot_weights(label, short, W0, Wj, Ws, margins, per_cos):
-    panels = [("init  W", W0[0]), ("trained through Jev  W", Wj[0]), ("trained exact  W", Ws[0]),
-              ("Jev arm  ΔW = W − W_init", Wj[0] - W0[0]), ("exact arm  ΔW", Ws[0] - W0[0]),
-              ("ΔW Jev − ΔW exact", (Wj[0] - W0[0]) - (Ws[0] - W0[0]))]
-    fig, axes = plt.subplots(3, 2, figsize=(11, 8.6), constrained_layout=True)
-    for ax, (title, W) in zip(axes.T.ravel(), panels):
-        v = np.nanquantile(np.abs(W), 0.99) or 1
-        im = ax.imshow(mosaic(W), cmap=S.DIVERGING, vmin=-v, vmax=v)
-        ax.set_title(f"{title}   (±{v:.2f})", fontsize=9)
-        ax.axis("off")
-        fig.colorbar(im, ax=ax, shrink=0.7)
-    fig.suptitle(f"{label}: first-layer weights per hidden neuron, 28×28 (brown positive, slate negative)", fontsize=10)
-    savefig(fig, f"stage6b-weights-{short}.png")
+    if short != "s5-3v8":  # jevrons.figures draws that map (weights_3v8)
+        panels = [("init  W", W0[0]), ("trained through Jev  W", Wj[0]), ("trained exact  W", Ws[0]),
+                  ("Jev arm  ΔW = W − W_init", Wj[0] - W0[0]), ("exact arm  ΔW", Ws[0] - W0[0]),
+                  ("ΔW Jev − ΔW exact", (Wj[0] - W0[0]) - (Ws[0] - W0[0]))]
+        fig, axes = plt.subplots(3, 2, figsize=(11, 8.6), constrained_layout=True)
+        for ax, (title, W) in zip(axes.T.ravel(), panels):
+            v = np.nanquantile(np.abs(W), 0.99) or 1
+            im = ax.imshow(mosaic(W), cmap=S.DIVERGING, vmin=-v, vmax=v)
+            ax.set_title(f"{title}   (±{v:.2f})", fontsize=9)
+            ax.axis("off")
+            fig.colorbar(im, ax=ax, shrink=0.7)
+        fig.suptitle(f"{label}: first-layer weights per hidden neuron, 28×28 (brown positive, slate negative)", fontsize=10)
+        savefig(fig, f"stage6b-weights-{short}.png")
     fig, axes = plt.subplots(1, 3, figsize=(12, 3.6), constrained_layout=True)
     bins = np.linspace(-6, 6, 61)
     for a, color in (("init", INK), ("swap", EXACT), ("jev", ACCENT)):

@@ -4,7 +4,7 @@
 
 On all ten digits, a 784-32-10 network of full-state Jev neurons trained through Jev gets 68.5% on 1,000 test images (three seeds: 71.0%, 70.2%, 64.4%). The same architecture from the same starts, trained with an exact neuron and then run on Jev, gets 48.0% (43.7%, 52.9%, 47.5%), although it's the better network on paper: 76.8% on an exact neuron. Training through Jev wins by 17-27 points on every seed.
 
-Code: `src/jevrons/stage6.py`. Per-seed results, weights and curves: `runs/stage6/`. Journals are gitignored and backed up outside git (`~/jevrons-journal-backup/`).
+Code: `src/jevrons/stage6.py`. Per-seed results, weights and curves: `runs/stage6/`. The journals aren't published.
 
 ## Setup
 

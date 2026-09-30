@@ -20,11 +20,13 @@ uv run python data.py                     # self-check of the synthetic generato
 uv run python train.py truth --name truth --steps 3000   # true-math arm
 uv run python evaluate.py base            # -> eval-base.json (unmodified laya)
 uv run python evaluate.py truth           # -> eval-truth.json
-uv run python plots.py base truth         # -> ../docs/figures/stage10-*.png
 uv run python payoff.py truth             # sparse 3 vs 8 through the laya neuron, plus the swap control
 uv run python install_ollaya.py truth laya-neuron   # serve it: adds laya-neuron:latest to Ollaya's store
 uv run python client_check.py ollaya-laya-neuron truth   # probes through Jev(..., backends=["ollaya-laya-neuron"])
 ```
+
+`real_data.py` reads the Jev journals, which aren't published. The figures come from the main project:
+`uv run python -m jevrons.figures stage10 stage10_accuracy stage10_training stage10_traps` from the repo root.
 
 Remove the served model with `ollaya rm laya-neuron`. From the main project, the backend is
 `Jev(journal, backends=["ollaya-laya-neuron"])` (512-token context, so about 99 terms at most).
@@ -42,4 +44,3 @@ Training takes about 2.4 s per step (batch 16) on an M5 Pro's GPU and peaks near
 - `payoff.py`: the sparse 3 vs 8 network through the fine-tuned neuron.
 - `install_ollaya.py`: installs a checkpoint as an Ollaya model (Ollaya's Modelfile can't swap weights).
 - `client_check.py`: checks the served model through the normal Jev client against the offline answers.
-- `plots.py`: figures.

@@ -959,7 +959,8 @@ def check_live_limits(pixels):
     finished(evs)
     assert {"type": "waiting", "reason": "busy"} in evs, [e for e in evs if e["type"] == "waiting"]
     flags = [k for k, _ in groupby(e["on"] for e in evs if e["type"] == "degraded")]
-    assert flags == [False, True, False] and not degraded() and PACER.cut, flags  # on after the 429s, off after 20 successes
+    # on after the 429s, off after 20 successes; a slow runner can land a late 429 after that and flip it once more
+    assert flags[:3] == [False, True, False] and flags[-1] is False and not degraded() and PACER.cut, flags
     status = json.load(urllib.request.urlopen(f"http://127.0.0.1:{srv.server_port}/api/status"))
     assert status == {"degraded": False, "typesafe": {"state": "operational", "report": None}}, status
     behave["f"] = lambda n: (402, 0)

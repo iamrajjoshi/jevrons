@@ -4,7 +4,7 @@
 
 A Jev neuron is a real but imperfect adder. With the bias out of the way, it gets the sign of a weighted sum right 82-93% of the time up to 75 terms, falling to 65-82% at 150-250 terms. That's the range where the local mock showed training can compensate, so the gate to the logic-gates experiment passes. Three findings overturned the audited proposal: Jev isn't deterministic, packing neurons into one request changes their answers, and the neuron over-trusts a standalone bias.
 
-Code: `src/jevrons/probe.py`, `src/jevrons/analyze_probe.py`. Raw journals: `runs/probe/*.jsonl.gz` (every state sent and answer received).
+Code: `src/jevrons/probe.py`, `src/jevrons/analyze_probe.py`. Summaries and per-call rows: `runs/probe/`. The raw journals (every state sent and answer received) aren't published.
 
 ## The full-state neuron sums, roughly
 

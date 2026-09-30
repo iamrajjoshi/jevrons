@@ -6,7 +6,7 @@ Jev isn't skimming the list, but it isn't only adding either: its yes/no also fo
 
 Optimization finds quirks you didn't know to look for. The single-neuron probe found the first one by accident: with a separate `bias` field, Jev followed the bias sign 72-97% of the time. Logic gates then showed training could only solve XOR once the bias was folded into the list. This experiment goes looking for the rest.
 
-Code: `src/jevrons/stage6b_features.py` (streams the journals into `runs/stage6b/features.npz`), `src/jevrons/stage6b.py` (offline analysis and figures), `src/jevrons/stage6b_traps.py` (live traps). Numbers: `runs/stage6b/*.json`. Trap journal: `runs/stage6b/journal.jsonl`.
+Code: `src/jevrons/stage6b_features.py` (streams the journals into `runs/stage6b/features.npz`), `src/jevrons/stage6b.py` (offline analysis and figures), `src/jevrons/stage6b_traps.py` (live traps). Numbers: `runs/stage6b/*.json`. The journals and `features.npz` aren't published, so the analysis reruns only where they exist.
 
 ## Data
 

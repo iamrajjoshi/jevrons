@@ -11,7 +11,7 @@ each network's net change from init with its twin's, and reads Jev's measured cu
   pixels    which pixels' weights differ most between arms, against which digits use those pixels
 Usage: uv run python -m jevrons.stage6c [bend misfire lean readoff pixels]  (default: all)
 Needs runs/stage6c/calls.npz (uv run python -m jevrons.stage6c_calls). Numbers: runs/stage6c/<part>.json;
-figures: docs/figures/stage6c-*.png.
+misfire, lean and readoff also draw docs/figures/stage6c-<part>.png (jevrons.figures draws bend and pixels).
 """
 
 import json
@@ -218,46 +218,6 @@ def run_bend():
     for v in res["sim"].values():
         v.pop("_w")
     save("bend", res)
-    plot_bend(res)
-
-
-def plot_bend(res):
-    fig, axes = plt.subplots(1, 3, figsize=(14, 4.6), constrained_layout=True)
-    sims = res["sim"]
-    for graded, color, lab in ((True, INK, "simulated: Jev's curve scaled, graded p"), (False, BLUE, "simulated: scaled, sampled yes/no")):
-        pts = [v for v in sims.values() if v["graded"] == graded]
-        lams = sorted({v["lam"] for v in pts})
-        for ax, xkey in ((axes[0], "swap_gap_pts"), (axes[1], "twin_hidden_misfire")):
-            xs = [np.mean([v[xkey] for v in pts if v["lam"] == lam]) for lam in lams]
-            ys = [np.mean([v["bend"]["W1"]["rel_dist"] for v in pts if v["lam"] == lam]) for lam in lams]
-            if xkey == "twin_hidden_misfire":
-                xs = [100 * x for x in xs]
-            ax.plot(xs, ys, "o-", color=color, ms=3, lw=1, label=lab)
-            for x, y, lam in zip(xs, ys, lams):
-                ax.annotate(f"λ={lam:g}", (x, y), fontsize=6, color=color, xytext=(3, -8), textcoords="offset points")
-        xs = [np.mean([v["twin_hidden_misfire"] for v in pts if v["lam"] == lam]) * 100 for lam in lams]
-        axes[2].plot(xs, [np.mean([v["bend"]["W1"]["cos"] for v in pts if v["lam"] == lam]) for lam in lams], "o-", color=color, ms=3, lw=1)
-    for name, v in res["real"].items():
-        color = ACCENT if name.startswith(("plain", "8g")) else INK if name.startswith("9c") else EXACT
-        marker = "s" if name.startswith("10") else ("D" if name.startswith("9c") else "o")
-        for ax, x, y in ((axes[0], v["swap_gap_pts"], v["bend"]["W1"]["rel_dist"]),
-                         (axes[1], 100 * v["twin_hidden_misfire"], v["bend"]["W1"]["rel_dist"]),
-                         (axes[2], 100 * v["twin_hidden_misfire"], v["bend"]["W1"]["cos"])):
-            ax.plot(x, y, marker, color=color, ms=6)
-            ax.annotate(name, (x, y), fontsize=7, xytext=(4, 3), textcoords="offset points")
-    nf = res["noise_floor"]["lam=1.0"]["W1_rel_dist_between_seeds"]
-    for ax in axes[:2]:
-        ax.axhline(nf, color=BLUE, lw=0.7, ls=":")
-        ax.set_ylabel("bend: ‖ΔW1 − ΔW1 twin‖ / ‖ΔW1 twin‖")
-    axes[0].text(0.5, nf, " coin-flip noise floor (λ=1, sampled)", fontsize=6, color=BLUE, va="bottom")
-    axes[0].set_xlabel("swap gap (points): twin on exact neuron − twin on this neuron")
-    axes[1].set_xlabel("twin's hidden misfire rate on this neuron (%)")
-    axes[2].set_xlabel("twin's hidden misfire rate on this neuron (%)")
-    axes[2].set_ylabel("cosine of ΔW1 with the twin's ΔW1")
-    axes[0].legend(fontsize=7, frameon=False, loc="upper left")
-    fig.suptitle("3 vs 8: how far each network's first layer bent away from its exact twin, against how faulty its neuron is\n"
-                 "pink = Jev arms (stage 5, 8g), black = laya (9c scalar ◆, 10 sparse ■, own twin)", fontsize=10)
-    savefig(fig, "stage6c-bend.png")
 
 
 # ---------------------------------------------------------------- 2. per-neuron misfires, predicted and measured
@@ -627,21 +587,6 @@ def run_pixels():
     res["swap_on_jev_per_digit_test_mean"] = np.mean(pd, 0).round(3).tolist()
     res["ink_pixels_per_digit"] = [ink[d] for d in range(10)]
     save("pixels", res)
-    fig, axes = plt.subplots(2, 5, figsize=(13, 5.6), constrained_layout=True)
-    Dm = np.mean([maps[f"s6 seed{s}"] for s in range(3)], 0)
-    panels = [("‖ΔW Jev − ΔW exact‖ per pixel\nten digits, mean of 3 seeds", Dm, S.SEQ_JEV),
-              ("same, 3 vs 8 (stage 5)", maps["s5 3v8"], S.SEQ_JEV)]
-    panels += [(f"digit {d}: share of images with the pixel on\ncorr with map {res['s6 seed0']['digits'][str(d)]['corr_D_vs_on_freq_live']:+.2f} (seed 0)", freq[d], S.SEQ_SLATE)
-               for d in (0, 3, 8, 1)]
-    panels += [(f"digit {d}: pixels used more than average\n(corr {np.mean([res[f's6 seed{s}']['digits'][str(d)]['corr_D_vs_excess_on_freq'] for s in range(3)]):+.2f}, mean over seeds)",
-                freq[d] - np.mean([freq[e] for e in range(10)], 0), S.DIVERGING) for d in (0, 3, 8, 1)]
-    for ax, (title, img, cmap) in zip(axes.ravel(), panels):
-        v = np.abs(img).max()
-        ax.imshow(img.reshape(28, 28), cmap=cmap, vmin=-v if cmap is S.DIVERGING else 0, vmax=v)
-        ax.set_title(title, fontsize=7.5)
-        ax.axis("off")
-    fig.suptitle("Which pixels' weights differ most between Jev-trained and exact-trained networks", fontsize=10)
-    savefig(fig, "stage6c-pixels.png")
 
 
 PARTS = {"bend": run_bend, "misfire": run_misfire, "lean": run_lean, "readoff": run_readoff, "pixels": run_pixels}

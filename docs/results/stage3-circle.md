@@ -6,7 +6,7 @@ Training through Jev works where swapping Jev in fails. A 2-6-1 network trained 
 
 ![Decision boundaries](../figures/stage3-boundary.png)
 
-Code: `src/jevrons/stage3.py`, figure from `src/jevrons/plots.py`. Results, weights, curves and boundary grids: `runs/stage3/`.
+Code: `src/jevrons/stage3.py`, figure from `src/jevrons/figures.py`. Results, weights, curves and boundary grids: `runs/stage3/`.
 
 ## Setup
 
