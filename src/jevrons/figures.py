@@ -2,7 +2,9 @@
 
 Offline: reads runs/ and replays local exact-neuron training where a journal lacks a run. No API calls.
 Every number drawn comes from a data file; where a figure labels a value the post cites, it's asserted.
-Usage: uv run python -m jevrons.figures [name ...]   (default: all; names are the keys of FIGURES)
+Usage: uv run python -m jevrons.figures [--theme docs|light|dark|both] [name ...]
+  (default: every figure, docs theme into docs/figures; light/dark/both write the blog's variants to
+  docs/figures/site/ as name.png and name-dark.png; names are the keys of FIGURES)
 """
 
 import json
@@ -54,7 +56,7 @@ def dumbbell(ax, rows, lo, hi, chance=None):
         first = -1 if exact <= jev else 1  # exact on the left when it's the smaller value
         for v, c, weight, side in ((exact, S.MUTE, "normal", first), (jev, strong, "medium", -first)):
             ax.annotate(f"{v:.1%}", (v, y), xytext=(side * 10, 0), textcoords="offset points", va="center",
-                        ha="right" if side < 0 else "left", fontsize=9, color=c, fontweight=weight)
+                        ha="right" if side < 0 else "left", fontsize=9.5, color=c, fontweight=weight)
     ax.set_yticks([-i for i in range(len(rows))], [r[0] for r in rows])
     ax.tick_params(axis="y", length=0)
     ax.spines["left"].set_visible(False)
@@ -72,7 +74,7 @@ def dumbbell_key(ax):
     from matplotlib.lines import Line2D
     h = [Line2D([], [], ls="", marker="o", ms=9, mfc=S.PAPER, mec=S.INK2, mew=1.6),
          Line2D([], [], ls="", marker="o", ms=6.5, color=S.INK2)]
-    ax.legend(h, ["exact neuron", "live Jev"], loc="lower left", bbox_to_anchor=(0, 1.0), ncol=2, fontsize=9,
+    ax.legend(h, ["exact neuron", "live Jev"], loc="lower left", bbox_to_anchor=(0, 1.0), ncol=2, fontsize=9.5,
               handletextpad=0.1, columnspacing=1.2, borderaxespad=0.2, borderpad=0)
 
 
@@ -84,14 +86,15 @@ def margin_by_terms():
     for n, (k, m0) in {10: (3.2, 0.20), 250: (1.5, -1.10)}.items():  # the post's table
         assert (fits[str(n)]["k"], fits[str(n)]["threshold_m0"]) == (k, m0)
     terms = sorted({r[0] for r in rows})
-    colors = [S.SEQ_JEV(v) for v in np.linspace(0.28, 0.92, len(terms))]
+    lo = 0.45 if S.THEME == "dark" else 0.28  # the pale end of the ramp fades into dark paper sooner
+    colors = [S.SEQ_JEV(v) for v in np.linspace(lo, 0.92, len(terms))]
     edges = np.linspace(-3, 3, 25)
     mid = (edges[1:] + edges[:-1]) / 2
     t = np.linspace(-3, 3, 400)
     fig, ax = S.figure(4.1)
     ax.axhline(0.5, color=S.RULE, lw=0.8, zorder=0)
     ax.plot([-3, 0, 0, 3], [0, 0, 1, 1], color=S.INK, lw=1.1, ls=(0, (4, 3)), zorder=1)
-    ax.text(0.08, 0.03, "exact neuron", color=S.INK2, fontsize=9, va="bottom")
+    ax.text(0.08, 0.03, "exact neuron", color=S.INK2, fontsize=9.5, va="bottom")
     label_y = {250: 0.62, 150: 0.47, 75: 0.33, 30: 0.2, 10: 0.5}
     for color, n in zip(colors, terms):
         m = np.array([r[1] for r in rows if r[0] == n])
@@ -105,7 +108,7 @@ def margin_by_terms():
         x = m0 + float(np.sqrt(2) * _erfinv(2 * y - 1)) / k
         right = n == 10  # the shortest list is the rightmost curve at this height; label it on the open side
         ax.text(x + (0.09 if right else -0.09), y, "10 terms" if right else str(n), color=color if n > 30 else S.JEV_TEXT,
-                fontsize=9.5, ha="left" if right else "right", va="center", fontweight="medium")
+                fontsize=10, ha="left" if right else "right", va="center", fontweight="medium")
     ax.set_xlim(-3.05, 3.05)
     ax.set_ylim(-0.03, 1.03)
     ax.set_xlabel("normalized margin  m = z / spread")
@@ -141,14 +144,14 @@ def bias():
             ns.append(len(dis))
         ax.bar(x + off, vals, w, color=color, zorder=2)
         for xi, v in zip(x + off, vals):
-            ax.text(xi, v + 0.02, f"{v:.0%}", ha="center", va="bottom", fontsize=9,
+            ax.text(xi, v + 0.02, f"{v:.0%}", ha="center", va="bottom", fontsize=9.5,
                     color=S.JEV_TEXT if color == S.JEV else S.INK2)
         pooled = sum(v * n for v, n in zip(vals, ns)) / sum(ns)
         ax.text(len(terms) - 0.45, pooled, f"{name}\n{pooled:.0%} of {sum(ns)} calls", ha="left", va="center",
-                fontsize=9, color=S.JEV_TEXT if color == S.JEV else S.INK2, linespacing=1.3)
+                fontsize=9.5, color=S.JEV_TEXT if color == S.JEV else S.INK2, linespacing=1.3)
         ax.plot([len(terms) - 0.6, len(terms) - 0.5], [pooled, pooled], color=color, lw=2, clip_on=False)
     ax.axhline(0.5, color=S.MUTE, lw=0.8, ls=(0, (2, 2)), zorder=1)
-    ax.text(-0.55, 0.97, "calls where the bias and the true total have opposite signs", fontsize=9, color=S.INK2, va="top")
+    ax.text(-0.55, 0.97, "calls where the bias and the true total have opposite signs", fontsize=9.5, color=S.INK2, va="top")
     ax.set_xticks(x, [f"{n} terms" if i == 0 else str(n) for i, n in enumerate(terms)])
     ax.set_xlim(-0.6, len(terms) + 0.9)
     ax.spines["bottom"].set_bounds(-0.6, len(terms) - 0.4)
@@ -178,16 +181,16 @@ def xor():
                         mec=S.PAPER, mew=0.8)
         solved = sum(r["all_correct_frac"] * len(r["pass_accuracy"]) for r in res)
         total = sum(len(r["pass_accuracy"]) for r in res)
-        ax.set_title(title, fontsize=9.5, color=S.INK, loc="left", linespacing=1.25)
-        ax.text(0.0, -0.36, f"{solved:.0f} of {total} passes fully correct", transform=ax.transAxes, fontsize=9, color=S.INK2)
+        ax.set_title(title, fontsize=10, color=S.INK, loc="left", linespacing=1.25)
+        ax.text(0.0, -0.36, f"{solved:.0f} of {total} passes fully correct", transform=ax.transAxes, fontsize=9.5, color=S.INK2)
         ax.axhline(0.5, color=S.MUTE, lw=0.8, ls=(0, (2, 2)), zorder=0)
         ax.set_xticks(range(4), inputs)
         ax.set_xlim(-0.55, 3.55)
-        ax.set_xlabel("input", fontsize=9.5)
+        ax.set_xlabel("input", fontsize=10)
     folded = sum(js(f"stage2/result-XOR-ste_folded-{s}.json")["all_correct_frac"] * 5 for s in (0, 1, 2))
     assert round(folded) == 14
-    axes[0].text(1.0, 0.94, "target", fontsize=8.5, color=S.INK2, ha="center", va="top")
-    axes[2].text(3.5, 0.62, "wrong side\nof 0.5", fontsize=8.5, color=S.JEV_TEXT, ha="right", va="bottom", linespacing=1.1)
+    axes[0].text(1.0, 0.94, "target", fontsize=9, color=S.INK2, ha="center", va="top")
+    axes[2].text(3.5, 0.62, "wrong side\nof 0.5", fontsize=9, color=S.JEV_TEXT, ha="right", va="bottom", linespacing=1.1)
     axes[0].set_ylim(-0.04, 1.04)
     axes[0].set_ylabel("Jev's mean output p")
     axes[0].set_yticks([0, 0.5, 1])
@@ -211,7 +214,7 @@ def stage3_boundary():
         inside = YTE.ravel() > 0.5
         ax.scatter(*XTE[inside].T, s=5, color=S.INK, lw=0, alpha=0.75)
         ax.scatter(*XTE[~inside].T, s=9, color=S.INK, marker="x", lw=0.6, alpha=0.55)
-        ax.set_title(f"{title}\nheld-out accuracy {r['test_accuracy']:.0%}", fontsize=10)
+        ax.set_title(f"{title}\nheld-out accuracy {r['test_accuracy']:.0%}", fontsize=10.5)
         ax.set_aspect("equal")
         ax.set_xticks([-1, 0, 1])
         ax.set_yticks([-1, 0, 1])
@@ -220,7 +223,7 @@ def stage3_boundary():
     check(js("stage3/result-ste_jev-0.json")["test_accuracy"], "84%")
     check(js("stage3/result-swap-0.json")["test_accuracy"], "47%")
     cb = fig.colorbar(im, ax=axes, shrink=0.75, aspect=22, pad=0.03)
-    cb.set_label("Jev's output p (fire = inside)", fontsize=9.5, color=S.INK2)
+    cb.set_label("Jev's output p (fire = inside)", fontsize=10, color=S.INK2)
     cb.set_ticks([0, 0.5, 1])
     cb.outline.set_visible(False)
     S.save(fig, "stage3-boundary.png")
@@ -244,12 +247,12 @@ def wording():
     ax.plot([-10, 0, 0, 10], [0, 0, 1, 1], color=S.INK, lw=1, ls=(0, (4, 3)), zorder=1)
     ax.plot(z[w], p[w], color=S.JEV, lw=1.8, zorder=3)
     ax.plot(za, pa, color=S.INK, lw=1.8, zorder=2)
-    ax.text(-9.7, neg.max() + 0.04, "statement: \u201cz is greater than zero.\u201d", color=S.JEV_TEXT, fontsize=9.5,
+    ax.text(-9.7, neg.max() + 0.04, "statement: \u201cz is greater than zero.\u201d", color=S.JEV_TEXT, fontsize=10,
             va="bottom")
     ax.text(-9.7, neg.min() - 0.04, f"p = {neg.min():.2f} to {neg.max():.2f} for every negative z", color=S.JEV_TEXT,
-            fontsize=9, va="top")
-    ax.text(-9.7, 0.08, "question: \u201cIs the number z positive?\u201d", color=S.INK, fontsize=9.5, va="bottom")
-    ax.text(9.7, 0.9, "exact step", color=S.INK2, fontsize=9, ha="right", va="top")
+            fontsize=9.5, va="top")
+    ax.text(-9.7, 0.08, "question: \u201cIs the number z positive?\u201d", color=S.INK, fontsize=10, va="bottom")
+    ax.text(9.7, 0.9, "exact step", color=S.INK2, fontsize=9.5, ha="right", va="top")
     ax.set_xlim(-10.2, 10.2)
     ax.set_xticks(range(-10, 11, 5))
     ax.set_ylim(-0.03, 1.05)
@@ -294,7 +297,7 @@ def stage5_training():
                 ax.plot(step, v, color=color, lw=0.8, alpha=0.3)
                 ax.plot(step[k - 1:], sm, color=color, lw=2)
                 if c == 1 and r_ == 0:
-                    ax.text(step[-1] + 1, sm[-1] - (0.07 if arm == "jev" else -0.04), label, fontsize=9, va="center",
+                    ax.text(75, 0.36 if arm == "jev" else 0.47, label, fontsize=9.5, ha="right", va="center",
                             color=S.JEV_TEXT if arm == "jev" else S.INK2)
         axes[0, c].set_title(name)
         axes[0, c].set_ylim(0.3, 1.02)
@@ -307,8 +310,8 @@ def stage5_training():
     axes[0, 1].set_xlim(0, 76)
     axes[0, 0].set_ylabel("batch accuracy\non its own neuron")
     axes[1, 0].set_ylabel("loss, trained\nthrough Jev")
-    axes[1, 0].text(75, 1.4, "exact-trained loss not drawn: a step\nneuron outputs 0 or 1, so its loss\nonly counts mistakes",
-                    fontsize=8.5, color=S.MUTE, ha="right", va="top", linespacing=1.25)
+    axes[1, 0].text(75, 1.4, "exact-trained loss not drawn:\na step neuron outputs 0 or 1,\nso its loss only counts\nmistakes",
+                    fontsize=9, color=S.MUTE, ha="right", va="top", linespacing=1.25)
     S.save(fig, "stage5-training.png")
 
 
@@ -340,12 +343,12 @@ def stage5_margins():
         res = js(f"stage5/result-3v8-{arm}.json")["val_jev"]["fires_as_intended"]["hidden"]
         assert abs(ok.mean() - res) < 1e-3, (ok.mean(), res)  # the result file counts z = 0 slightly differently
         ax.set_title(title)
-        ax.text(0.99, 0.95, f"fires as intended {res:.1%}", transform=ax.transAxes, ha="right", va="top", fontsize=9.5,
+        ax.text(0.99, 0.95, f"fires as intended {res:.1%}", transform=ax.transAxes, ha="right", va="top", fontsize=10,
                 color=S.INK2)
-        ax.text(0.99, 0.78, f"Jev misfired {1 - res:.1%}", transform=ax.transAxes, ha="right", va="top", fontsize=9.5,
+        ax.text(0.99, 0.78, f"Jev misfired {1 - res:.1%}", transform=ax.transAxes, ha="right", va="top", fontsize=10,
                 color=S.JEV_TEXT)
         ax.text(0, 1.01, f"{near:.0%} within one spread of zero", transform=ax.get_xaxis_transform(), ha="center",
-                va="bottom", fontsize=9, color=S.INK2)
+                va="bottom", fontsize=9.5, color=S.INK2)
         ax.set_ylabel("hidden calls")
         S.ygrid(ax)
     check(js("stage5/result-3v8-jev.json")["val_jev"]["fires_as_intended"]["hidden"], "93.0%", "{:.1%}")
@@ -359,7 +362,7 @@ def stage5_margins():
 # ---------------------------------------------------------------- All ten digits
 
 def stage6_swap():
-    fig, axes = S.figure(3.6, ncols=2, sharey=True)
+    fig, axes = S.figure(6.4, nrows=2)
     for ax, split_ in zip(axes, ("val", "test")):
         rows = []
         for seed in (0, 1, 2):
@@ -406,22 +409,22 @@ def stage6_digits():
         ax.vlines(digits + off, per.min(0), per.max(0), color=color, lw=1.4, alpha=0.5)
         ax.plot(digits + off, per.mean(0), "o", color=color, ms=7, mec=S.PAPER, mew=0.8, label=label)
     for d in (0, 3, 8):
-        ax.text(d + 0.3, means["swap"][d], f"{means['swap'][d]:.0%}", ha="left", va="center", fontsize=9, color=S.INK2)
-        ax.text(d - 0.14, means["jev"][d] + 0.05, f"{means['jev'][d]:.0%}", ha="center", va="bottom", fontsize=9,
+        ax.text(d + 0.3, means["swap"][d], f"{means['swap'][d]:.0%}", ha="left", va="center", fontsize=9.5, color=S.INK2)
+        ax.text(d - 0.14, means["jev"][d] + 0.05, f"{means['jev'][d]:.0%}", ha="center", va="bottom", fontsize=9.5,
                 color=S.JEV_TEXT)
     for d, cited in zip((0, 3, 8), ("7%", "17%", "5%")):
         check(means["swap"][d], cited)
     for d, cited in zip((0, 3, 8), ("82%", "66%", "43%")):
         check(means["jev"][d], cited)
     ax.set_xticks(digits, [f"{d}\n{ink[d]:.0f}" for d in digits])
-    ax.text(-0.75, -0.33, "active\npixels", transform=ax.get_xaxis_transform(), ha="right", fontsize=8.5, color=S.MUTE,
+    ax.text(-0.75, -0.33, "active\npixels", transform=ax.get_xaxis_transform(), ha="right", fontsize=9, color=S.MUTE,
             linespacing=1.1)
     ax.set_xlim(-0.6, 9.6)
     ax.set_ylim(0, 1.05)
     ax.set_ylabel("test accuracy per digit")
     S.pct(ax)
     S.ygrid(ax)
-    ax.legend(loc="lower right", ncol=2, fontsize=9, handletextpad=0.2, columnspacing=1.2, borderaxespad=0.1,
+    ax.legend(loc="lower right", ncol=2, fontsize=9.5, handletextpad=0.2, columnspacing=1.2, borderaxespad=0.1,
               bbox_to_anchor=(1, 1.0))
     for c, (arm, cmap, title) in enumerate((("jev", S.SEQ_JEV, "trained through Jev"), ("swap", S.SEQ_INK, "trained exact, run on Jev"))):
         preds = _stage6_predictions(arm)
@@ -436,19 +439,19 @@ def stage6_digits():
         for i in range(10):
             for j in range(10):
                 if conf[i, j] >= 0.1:
-                    axc.text(j, i, f"{conf[i, j] * 100:.0f}", ha="center", va="center", fontsize=7.5,
-                             color=S.PAPER if conf[i, j] > 0.45 else S.INK)
+                    axc.text(j, i, f"{conf[i, j] * 100:.0f}", ha="center", va="center", fontsize=9,
+                             color=S.text_on(cmap(conf[i, j])))
         axc.set_xticks(digits)
         axc.set_yticks(digits)
-        axc.tick_params(length=0, labelsize=8.5)
+        axc.tick_params(length=0, labelsize=9)
         for s in axc.spines.values():
             s.set_visible(False)
-        axc.set_title(title, fontsize=10)
-        axc.set_xlabel("predicted", fontsize=9.5)
+        axc.set_title(title, fontsize=10.5)
+        axc.set_xlabel("predicted", fontsize=10)
         if c == 0:
-            axc.set_ylabel("true digit", fontsize=9.5)
+            axc.set_ylabel("true digit", fontsize=10)
     fig.text(1.0, -0.015, "cells: % of each true digit, 3 seeds pooled, shown when 10% or more", ha="right", va="top",
-             fontsize=8.5, color=S.MUTE)
+             fontsize=9, color=S.MUTE)
     S.save(fig, "stage6-digits.png")
 
 
@@ -473,7 +476,7 @@ def stage7():
              np.mean([t["accuracy"] for t in six["swap"]]))]
     dumbbell(ax, rows, 0.3, 0.95)
     ax.axhline(-1.5, color=S.RULE, lw=0.8)
-    ax.set_xlabel("test accuracy (2,000 images; 1,000-image rows are the mean of 3 ten-digit seeds)", fontsize=9.5)
+    ax.set_xlabel("test accuracy (2,000 images;\n1,000-image rows are the mean of 3 ten-digit seeds)", fontsize=10)
     dumbbell_key(ax)
     ax2 = fig.add_subplot(gs[1])
     digits = np.arange(10)
@@ -485,13 +488,13 @@ def stage7():
         ax2.plot(digits + off, after, "o", ms=7, color=c7, mec=S.PAPER, mew=0.8, zorder=3)
     for d, cited in ((0, "6%"), (3, "17%")):
         check(s["per_digit"][d], cited)
-        ax2.text(d + 0.32, s["per_digit"][d], f"{s['per_digit'][d]:.1%}", va="center", fontsize=9, color=S.INK2)
+        ax2.text(d + 0.32, s["per_digit"][d], f"{s['per_digit'][d]:.1%}", va="center", fontsize=9.5, color=S.INK2)
     from matplotlib.lines import Line2D
     ax2.legend([Line2D([], [], ls="", marker="o", ms=7, color=S.JEV), Line2D([], [], ls="", marker="o", ms=7, color=S.INK)],
-               ["trained through Jev", "trained exact"], loc="lower left", bbox_to_anchor=(0.5, 0.02), ncol=1, fontsize=9,
+               ["trained through Jev", "trained exact"], loc="lower left", bbox_to_anchor=(0.47, 0.02), ncol=1, fontsize=9.5,
                handletextpad=0.1, columnspacing=1.2)
-    ax2.text(0.0, 1.03, "per digit, on live Jev: hollow = 1,000 images (mean of 3 ten-digit seeds), filled = 5,000 images",
-             transform=ax2.transAxes, fontsize=9, color=S.INK2)
+    ax2.text(0.0, 1.03, "per digit, on live Jev: hollow = 1,000 images (mean of 3 ten-digit seeds),\nfilled = 5,000 images",
+             transform=ax2.transAxes, fontsize=9.5, color=S.INK2)
     ax2.set_xticks(digits)
     ax2.set_xlabel("digit")
     ax2.set_xlim(-0.6, 9.8)
@@ -523,8 +526,8 @@ def stage8_sparse():
     dumbbell(ax, [(label, color, r["exact_step"], r["accuracy"]) for label, color, r in rows], 0.45, 0.95)
     for y in (-1.5, -3.5):
         ax.axhline(y, color=S.RULE, lw=0.8)
-    ax.set_xlabel("test accuracy (dense 784-32-10: 2,000 images; sparse 784-64-10, 96 pixels per neuron: 1,000)",
-                  fontsize=9.5)
+    ax.set_xlabel("test accuracy (dense 784-32-10: 2,000 images;\nsparse 784-64-10, 96 pixels per neuron: 1,000)",
+                  fontsize=10)
     dumbbell_key(ax)
     ax2 = fig.add_subplot(gs[1])
     bands = list(bt["jev"]["by_abs_m"])
@@ -541,7 +544,7 @@ def stage8_sparse():
         color = S.SEQ_JEV(shade)
         name = "dense" if len(keys) == 1 else "sparse"
         ax2.plot(x, rate, "o-", color=color, ms=5, lw=2, label=f"{name}, about {terms:.0f} numbers per call")
-    ax2.legend(loc="upper right", fontsize=9, handlelength=1.6)
+    ax2.legend(loc="upper right", fontsize=9.5, handlelength=1.6)
     ax2.set_xticks(x, [b.replace("3-99", "3+").replace("-", "\u2013") for b in bands])
     ax2.set_xlabel("hidden margin band  |m| = |z| / spread  (both arms pooled)")
     ax2.set_ylabel("hidden misfires")
@@ -556,9 +559,11 @@ def training_curves():
     validation on Jev at the evaluated epochs, and the final test accuracy on Jev."""
     nets = (("stage7", "dense 784-32-10, 5,000 images", {"jev": "84.6%", "swap": "52.6%"}),
             ("stage8a", "sparse 784-64-10, 1,000 images", {"jev": "85.3%", "swap": "65.8%"}))
-    fig, axes = S.figure(5.0, ncols=2, nrows=2, sharex="col", gridspec_kw={"height_ratios": [1.5, 1]})
+    fig, axes = S.figure(8.2, nrows=4, gridspec_kw={"height_ratios": [1.5, 1, 1.5, 1]})
     for c, (run, title, cited) in enumerate(nets):
-        top, bottom = axes[0, c], axes[1, c]
+        top, bottom = axes[2 * c], axes[2 * c + 1]
+        top.sharex(bottom)
+        top.tick_params(labelbottom=False)
         for arm, color in (("swap", S.INK), ("jev", S.JEV)):
             cur = js(f"{run}/curve-{arm}.json")
             res = js(f"{run}/result-{arm}.json")
@@ -578,8 +583,8 @@ def training_curves():
             check(test, cited[arm], "{:.1%}")
             top.plot([epochs + 0.35], [test], "D", ms=6.5, color=color, zorder=4, clip_on=False)
             top.annotate(f"{test:.1%}", (epochs + 0.35, test), xytext=(8, 0), textcoords="offset points", va="center",
-                         fontsize=9, fontweight="medium", color=S.JEV_TEXT if arm == "jev" else S.INK)
-        top.set_title(title, fontsize=10)
+                         fontsize=9.5, fontweight="medium", color=S.JEV_TEXT if arm == "jev" else S.INK)
+        top.set_title(title, fontsize=10.5)
         top.set_ylim(0.3, 1.02)
         top.set_xlim(0, epochs + 0.35)
         S.pct(top)
@@ -588,17 +593,15 @@ def training_curves():
         bottom.set_xticks(range(0, epochs + 1, 2))
         for ax in (top, bottom):
             S.ygrid(ax)
-            if c:
-                ax.set_yticklabels([])
-    fig.text(0.0, -0.01, "Top: lines are training batch accuracy, each network on its own neuron (smoothed over a quarter "
-             "epoch, raw behind); rings are validation on Jev; diamonds are test on Jev.", ha="left", va="top", fontsize=8,
+        top.set_ylabel("accuracy")
+        bottom.set_ylabel("training loss\n(trained through Jev)", fontsize=10.5)
+    fig.text(0.0, -0.01, "Accuracy panels: lines are training batch accuracy, each network on its own neuron (smoothed over a quarter "
+             "epoch, raw behind); rings are validation on Jev; diamonds are test on Jev.", ha="left", va="top", fontsize=9,
              color=S.INK2, wrap=True)
-    axes[0, 1].text(3.1, 0.93, "trained through Jev", fontsize=9, color=S.JEV_TEXT, ha="center")
-    axes[0, 1].text(3.1, 0.47, "trained exact\n(its twin)", fontsize=9, color=S.INK, ha="center", va="top", linespacing=1.1)
-    axes[0, 0].set_ylabel("accuracy")
-    axes[1, 0].set_ylabel("training loss\n(trained through Jev)", fontsize=10)
-    axes[1, 1].text(0.98, 0.9, "the twin's loss isn't drawn: a step neuron outputs\n0 or 1, so its loss only counts mistakes",
-                    transform=axes[1, 1].transAxes, ha="right", va="top", fontsize=8, color=S.MUTE, linespacing=1.3)
+    axes[2].text(3.1, 0.93, "trained through Jev", fontsize=9.5, color=S.JEV_TEXT, ha="center")
+    axes[2].text(3.1, 0.47, "trained exact\n(its twin)", fontsize=9.5, color=S.INK, ha="center", va="top", linespacing=1.1)
+    axes[3].text(0.98, 0.9, "the twin's loss isn't drawn: a step neuron outputs\n0 or 1, so its loss only counts mistakes",
+                    transform=axes[3].transAxes, ha="right", va="top", fontsize=9, color=S.MUTE, linespacing=1.3)
     S.save(fig, "training-curves.png")
 
 
@@ -622,7 +625,7 @@ def sparse_confusion():
                 outputs[t["arm"]][t["i"], t["j"]] = np.mean([v["above"] if isinstance(v, dict) else v
                                                              for v in r["answers"].values()])
     assert not any(np.isnan(o).any() for o in outputs.values()), "journal is missing test output calls"
-    fig, axes = S.figure(3.9, ncols=2)
+    fig, axes = S.figure(8.0, nrows=2)
     for ax, (arm, title, cited) in zip(axes, (("jev", "trained through Jev", "85.3%"), ("swap", "trained exact, run on Jev", "65.8%"))):
         r = js(f"stage8a/result-{arm}.json")["test"]
         pred = decide(outputs[arm])
@@ -640,19 +643,20 @@ def sparse_confusion():
         for i in range(10):
             for j in range(10):
                 if counts[i, j] and (i == j or frac[i, j] >= 0.05):
-                    dark = frac[i, j] > 0.5 and i == j
-                    ax.text(j, i, str(counts[i, j]), ha="center", va="center", fontsize=7.5,
-                            color=S.PAPER if dark else (S.INK if i == j else S.JEV_TEXT if frac[i, j] < 0.2 else S.INK))
+                    faint = i != j and frac[i, j] < 0.2
+                    ax.text(j, i, str(counts[i, j]), ha="center", va="center", fontsize=9,
+                            color=S.JEV_TEXT if faint else S.text_on(rgb[i, j]))
         ax.set_xticks(range(10))
         ax.set_yticks(range(10))
-        ax.tick_params(length=0, labelsize=8.5)
+        ax.tick_params(length=0, labelsize=9)
         for sp in ax.spines.values():
             sp.set_visible(False)
-        ax.set_title(f"{title}\n{r['accuracy']:.1%} of 1,000 test digits", fontsize=10, linespacing=1.3)
-        ax.set_xlabel("predicted", fontsize=9.5)
-    axes[0].set_ylabel("true digit", fontsize=9.5)
-    fig.text(1.0, -0.01, "cells: image counts; diagonal shaded grey, off-diagonal shaded pink by share of the row; "
-             "off-diagonal counts shown at 5% of the row or more", ha="right", va="top", fontsize=8, color=S.MUTE)
+        ax.set_title(f"{title}\n{r['accuracy']:.1%} of 1,000 test digits", fontsize=10.5, linespacing=1.3)
+        ax.set_xlabel("predicted", fontsize=10)
+    for ax in axes:
+        ax.set_ylabel("true digit", fontsize=10)
+    fig.text(0.5, -0.01, "cells: image counts; diagonal shaded grey, off-diagonal shaded pink by share of the row;\n"
+             "off-diagonal counts shown at 5% of the row or more", ha="center", va="top", fontsize=9, color=S.MUTE)
     S.save(fig, "stage8a-confusion.png")
 
 
@@ -665,7 +669,8 @@ def margin_dynamics():
               ("stage 6 seed 1", "ten digits, seed 1", "stage6/result-seed1-swap.json"),
               ("stage 5 0v1", "0 vs 1", "stage5/result-0v1-swap.json"),
               ("stage 5 3v8", "3 vs 8", "stage5/result-3v8-swap.json")]
-    fig, axes = S.figure(4.6, ncols=4, nrows=2)
+    fig, grid = S.figure(7.8, ncols=2, nrows=4)
+    axes = grid.T  # axes[metric, dataset]: one row per dataset, stacked
     for c, (key, title, swap_res) in enumerate(panels):
         rows = dyn[key]
         swap = rows["swap"]
@@ -686,19 +691,22 @@ def margin_dynamics():
             if arm == "jev":
                 axes[1, c].plot(ep, [d["fires_as_intended"] for d in data], "o-", color=color, ms=3.5, lw=1.8)
         axes[1, c].plot([ep[-1]], [measured], "o", ms=6, mfc=S.PAPER, mec=S.INK, mew=1.6)
-        axes[0, c].set_title(title, fontsize=10)
+        axes[0, c].set_title(title, fontsize=10.5)
         axes[0, c].set_ylim(0, 0.52)
         axes[1, c].set_ylim(0.8, 1.0)
-        axes[1, c].set_xlabel("epoch", fontsize=9.5)
         n = len(ep)
         for r_ in (0, 1):
             ax = axes[r_, c]
             ax.set_xticks([1, n // 2, n] if n > 5 else range(1, n + 1))
-            ax.tick_params(labelsize=8.5)
+            ax.tick_params(labelsize=9)
             S.ygrid(ax)
             S.pct(ax)
-            if c:
-                ax.set_yticklabels([])
+    for ax in grid[-1]:
+        ax.set_xlabel("epoch", fontsize=10)
+    for ax in grid[:, 0]:
+        ax.set_ylabel("hidden sums with |m| < 1", fontsize=10)
+    for ax in grid[:, 1]:
+        ax.set_ylabel("hidden fires as intended", fontsize=10)
     s38 = dyn["stage 5 3v8"]
     for arm, first, last in (("jev", "32%", "13%"), ("swap", "49%", "38%")):  # the post says 39%; the data is 38.45%
         check(s38[arm][0]["frac_abs_m_lt_1"], first)
@@ -708,13 +716,11 @@ def margin_dynamics():
         check(s01[arm][0]["frac_abs_m_lt_1"], first)
         check(s01[arm][-1]["frac_abs_m_lt_1"], last)
     ax = axes[0, 3]
-    ax.text(5, s38["swap"][-1]["frac_abs_m_lt_1"] + 0.05, "trained exact", ha="right", fontsize=9, color=S.INK2)
-    ax.text(5, s38["jev"][-1]["frac_abs_m_lt_1"] - 0.05, "trained\nthrough Jev", ha="right", va="top", fontsize=9,
-            color=S.JEV_TEXT, linespacing=1.1)
-    axes[0, 0].set_ylabel("hidden sums with |m| < 1", fontsize=10)
-    axes[1, 0].set_ylabel("hidden fires as intended", fontsize=10)
+    ax.text(5, s38["swap"][-1]["frac_abs_m_lt_1"] + 0.05, "trained exact", ha="right", fontsize=9.5, color=S.INK2)
+    ax.text(5, s38["jev"][-1]["frac_abs_m_lt_1"] - 0.05, "trained through Jev", ha="right", va="top", fontsize=9.5,
+            color=S.JEV_TEXT)
     axes[1, 2].text(0.97, 0.04, "solid: measured on Jev\ndashed: predicted by\nthe margin curve\nhollow: exact twin,\nmeasured",
-                    transform=axes[1, 2].transAxes, fontsize=8, color=S.INK2, linespacing=1.3, ha="right", va="bottom")
+                    transform=axes[1, 2].transAxes, fontsize=9, color=S.INK2, linespacing=1.3, ha="right", va="bottom")
     S.save(fig, "stage6b-margin-dynamics.png")
 
 
@@ -738,19 +744,19 @@ def weights_3v8():
         cmap = S.DIVERGING.copy()
         cmap.set_bad(S.PAPER)
         im = ax.imshow(img, cmap=cmap, vmin=-v, vmax=v, interpolation="nearest")
-        ax.set_title(title, fontsize=9.5)
+        ax.set_title(title, fontsize=10)
         ax.axis("off")
         if W is dJ or W is dS:
             ax.text(1.0, 1.02, f"Frobenius norm {np.linalg.norm(W):.1f}", transform=ax.transAxes, ha="right", va="bottom",
-                    fontsize=9, color=S.JEV_TEXT if W is dJ else S.INK2)
+                    fontsize=9.5, color=S.JEV_TEXT if W is dJ else S.INK2)
         if ax in (axes[2, 0], axes[2, 1]):
             cb = fig.colorbar(im, ax=axes[:, list(axes[2]).index(ax)], orientation="horizontal", shrink=0.6, aspect=30,
                               pad=0.02)
             cb.set_ticks([-round(v, 1), 0, round(v, 1)])
             cb.outline.set_visible(False)
-            cb.ax.tick_params(labelsize=8.5)
+            cb.ax.tick_params(labelsize=9)
             cb.set_label("weight" if ax is axes[2, 0] else "change from the start (same scale for all three)",
-                         fontsize=9, color=S.INK2)
+                         fontsize=9.5, color=S.INK2)
     S.save(fig, "stage6b-weights-s5-3v8.png", svg=False, colors=128)
 
 
@@ -780,19 +786,19 @@ def traps():
     fig, ax = S.figure(4.5)
     y, ticks, labels = 0, [], []
     for head, bars in groups:
-        ax.text(-0.005, y, head, fontsize=9.5, color=S.INK, fontweight="medium", ha="right", va="center",
+        ax.text(-0.005, y, head, fontsize=10, color=S.INK, fontweight="medium", ha="right", va="center",
                 transform=ax.get_yaxis_transform())
         y -= 0.8
         for label, v, trap in bars:
             ax.barh(y, v, 0.68, color=S.JEV if trap else S.GREY, zorder=2)
-            ax.text(v + 0.012, y, f"{v:.1%}".replace(".0%", "%"), va="center", fontsize=9,
+            ax.text(v + 0.012, y, f"{v:.1%}".replace(".0%", "%"), va="center", fontsize=9.5,
                     color=S.JEV_TEXT if trap else S.INK2)
             ticks.append(y)
             labels.append(label)
             y -= 0.8
         y -= 0.45
     ax.set_yticks(ticks, labels)
-    ax.tick_params(axis="y", length=0, labelsize=9.5)
+    ax.tick_params(axis="y", length=0, labelsize=10)
     ax.spines["left"].set_visible(False)
     ax.set_xlim(0, 1.08)
     ax.spines["bottom"].set_bounds(0, 1)
@@ -807,18 +813,19 @@ def traps():
 
 # ---------------------------------------------------------------- Teaching laya to add
 
-LAYA = {"base": (S.GREY, "base laya"), "truth": (S.INK, "fine-tuned laya")}
+def laya():
+    return {"base": (S.GREY, "base laya"), "truth": (S.INK, "fine-tuned laya")}
 
 
 def stage10_curves():
     fits = js("margin/summary.json")["offset_fit"]
-    ev = {n: js(f"stage10/eval-{n}.json") for n in LAYA}
+    ev = {n: js(f"stage10/eval-{n}.json") for n in laya()}
     mm = np.linspace(-3, 3, 400)
     fig, axes = S.figure(3.2, ncols=3, sharey=True)
     for ax, n in zip(axes, (10, 30, 75)):
         ax.axhline(0.5, color=S.RULE, lw=0.8, zorder=0)
         ax.axvline(0, color=S.RULE, lw=0.8, zorder=0)
-        for name, (color, _) in LAYA.items():
+        for name, (color, _) in laya().items():
             c = ev[name]["curves"][f"probe-{n}"]
             b = np.array(c["binned"])
             ax.plot(b[:, 0] + 0.125, b[:, 1], "o", ms=2.8, color=color, alpha=0.9)
@@ -826,44 +833,44 @@ def stage10_curves():
         k, m0 = fits[str(n)]["k"], fits[str(n)]["threshold_m0"]
         ax.plot(mm, Phi(k * (mm - m0)), color=S.JEV, lw=1.8, ls=(0, (4, 2.5)))
         kt = ev["truth"]["curves"][f"probe-{n}"]["k"]
-        ax.set_title(f"{n} terms", fontsize=10)
-        ax.text(0.98, 0.04, f"fine-tuned k {kt:.1f}\nJev k {k:.1f}", transform=ax.transAxes, ha="right", va="bottom",
-                fontsize=8, color=S.INK2, linespacing=1.4)
+        ax.set_title(f"{n} terms", fontsize=10.5)
+        ax.text(0.98, 0.3, f"fine-tuned\nk {kt:.1f}\nJev k {k:.1f}", transform=ax.transAxes, ha="right", va="bottom",
+                fontsize=9, color=S.INK2, linespacing=1.4)
         ax.set_xlim(-3, 3)
         ax.set_xticks([-3, 0, 3])
-        ax.set_xlabel("m = z / spread", fontsize=10)
+        ax.set_xlabel("m = z / spread", fontsize=10.5)
     check(ev["truth"]["curves"]["probe-10"]["k"], "13.5", "{:.1f}")
     check(ev["truth"]["curves"]["probe-10"]["sign_accuracy"], "98.7%", "{:.1%}")
-    axes[0].set_ylabel("share of calls that fire", fontsize=10)
+    axes[0].set_ylabel("share of calls that fire", fontsize=10.5)
     S.pct(axes[0])
     ax = axes[0]
-    ax.text(-2.85, 0.93, "base laya", fontsize=8.5, color=S.MUTE, va="center")
-    ax.annotate("fine-tuned laya", xy=(0.02, 0.62), xytext=(-2.9, 0.62), fontsize=8.5, color=S.INK, va="center",
+    ax.text(-2.85, 0.93, "base laya", fontsize=9, color=S.MUTE, va="center")
+    ax.annotate("fine-tuned laya", xy=(0.02, 0.62), xytext=(-2.9, 0.62), fontsize=9, color=S.INK, va="center",
                 arrowprops=dict(arrowstyle="-", color=S.INK, lw=0.6))
-    ax.annotate("Jev", xy=(0.12, 0.3), xytext=(-2.9, 0.3), fontsize=8.5, color=S.JEV_TEXT, va="center",
+    ax.annotate("Jev", xy=(0.12, 0.3), xytext=(-2.9, 0.3), fontsize=9, color=S.JEV_TEXT, va="center",
                 arrowprops=dict(arrowstyle="-", color=S.JEV, lw=0.6))
     S.save(fig, "stage10-curves.png")
 
 
 def stage10_accuracy():
     """Results doc only: sign accuracy against term count."""
-    ev = {n: js(f"stage10/eval-{n}.json") for n in LAYA}
+    ev = {n: js(f"stage10/eval-{n}.json") for n in laya()}
     jev = js("margin/summary.json")["by_terms"]
     fig, ax = S.figure(3.4)
     ax.axvspan(2, 60, color=S.FAINT, lw=0, zorder=0)
-    ax.text(2.2, 0.42, "trained term counts", fontsize=8.5, color=S.MUTE)
-    for name, (color, label) in LAYA.items():
+    ax.text(2.2, 0.42, "trained term counts", fontsize=9, color=S.MUTE)
+    for name, (color, label) in laya().items():
         ks = sorted(int(k.split("-")[1]) for k in ev[name]["curves"] if k.startswith("gen-"))
         acc = [ev[name]["curves"][f"gen-{k}"]["sign_accuracy"] for k in ks]
         ax.plot(ks, acc, "o-", color=color, ms=4, lw=1.8)
-        ax.annotate(label, (ks[-1], acc[-1]), xytext=(6, 0), textcoords="offset points", va="center", fontsize=9,
+        ax.annotate(label, (ks[-1], acc[-1]), xytext=(6, 0), textcoords="offset points", va="center", fontsize=9.5,
                     color=S.INK2)
     ks = sorted(int(k) for k in jev)
     ax.plot(ks, [jev[str(k)]["sign_accuracy"] for k in ks], "o", color=S.JEV, ms=4, lw=1.8, ls=(0, (4, 2.5)))
     ax.annotate("Jev", (ks[-1], jev[str(ks[-1])]["sign_accuracy"]), xytext=(6, 0), textcoords="offset points", va="center",
-                fontsize=9, color=S.JEV_TEXT)
+                fontsize=9.5, color=S.JEV_TEXT)
     ax.axvline(97, color=S.MUTE, lw=0.8, ls=(0, (1, 2)))
-    ax.text(99, 0.43, "512-token\ncontext ends", fontsize=8.5, color=S.MUTE, linespacing=1.1)
+    ax.text(99, 0.43, "512-token\ncontext ends", fontsize=9, color=S.MUTE, linespacing=1.1)
     ax.set_xscale("log")
     ax.set_xticks([2, 5, 10, 30, 60, 90, 150, 250], ["2", "5", "10", "30", "60", "90", "150", "250"])
     ax.minorticks_off()
@@ -880,17 +887,17 @@ def stage10_accuracy():
 def stage10_training():
     """Results doc only: fine-tuning loss and validation accuracy by step, true-math arm."""
     fig, axes = S.figure(3.2, ncols=2)
-    color, label = LAYA["truth"]
+    color, label = laya()["truth"]
     rows = [json.loads(line) for line in (RUNS / "stage10/truth/log.jsonl").open()]
     steps = [r for r in rows if "loss" in r]
     loss = np.convolve([r["loss"] for r in steps], np.ones(50) / 50, "valid")
     axes[0].plot(np.arange(len(loss)) + 50, loss, color=color, lw=1.6)
-    axes[0].text(2100, 0.2, label, fontsize=8.5, color=S.INK2)
+    axes[0].text(2100, 0.2, label, fontsize=9, color=S.INK2)
     evs = [r["eval"] for r in rows if "eval" in r]
     for key, ls in (("acc_s10", "-"), ("acc_s75", (0, (1, 1.5))), ("acc_real", (0, (4, 2)))):
         axes[1].plot([e["step"] for e in evs], [e[key] for e in evs], color=color, ls=ls, lw=1.5)
     axes[1].text(0.98, 0.05, "vs the true sign\nsolid: 10 terms\ndotted: 75 terms\ndashed: real journal states",
-                 transform=axes[1].transAxes, ha="right", va="bottom", fontsize=8, color=S.INK2, linespacing=1.3)
+                 transform=axes[1].transAxes, ha="right", va="bottom", fontsize=9, color=S.INK2, linespacing=1.3)
     axes[0].set_yscale("log")
     axes[0].set_yticks([0.03, 0.1, 0.3, 1], ["0.03", "0.1", "0.3", "1"])
     axes[0].minorticks_off()
@@ -907,12 +914,12 @@ def stage10_training():
 
 def stage10_traps():
     """Results doc only: trap misfires for Jev and the two laya models; ticks are the matched controls."""
-    ev = {n: js(f"stage10/eval-{n}.json")["traps"] for n in LAYA}
+    ev = {n: js(f"stage10/eval-{n}.json")["traps"] for n in laya()}
     jt = js("stage6b/traps.json")["families"]
     fams = [("last", "last", "big number last\n(75 terms)"), ("first", "first", "big number first\n(75)"),
             ("vote", "vote", "sign vote\n(75)"), ("long90", "long", "long list, m = \u22121\n(90; Jev: 250)"),
             ("zeros60", "zeros", "zero padding\n(60; Jev: 150)")]
-    series = [("Jev", S.JEV, {f: jt[j] for f, j, _ in fams})] + [(LAYA[n][1], LAYA[n][0], ev[n]) for n in LAYA]
+    series = [("Jev", S.JEV, {f: jt[j] for f, j, _ in fams})] + [(laya()[n][1], laya()[n][0], ev[n]) for n in laya()]
     fig, ax = S.figure(3.4)
     x = np.arange(len(fams))
     w = 0.8 / len(series)
@@ -921,13 +928,13 @@ def stage10_traps():
         ax.bar(xs, [t[f]["trap_misfire"] for f, _, _ in fams], w * 0.88, color=color, label=label, zorder=2)
         ax.scatter(xs, [t[f]["control_misfire"] for f, _, _ in fams], marker="_", s=90, lw=1.6, color=S.INK2, zorder=3,
                    label="matched control" if i == 0 else None)
-    ax.set_xticks(x, [f[2] for f in fams], fontsize=8.5)
+    ax.set_xticks(x, [f[2] for f in fams], fontsize=9)
     ax.tick_params(axis="x", length=0)
     ax.set_ylim(0, 1.05)
     S.pct(ax)
     S.ygrid(ax)
     ax.set_ylabel("misfire rate, 200 states per bar")
-    ax.legend(ncol=5, loc="lower left", bbox_to_anchor=(0, 1.0), fontsize=8.5, handlelength=1, columnspacing=1,
+    ax.legend(ncol=5, loc="lower left", bbox_to_anchor=(0, 1.0), fontsize=9, handlelength=1, columnspacing=1,
               handletextpad=0.4)
     S.save(fig, "stage10-traps.png")
 
@@ -941,9 +948,9 @@ def bend():
         check(real[name]["bend"]["W1"]["rel_dist"], cited, "{:.2f}")
     # (label, offset in points, alignment) for the points named in the left panel
     named = {"plain Jev": ("plain Jev", (-8, 0), "right"), "8g B": ("curve backprop", (7, -9), "left"),
-             "8g C": ("bias shift", (-8, 3), "right"), "8g E": ("two questions averaged", (8, 0), "left"),
+             "8g C": ("bias shift", (-8, 3), "right"), "8g E": ("two questions averaged", (0, 12), "center"),
              "10 laya-neuron (sparse)": ("fine-tuned laya", (8, 0), "left"), "9c laya-hidden": ("base laya", (0, 13), "center")}
-    fig, axes = S.figure(3.6, ncols=3, gridspec_kw={"width_ratios": [1.3, 1, 0.85]})
+    fig, axes = S.figure(7.4, nrows=3)
     sims = list(res["sim"].values())
     for graded, color, ls, lab in ((True, S.GREY, "-", "simulated, graded"), (False, S.MUTE, (0, (3, 2)), "simulated, sampled")):
         pts = [v for v in sims if v["graded"] == graded]
@@ -955,7 +962,7 @@ def bend():
             ys = [np.mean([v["bend"]["W1"][ykey] for v in pts if v["lam"] == lam]) for lam in lams]
             ax.plot(xs, ys, marker="o", color=color, ms=3, lw=1.1, ls=ls, zorder=1)
             if ax is axes[1]:
-                ax.annotate(lab, (xs[-1], ys[-1]), xytext=(6, 0), textcoords="offset points", fontsize=8, color=S.INK2,
+                ax.annotate(lab, (xs[-1], ys[-1]), xytext=(6, 0), textcoords="offset points", fontsize=9, color=S.INK2,
                             va="center")
     for name, v in real.items():
         jev = name.startswith(("plain", "8g"))
@@ -967,31 +974,31 @@ def bend():
             ax.plot(x, y, marker, color=color, ms=6.5, mec=S.PAPER, mew=0.8, zorder=3)
             if ax is axes[0] and name in named:
                 text, off, ha = named[name]
-                ax.annotate(text, (x, y), xytext=off, textcoords="offset points", fontsize=8.5, ha=ha, va="center",
+                ax.annotate(text, (x, y), xytext=off, textcoords="offset points", fontsize=9, ha=ha, va="center",
                             color=S.JEV_TEXT if jev else S.INK)
     ax = axes[2]
-    ax.text(14, 0.5, "Jev\nneurons", fontsize=8.5, color=S.JEV_TEXT, ha="center", va="top", linespacing=1.1)
-    ax.text(65, 0.44, "base\nlaya", fontsize=8.5, color=S.INK, ha="center", va="bottom", linespacing=1.1)
+    ax.text(14, 0.5, "Jev\nneurons", fontsize=9, color=S.JEV_TEXT, ha="center", va="top", linespacing=1.1)
+    ax.text(65, 0.44, "base\nlaya", fontsize=9, color=S.INK, ha="center", va="bottom", linespacing=1.1)
     nf = res["noise_floor"]["lam=1.0"]["W1_rel_dist_between_seeds"]
     for ax in axes[:2]:
         ax.axhline(nf, color=S.MUTE, lw=0.8, ls=(0, (1, 2)), zorder=0)
         ax.set_ylim(0, 1.95)
         S.ygrid(ax)
-    axes[1].set_yticklabels([])
-    axes[0].text(46, nf - 0.03, "noise floor", fontsize=8, color=S.MUTE, ha="right", va="top")
-    axes[0].set_ylabel("bend of the first-layer change", fontsize=10)
-    axes[0].set_xlabel("swap gap (points)", fontsize=10)
+    axes[0].text(46, nf - 0.03, "noise floor", fontsize=9, color=S.MUTE, ha="right", va="top")
+    axes[0].set_ylabel("bend of the first-layer change", fontsize=10.5)
+    axes[0].set_xlabel("swap gap (points)", fontsize=10.5)
     axes[0].set_xlim(-3, 47)
-    axes[1].set_xlabel("twin's hidden misfires", fontsize=10)
-    axes[2].set_xlabel("twin's hidden misfires", fontsize=10)
-    axes[2].set_title("cosine with the twin's change", fontsize=9.5)
+    axes[1].set_ylabel("bend of the first-layer change", fontsize=10.5)
+    axes[1].set_xlabel("twin's hidden misfires", fontsize=10.5)
+    axes[2].set_xlabel("twin's hidden misfires", fontsize=10.5)
+    axes[2].set_ylabel("cosine with the twin's change", fontsize=10.5)
     axes[2].set_ylim(0, 1)
     S.ygrid(axes[2])
     for ax in axes[1:]:
         ax.set_xlim(0, 72)
         ax.xaxis.set_major_formatter(__import__("matplotlib").ticker.PercentFormatter(100, decimals=0))
     for ax in axes:
-        ax.tick_params(labelsize=8.5)
+        ax.tick_params(labelsize=9)
     S.save(fig, "stage6c-bend.png")
 
 
@@ -1029,7 +1036,7 @@ def pixels():
         cm = cmap.copy()
         cm.set_bad(S.PAPER)
         ax.imshow(img.reshape(28, 28), cmap=cm, vmin=lo, vmax=hi, interpolation="nearest")
-        ax.set_title(title, fontsize=8.5, loc="center", linespacing=1.3)
+        ax.set_title(title, fontsize=9, loc="center", linespacing=1.3)
 
     def r_(v):
         return f"r = {v:+.2f}".replace("-", "\u2212")
@@ -1042,7 +1049,7 @@ def pixels():
         r = np.mean([res[f"s6 seed{s}"]["digits"][str(d)]["corr_D_vs_excess_on_freq"] for s in range(3)])
         show(axes[1, c], freq[d] - mean_f, S.DIVERGING, f"{d}: on more than avg.\n{r_(r)}", sym=True)
     fig.text(1.0, -0.01, "r: correlation with the ten-digit map (top left) over pixels that are ever on, mean of 3 seeds",
-             ha="right", va="top", fontsize=8.5, color=S.MUTE)
+             ha="right", va="top", fontsize=9, color=S.MUTE)
     S.save(fig, "stage6c-pixels.png", svg=False)
 
 
@@ -1056,6 +1063,20 @@ FIGURES = {
     "bend": bend, "pixels": pixels,
 }
 
+def main(argv):
+    args = list(argv)
+    theme = "docs"
+    if "--theme" in args:
+        i = args.index("--theme")
+        theme = args[i + 1]
+        del args[i:i + 2]
+    themes = ("light", "dark") if theme == "both" else (theme,)
+    assert all(t in S.THEMES for t in themes), f"--theme is one of docs, light, dark, both; got {theme}"
+    for t in themes:
+        S.use(t)
+        for name in args or FIGURES:
+            FIGURES[name]()
+
+
 if __name__ == "__main__":
-    for name in sys.argv[1:] or FIGURES:
-        FIGURES[name]()
+    main(sys.argv[1:])
