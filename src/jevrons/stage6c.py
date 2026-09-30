@@ -33,7 +33,7 @@ from jevrons.stage8g import curve, slope_for, terms_and_spread  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT, FIG = ROOT / "runs" / "stage6c", ROOT / "docs" / "figures"
-ACCENT, INK, GREY, BLUE = S.JEV, S.INK, S.GREY, S.SLATE
+ACCENT, INK, EXACT, BLUE = S.JEV, S.INK, S.EXACT, S.SLATE
 XTR, YTR, _, _ = mnist()
 TR38, VA38 = split(YTR, (3, 8), 500, 500)
 TR10, VA10 = split(YTR, range(10), 1000, 500)
@@ -224,7 +224,7 @@ def run_bend():
 def plot_bend(res):
     fig, axes = plt.subplots(1, 3, figsize=(14, 4.6), constrained_layout=True)
     sims = res["sim"]
-    for graded, color, lab in ((True, GREY, "simulated: Jev's curve scaled, graded p"), (False, BLUE, "simulated: scaled, sampled yes/no")):
+    for graded, color, lab in ((True, INK, "simulated: Jev's curve scaled, graded p"), (False, BLUE, "simulated: scaled, sampled yes/no")):
         pts = [v for v in sims.values() if v["graded"] == graded]
         lams = sorted({v["lam"] for v in pts})
         for ax, xkey in ((axes[0], "swap_gap_pts"), (axes[1], "twin_hidden_misfire")):
@@ -238,7 +238,7 @@ def plot_bend(res):
         xs = [np.mean([v["twin_hidden_misfire"] for v in pts if v["lam"] == lam]) * 100 for lam in lams]
         axes[2].plot(xs, [np.mean([v["bend"]["W1"]["cos"] for v in pts if v["lam"] == lam]) for lam in lams], "o-", color=color, ms=3, lw=1)
     for name, v in res["real"].items():
-        color = ACCENT if name.startswith(("plain", "8g")) else INK
+        color = ACCENT if name.startswith(("plain", "8g")) else INK if name.startswith("9c") else EXACT
         marker = "s" if name.startswith("10") else ("D" if name.startswith("9c") else "o")
         for ax, x, y in ((axes[0], v["swap_gap_pts"], v["bend"]["W1"]["rel_dist"]),
                          (axes[1], 100 * v["twin_hidden_misfire"], v["bend"]["W1"]["rel_dist"]),
@@ -365,14 +365,14 @@ def run_misfire():
 
 def plot_misfire(res, scatter):
     fig, axes = plt.subplots(1, 3, figsize=(14, 4.4), constrained_layout=True)
-    for label, color, mk in (("s5 3v8 jev", ACCENT, "o"), ("s5 3v8 swap", INK, "o"), ("s6 seed0 jev", ACCENT, "^"),
-                             ("s6 seed0 swap", INK, "^"), ("s6 seed1 jev", ACCENT, "v"), ("s6 seed1 swap", INK, "v"),
-                             ("s6 seed2 jev", ACCENT, "<"), ("s6 seed2 swap", INK, "<")):
+    for label, color, mk in (("s5 3v8 jev", ACCENT, "o"), ("s5 3v8 swap", EXACT, "o"), ("s6 seed0 jev", ACCENT, "^"),
+                             ("s6 seed0 swap", EXACT, "^"), ("s6 seed1 jev", ACCENT, "v"), ("s6 seed1 swap", EXACT, "v"),
+                             ("s6 seed2 jev", ACCENT, "<"), ("s6 seed2 swap", EXACT, "<")):
         meas, pred = scatter[label][:2]
         axes[0].plot(100 * pred, 100 * meas, mk, color=color, ms=3.5, alpha=0.7, mfc="none" if "s6" in label else color,
                      label=label if "seed1" not in label and "seed2" not in label else None)
     lim = axes[0].get_xlim()[1]
-    axes[0].plot([0, 60], [0, 60], color=GREY, lw=0.7)
+    axes[0].plot([0, 60], [0, 60], color=S.MUTE, lw=0.7)  # guide
     axes[0].set_xlim(0, 60)
     axes[0].set_ylim(0, 60)
     axes[0].set_xlabel("predicted misfire, margin curve (%)")
@@ -388,7 +388,7 @@ def plot_misfire(res, scatter):
     axes[1].set_xticks(x, [lb.replace("s6 ", "").replace("s5 ", "") for lb in labels], rotation=60, fontsize=7)
     axes[1].set_ylabel("rate (%), bars measured, ticks = margin-curve prediction")
     axes[1].legend(fontsize=7, frameon=False)
-    for label, color in (("s6 seed0 jev", ACCENT), ("s6 seed0 swap", INK)):
+    for label, color in (("s6 seed0 jev", ACCENT), ("s6 seed0 swap", EXACT)):
         _, _, fired, pos, z, spread, n = scatter[label]
         m = (z / spread).ravel()
         axes[2].hist(np.clip(m, -5, 5), np.linspace(-5, 5, 81), histtype="step", color=color, density=True, lw=1.3, label=label)
@@ -463,19 +463,20 @@ def plot_lean(res):
     fig, axes = plt.subplots(1, 3, figsize=(14, 4.2), constrained_layout=True)
     names = ["exact twin", "real Jev", "graded, lean", "graded, no lean", "graded in [0.03, 0.97], lean",
              "graded in [0.03, 0.97], no lean", "sampled, lean", "sampled, no lean"]
-    colors = [INK, ACCENT, GREY, GREY, S.AMBER, S.AMBER, BLUE, BLUE]
+    colors = [EXACT, ACCENT, INK, INK, S.PAPER, S.PAPER, BLUE, BLUE]  # simulations: ink, hollow ink, slate
+    edges = [EXACT, ACCENT, INK, INK, INK, INK, BLUE, BLUE]
     hatches = ["", "", "", "//", "", "//", "", "//"]
     for ax, key, title in ((axes[0], "median_change_mean_z", "median change in a hidden neuron's mean z"),
                            (axes[1], "norm_dW2", "‖ΔW2‖ (output layer)"), (axes[2], "intended_fire_rate", "intended hidden fire rate")):
         for t, task in enumerate(("3v8", "10")):
             vals = [res["sim"][f"{task} {n}"][key] for n in names]
             x = t * (len(names) + 1) + np.arange(len(names))
-            ax.bar(x, vals, color=colors, hatch=hatches, edgecolor="white")
+            ax.bar(x, vals, color=colors, hatch=hatches, edgecolor=edges, lw=0.9)
         ax.set_xticks([3.5, 12.5], ["3 vs 8 (stage 5)", "ten digits (stage 6 seed 0)"])
         ax.set_title(title, fontsize=9)
         ax.axhline(0, color=INK, lw=0.5)
     from matplotlib.patches import Patch
-    axes[0].legend([Patch(color=c, hatch=h) for c, h in zip(colors, hatches)], names, fontsize=7, frameon=False)
+    axes[0].legend([Patch(facecolor=c, edgecolor=e, hatch=h) for c, e, h in zip(colors, edges, hatches)], names, fontsize=7, frameon=False)
     fig.suptitle("Which neuron property makes Jev-trained sums drift up? Simulated neurons with Jev's measured curve "
                  "(graded p vs sampled yes/no; with vs without threshold drift)", fontsize=10)
     savefig(fig, "stage6c-lean.png")
@@ -558,9 +559,9 @@ def plot_readoff(res):
     axes[0].plot(ns, curve(ns)[1], color=INK, lw=1.2, label="Jev's measured threshold m0(n) (margin probe)")
     bands = res["trained_logistic_m0_by_band"]
     for (k, v), x in zip(bands.items(), (40, 90, 160, 230)):
-        axes[0].plot(x, v, "s", color=GREY, ms=5, label="Jev's 50/50 point on trained states (6b logistic)" if k == "30-59" else None)
+        axes[0].plot(x, v, "s", color=INK, mfc=S.PAPER, ms=5, label="Jev's 50/50 point on trained states (6b logistic)" if k == "30-59" else None)
     for label, mk in (("s5 3v8", "o"), ("s6 seed0", "^"), ("s6 seed1", "v"), ("s6 seed2", "<")):
-        for arm, color in (("jev", ACCENT), ("swap", INK)):
+        for arm, color in (("jev", ACCENT), ("swap", EXACT)):
             rows = res["trough"][label][arm]
             x = [r["median_terms"] for r in rows]
             rows = [r for r in rows if r["trough_m"] is not None]
@@ -571,13 +572,13 @@ def plot_readoff(res):
             err = np.array([[r["trough_m"] - r["ci95"][0], r["ci95"][1] - r["trough_m"]] for r in rows]).T
             axes[0].errorbar(x, y, err, fmt=mk + "-", color=color, ms=4, lw=0.8, capsize=2,
                              label=f"{'Jev-trained' if arm == 'jev' else 'exact twin'}: trough of hidden m ({label})" if label in ("s5 3v8", "s6 seed0") else None)
-    axes[0].axhline(0, color=GREY, lw=0.5)
+    axes[0].axhline(0, color=S.MUTE, lw=0.5)
     axes[0].set_xlabel("terms in the neuron's list (image length band, median)")
     axes[0].set_ylabel("m = z / spread")
     axes[0].set_title("where the trained networks leave a gap in their hidden sums", fontsize=9)
     axes[0].legend(fontsize=6.5, frameon=False, loc="lower left")
     for label, ls in (("s5 3v8", "-"), ("s6 seed0", "--")):
-        for arm, color in (("jev", ACCENT), ("swap", INK)):
+        for arm, color in (("jev", ACCENT), ("swap", EXACT)):
             r = res["likelihood"][label][arm]
             loss = np.array(r["loss"])
             kbest = r["grid_k"].index(r["best_k"])
@@ -630,7 +631,7 @@ def run_pixels():
     Dm = np.mean([maps[f"s6 seed{s}"] for s in range(3)], 0)
     panels = [("‖ΔW Jev − ΔW exact‖ per pixel\nten digits, mean of 3 seeds", Dm, S.SEQ_JEV),
               ("same, 3 vs 8 (stage 5)", maps["s5 3v8"], S.SEQ_JEV)]
-    panels += [(f"digit {d}: share of images with the pixel on\ncorr with map {res['s6 seed0']['digits'][str(d)]['corr_D_vs_on_freq_live']:+.2f} (seed 0)", freq[d], S.SEQ_INK)
+    panels += [(f"digit {d}: share of images with the pixel on\ncorr with map {res['s6 seed0']['digits'][str(d)]['corr_D_vs_on_freq_live']:+.2f} (seed 0)", freq[d], S.SEQ_SLATE)
                for d in (0, 3, 8, 1)]
     panels += [(f"digit {d}: pixels used more than average\n(corr {np.mean([res[f's6 seed{s}']['digits'][str(d)]['corr_D_vs_excess_on_freq'] for s in range(3)]):+.2f}, mean over seeds)",
                 freq[d] - np.mean([freq[e] for e in range(10)], 0), S.DIVERGING) for d in (0, 3, 8, 1)]

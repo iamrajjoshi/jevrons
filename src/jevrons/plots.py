@@ -46,7 +46,7 @@ def stage5():
             r = json.loads((ROOT / f"runs/stage5/result-{pair}-{arm}.json").read_text())
             for m, (value, hatch) in enumerate(((r["val_exact_step"], "//"), (r["val_jev"]["accuracy"], ""))):
                 x = k + (a * 2 + m - 1.5) * width
-                ax.bar(x, value, width, color=(S.JEV, S.INK)[a], hatch=hatch, alpha=0.55 if hatch else 1,
+                ax.bar(x, value, width, color=(S.JEV, S.EXACT)[a], hatch=hatch, alpha=0.55 if hatch else 1,
                        label=f"{label}, {'exact neuron' if hatch else 'live Jev'}" if k == 0 else None)
                 ax.text(x, value + 0.01, f"{value:.0%}", ha="center", fontsize=8)
     ax.set_xticks(range(len(pairs)), ["0 vs 1", "3 vs 8"])
@@ -76,7 +76,7 @@ def margin():
     ax.plot(mid, rate, "o", color=S.INK, ms=5, label=f"Jev, {len(rows)} neurons, bias 0")
     t = np.linspace(-3, 3, 300)
     ax.plot(t, Phi(k * t), color=S.JEV, lw=2, label=f"noisy threshold  Φ({k:.2f} m)")
-    ax.step(t, (t > 0).astype(float), color=S.GREY, lw=1, ls="--", where="post", label="exact neuron")
+    ax.step(t, (t > 0).astype(float), color=S.EXACT, lw=1, ls="--", where="post", label="exact neuron")
     ax.set_xlabel("normalized margin  m = z / spread of the terms")
     ax.set_ylabel("fraction of calls where Jev said fire")
     ax.legend(fontsize=8, frameon=False, loc="upper left")

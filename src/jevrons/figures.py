@@ -45,14 +45,15 @@ def weights(rel):
 
 def dumbbell(ax, rows, lo, hi, chance=None):
     """One row per network: hollow dot = exact neuron, filled dot = live Jev, joined by a line.
-    rows: [(label, colour, exact, jev)], top to bottom. The live-Jev value is labelled in the row's
-    colour, the exact-neuron value in grey, each on its own side of the pair."""
-    for y, (label, color, exact, jev) in enumerate(rows):
+    rows: [(label, colour, exact, jev)] or with a fifth item True for a secondary row, top to bottom. The
+    live-Jev value is labelled in the row's colour, the exact-neuron value in grey, each on its own side."""
+    for y, (label, color, exact, jev, *secondary) in enumerate(rows):
         y = -y
-        ax.plot([exact, jev], [y, y], color=color, lw=1.6, alpha=0.45, zorder=1, solid_capstyle="butt")
+        ax.plot([exact, jev], [y, y], color=color, lw=1.3, zorder=1, solid_capstyle="butt",
+                ls=(0, (3, 2)) if secondary and secondary[0] else "-")  # a secondary row's join is dashed
         ax.plot(exact, y, "o", ms=10, mfc=S.PAPER, mec=color, mew=1.8, zorder=2)
         ax.plot(jev, y, "o", ms=6.5, color=color, zorder=3)  # smaller and on top: a tie reads as a dot in a ring
-        strong = S.JEV_TEXT if color == S.JEV else S.INK
+        strong = S.JEV_TEXT if color == S.JEV else S.EXACT_TEXT if color == S.EXACT else S.INK
         first = -1 if exact <= jev else 1  # exact on the left when it's the smaller value
         for v, c, weight, side in ((exact, S.MUTE, "normal", first), (jev, strong, "medium", -first)):
             ax.annotate(f"{v:.1%}", (v, y), xytext=(side * 10, 0), textcoords="offset points", va="center",
@@ -94,8 +95,8 @@ def margin_by_terms():
     t = np.linspace(-3, 3, 400)
     fig, ax = S.figure(4.1)
     ax.axhline(0.5, color=S.RULE, lw=0.8, zorder=0)
-    ax.plot([-3, 0, 0, 3], [0, 0, 1, 1], color=S.INK, lw=1.1, ls=(0, (4, 3)), zorder=1)
-    ax.text(0.08, 0.03, "exact neuron", color=S.INK2, fontsize=9.5, va="bottom")
+    ax.plot([-3, 0, 0, 3], [0, 0, 1, 1], color=S.EXACT, lw=1.1, ls=(0, (4, 3)), zorder=1)
+    ax.text(0.08, 0.03, "exact neuron", color=S.EXACT_TEXT, fontsize=9.5, va="bottom")
     label_y = {250: 0.62, 150: 0.47, 75: 0.33, 30: 0.2, 10: 0.5}
     for color, n in zip(colors, terms):
         m = np.array([r[1] for r in rows if r[0] == n])
@@ -137,20 +138,20 @@ def bias():
     x = np.arange(len(terms))
     w = 0.36
     for off, fmt, color, name in ((-w / 2 - 0.02, "products", S.JEV, "bias as its own field"),
-                                  (w / 2 + 0.02, "folded", S.INK, "bias folded into the list")):
+                                  (w / 2 + 0.02, "folded", None, "bias folded into the list")):  # None: hollow teal
         vals, ns = [], []
         for n in terms:
             dis = [r for r in rows if r[0] == fmt and r[2] == n and (r[3] > 0) != (r[4] > 0)]
             vals.append(np.mean([(r[5] >= 0.5) == (r[4] > 0) for r in dis]))
             ns.append(len(dis))
-        ax.bar(x + off, vals, w, color=color, zorder=2)
+        ax.bar(x + off, vals, w, color=color or S.PAPER, edgecolor=S.JEV, lw=0 if color else 1.4, zorder=2)
         for xi, v in zip(x + off, vals):
-            ax.text(xi, v + 0.02, f"{v:.0%}", ha="center", va="bottom", fontsize=9.5,
-                    color=S.JEV_TEXT if color == S.JEV else S.INK2)
+            ax.text(xi, v + 0.02, f"{v:.0%}", ha="center", va="bottom", fontsize=9.5, color=S.JEV_TEXT)
         pooled = sum(v * n for v, n in zip(vals, ns)) / sum(ns)
         ax.text(len(terms) - 0.45, pooled, f"{name}\n{pooled:.0%} of {sum(ns)} calls", ha="left", va="center",
-                fontsize=9.5, color=S.JEV_TEXT if color == S.JEV else S.INK2, linespacing=1.3)
-        ax.plot([len(terms) - 0.6, len(terms) - 0.5], [pooled, pooled], color=color, lw=2, clip_on=False)
+                fontsize=9.5, color=S.JEV_TEXT, linespacing=1.3)
+        ax.plot([len(terms) - 0.6, len(terms) - 0.5], [pooled, pooled], color=S.JEV, lw=2, clip_on=False,
+                ls="-" if color else (0, (1.2, 0.8)))
     ax.axhline(0.5, color=S.MUTE, lw=0.8, ls=(0, (2, 2)), zorder=1)
     ax.text(-0.55, 0.97, "calls where the bias and the true total have opposite signs", fontsize=9.5, color=S.INK2, va="top")
     ax.set_xticks(x, [f"{n} terms" if i == 0 else str(n) for i, n in enumerate(terms)])
@@ -174,12 +175,12 @@ def xor():
     for ax, (arm, title) in zip(axes, arms):
         res = [js(f"stage2/result-XOR-{arm}-{s}.json") for s in (0, 1, 2)]
         for i, tgt in enumerate(target):
-            ax.plot([i - 0.3, i + 0.3], [tgt, tgt], color=S.INK, lw=1.2, zorder=1)
+            ax.plot([i - 0.3, i + 0.3], [tgt, tgt], color=S.EXACT, lw=1.4, zorder=1)
             for s, r in enumerate(res):
                 p = r["mean_p"][i]
                 wrong = (p >= 0.5) != bool(tgt)
-                ax.plot(i + (s - 1) * 0.18, p, "o", ms=6.5, color=S.JEV if wrong else S.GREY, zorder=3,
-                        mec=S.PAPER, mew=0.8)
+                ax.plot(i + (s - 1) * 0.18, p, "o", ms=6.5, zorder=3, color=S.JEV,  # hollow on the right side, filled wrong
+                        **(dict(mec=S.PAPER, mew=0.8) if wrong else dict(mfc=S.PAPER, mec=S.JEV, mew=1.3)))
         solved = sum(r["all_correct_frac"] * len(r["pass_accuracy"]) for r in res)
         total = sum(len(r["pass_accuracy"]) for r in res)
         ax.set_title(title, fontsize=10, color=S.INK, loc="left", linespacing=1.25)
@@ -190,7 +191,7 @@ def xor():
         ax.set_xlabel("input", fontsize=10)
     folded = sum(js(f"stage2/result-XOR-ste_folded-{s}.json")["all_correct_frac"] * 5 for s in (0, 1, 2))
     assert round(folded) == 14
-    axes[0].text(1.0, 0.94, "target", fontsize=9, color=S.INK2, ha="center", va="top")
+    axes[0].text(1.0, 0.94, "target", fontsize=9, color=S.EXACT_TEXT, ha="center", va="top")
     axes[2].text(3.5, 0.62, "wrong side\nof 0.5", fontsize=9, color=S.JEV_TEXT, ha="right", va="bottom", linespacing=1.1)
     axes[0].set_ylim(-0.04, 1.04)
     axes[0].set_ylabel("Jev's mean output p")
@@ -245,7 +246,7 @@ def wording():
     w = np.abs(z) <= 10
     fig, ax = S.figure(3.4)
     ax.axhline(0.5, color=S.RULE, lw=0.8, zorder=0)
-    ax.plot([-10, 0, 0, 10], [0, 0, 1, 1], color=S.INK, lw=1, ls=(0, (4, 3)), zorder=1)
+    ax.plot([-10, 0, 0, 10], [0, 0, 1, 1], color=S.EXACT, lw=1.1, ls=(0, (4, 3)), zorder=1)
     ax.plot(z[w], p[w], color=S.JEV, lw=1.8, zorder=3)
     ax.plot(za, pa, color=S.INK, lw=1.8, zorder=2)
     ax.text(-9.7, neg.max() + 0.04, "statement: \u201cz is greater than zero.\u201d", color=S.JEV_TEXT, fontsize=10,
@@ -253,7 +254,7 @@ def wording():
     ax.text(-9.7, neg.min() - 0.04, f"p = {neg.min():.2f} to {neg.max():.2f} for every negative z", color=S.JEV_TEXT,
             fontsize=9.5, va="top")
     ax.text(-9.7, 0.08, "question: \u201cIs the number z positive?\u201d", color=S.INK, fontsize=10, va="bottom")
-    ax.text(9.7, 0.9, "exact step", color=S.INK2, fontsize=9.5, ha="right", va="top")
+    ax.text(9.7, 0.9, "exact step", color=S.EXACT_TEXT, fontsize=9.5, ha="right", va="top")
     ax.set_xlim(-10.2, 10.2)
     ax.set_xticks(range(-10, 11, 5))
     ax.set_ylim(-0.03, 1.05)
@@ -269,7 +270,7 @@ def wording():
 def stage5_swap():
     rows = []
     for pair, name in (("0v1", "0 vs 1"), ("3v8", "3 vs 8")):
-        for arm, who, color in (("jev", "trained through Jev", S.JEV), ("swap", "trained exact", S.INK)):
+        for arm, who, color in (("jev", "trained through Jev", S.JEV), ("swap", "trained exact", S.EXACT)):
             r = js(f"stage5/result-{pair}-{arm}.json")
             rows.append((f"{name}, {who}", color, r["val_exact_step"], r["val_jev"]["accuracy"]))
     check(rows[3][3], "67.8%", "{:.1%}")
@@ -286,7 +287,7 @@ def stage5_training():
     fig, axes = S.figure(4.0, ncols=2, nrows=2, sharex=True)
     k = 5
     for c, (pair, name) in enumerate((("0v1", "0 vs 1"), ("3v8", "3 vs 8"))):
-        for arm, color, label in (("swap", S.INK, "trained exact"), ("jev", S.JEV, "trained through Jev")):
+        for arm, color, label in (("swap", S.EXACT, "trained exact"), ("jev", S.JEV, "trained through Jev")):
             cur = js(f"stage5/curve-{pair}-{arm}.json")
             step = np.array([r["step"] for r in cur]) + 1
             for r_, key in ((0, "acc"), (1, "loss")):
@@ -295,11 +296,11 @@ def stage5_training():
                 v = np.array([r[key] for r in cur])
                 sm = np.convolve(v, np.ones(k) / k, "valid")
                 ax = axes[r_, c]
-                ax.plot(step, v, color=color, lw=0.8, alpha=0.3)
+                ax.plot(step, v, color=color, lw=0.4)  # raw, behind: thin, not faded
                 ax.plot(step[k - 1:], sm, color=color, lw=2)
                 if c == 1 and r_ == 0:
                     ax.text(75, 0.36 if arm == "jev" else 0.47, label, fontsize=9.5, ha="right", va="center",
-                            color=S.JEV_TEXT if arm == "jev" else S.INK2)
+                            color=S.JEV_TEXT if arm == "jev" else S.EXACT_TEXT)
         axes[0, c].set_title(name)
         axes[0, c].set_ylim(0.3, 1.02)
         S.pct(axes[0, c])
@@ -337,7 +338,9 @@ def stage5_margins():
         m = z / s_all[i, j]
         ok = (p >= 0.5) == (z > 0)
         mc = np.clip(m, bins[0] + 1e-9, bins[-1] - 1e-9)
-        ax.hist([mc[ok], mc[~ok]], bins, stacked=True, color=[S.GREY, S.JEV], rwidth=0.9, zorder=2)
+        _, _, (fine, misfired) = ax.hist([mc[ok], mc[~ok]], bins, stacked=True, color=[S.PAPER, S.JEV], rwidth=0.9, zorder=2)
+        for bar in fine:  # fired as intended: hollow teal under the filled misfires
+            bar.set(edgecolor=S.JEV, lw=0.8)
         ax.axvline(0, color=S.INK, lw=0.8, zorder=3)
         ax.axvspan(-1, 1, color=S.FAINT, zorder=0, lw=0)
         near = np.mean(np.abs(m) < 1)
@@ -367,7 +370,7 @@ def stage6_swap():
     for ax, split_ in zip(axes, ("val", "test")):
         rows = []
         for seed in (0, 1, 2):
-            for arm, who, color in (("jev", "trained through Jev", S.JEV), ("swap", "trained exact", S.INK)):
+            for arm, who, color in (("jev", "trained through Jev", S.JEV), ("swap", "trained exact", S.EXACT)):
                 r = js(f"stage6/result-seed{seed}-{arm}.json")
                 r = r["val"]["10"] if split_ == "val" else r["test"]
                 rows.append((f"seed {seed}, {who}", color, r["exact_step"], r["accuracy"]))
@@ -404,13 +407,13 @@ def stage6_digits():
     ax = fig.add_subplot(gs[0, :])
     digits = np.arange(10)
     means = {}
-    for arm, color, off, label in (("jev", S.JEV, -0.14, "trained through Jev"), ("swap", S.INK, 0.14, "trained exact, run on Jev")):
+    for arm, color, off, label in (("jev", S.JEV, -0.14, "trained through Jev"), ("swap", S.EXACT, 0.14, "trained exact, run on Jev")):
         per = np.array([js(f"stage6/result-seed{s}-{arm}.json")["test"]["per_digit"] for s in (0, 1, 2)])
         means[arm] = per.mean(0)
-        ax.vlines(digits + off, per.min(0), per.max(0), color=color, lw=1.4, alpha=0.5)
+        ax.vlines(digits + off, per.min(0), per.max(0), color=color, lw=1.1)
         ax.plot(digits + off, per.mean(0), "o", color=color, ms=7, mec=S.PAPER, mew=0.8, label=label)
     for d in (0, 3, 8):
-        ax.text(d + 0.3, means["swap"][d], f"{means['swap'][d]:.0%}", ha="left", va="center", fontsize=9.5, color=S.INK2)
+        ax.text(d + 0.3, means["swap"][d], f"{means['swap'][d]:.0%}", ha="left", va="center", fontsize=9.5, color=S.EXACT_TEXT)
         ax.text(d - 0.14, means["jev"][d] + 0.05, f"{means['jev'][d]:.0%}", ha="center", va="bottom", fontsize=9.5,
                 color=S.JEV_TEXT)
     for d, cited in zip((0, 3, 8), ("7%", "17%", "5%")):
@@ -427,7 +430,7 @@ def stage6_digits():
     S.ygrid(ax)
     ax.legend(loc="lower right", ncol=2, fontsize=9.5, handletextpad=0.2, columnspacing=1.2, borderaxespad=0.1,
               bbox_to_anchor=(1, 1.0))
-    for c, (arm, cmap, title) in enumerate((("jev", S.SEQ_JEV, "trained through Jev"), ("swap", S.SEQ_INK, "trained exact, run on Jev"))):
+    for c, (arm, cmap, title) in enumerate((("jev", S.SEQ_JEV, "trained through Jev"), ("swap", S.SEQ_EXACT, "trained exact, run on Jev"))):
         preds = _stage6_predictions(arm)
         conf = np.zeros((10, 10))
         for y, pred, r in preds:
@@ -470,28 +473,28 @@ def stage7():
     ax = fig.add_subplot(gs[0])
     six = {a: [js(f"stage6/result-seed{sd}-{a}.json")["test"] for sd in (0, 1, 2)] for a in ("jev", "swap")}
     rows = [("5,000 images, trained through Jev", S.JEV, j["exact_step"], j["accuracy"]),
-            ("5,000 images, trained exact", S.INK, s["exact_step"], s["accuracy"]),
-            ("1,000 images, trained through Jev", S.JEV_LIGHT, np.mean([t["exact_step"] for t in six["jev"]]),
-             np.mean([t["accuracy"] for t in six["jev"]])),
-            ("1,000 images, trained exact", S.GREY, np.mean([t["exact_step"] for t in six["swap"]]),
-             np.mean([t["accuracy"] for t in six["swap"]]))]
+            ("5,000 images, trained exact", S.EXACT, s["exact_step"], s["accuracy"]),
+            ("1,000 images, trained through Jev", S.JEV, np.mean([t["exact_step"] for t in six["jev"]]),
+             np.mean([t["accuracy"] for t in six["jev"]]), True),
+            ("1,000 images, trained exact", S.EXACT, np.mean([t["exact_step"] for t in six["swap"]]),
+             np.mean([t["accuracy"] for t in six["swap"]]), True)]
     dumbbell(ax, rows, 0.3, 0.95)
     ax.axhline(-1.5, color=S.RULE, lw=0.8)
     ax.set_xlabel("test accuracy (2,000 images;\n1,000-image rows are the mean of 3 ten-digit seeds)", fontsize=10)
     dumbbell_key(ax)
     ax2 = fig.add_subplot(gs[1])
     digits = np.arange(10)
-    for arm, res, c7, c6, off in (("jev", j, S.JEV, S.JEV_LIGHT, -0.15), ("swap", s, S.INK, S.GREY, 0.15)):
+    for arm, color, res, off in (("jev", S.JEV, j, -0.15), ("swap", S.EXACT, s, 0.15)):
         before = np.mean([t["per_digit"] for t in six[arm]], 0)
         after = np.array(res["per_digit"])
-        ax2.vlines(digits + off, before, after, color=c6, lw=1.4, zorder=1)
-        ax2.plot(digits + off, before, "o", ms=5.5, mfc=S.PAPER, mec=c6, mew=1.4, zorder=2)
-        ax2.plot(digits + off, after, "o", ms=7, color=c7, mec=S.PAPER, mew=0.8, zorder=3)
+        ax2.vlines(digits + off, before, after, color=color, lw=1.2, zorder=1)
+        ax2.plot(digits + off, before, "o", ms=5.5, mfc=S.PAPER, mec=color, mew=1.4, zorder=2)
+        ax2.plot(digits + off, after, "o", ms=7, color=color, mec=S.PAPER, mew=0.8, zorder=3)
     for d, cited in ((0, "6%"), (3, "17%")):
         check(s["per_digit"][d], cited)
-        ax2.text(d + 0.32, s["per_digit"][d], f"{s['per_digit'][d]:.1%}", va="center", fontsize=9.5, color=S.INK2)
+        ax2.text(d + 0.32, s["per_digit"][d], f"{s['per_digit'][d]:.1%}", va="center", fontsize=9.5, color=S.EXACT_TEXT)
     from matplotlib.lines import Line2D
-    ax2.legend([Line2D([], [], ls="", marker="o", ms=7, color=S.JEV), Line2D([], [], ls="", marker="o", ms=7, color=S.INK)],
+    ax2.legend([Line2D([], [], ls="", marker="o", ms=7, color=S.JEV), Line2D([], [], ls="", marker="o", ms=7, color=S.EXACT)],
                ["trained through Jev", "trained exact"], loc="lower left", bbox_to_anchor=(0.47, 0.02), ncol=1, fontsize=9.5,
                handletextpad=0.1, columnspacing=1.2)
     ax2.text(0.0, 1.03, "per digit, on live Jev: hollow = 1,000 images (mean of 3 ten-digit seeds),\nfilled = 5,000 images",
@@ -511,9 +514,10 @@ def stage8_sparse():
     r7 = {a: js(f"stage7/result-{a}.json")["test"] for a in ("jev", "swap")}
     r8 = {a: js(f"stage8a/result-{a}.json")["test"] for a in ("jev", "swap")}
     pre, ft = js("stage8c/result-pretrained-test.json"), js("stage8c/result.json")["test"]
-    rows = [("dense, trained through Jev", S.JEV, r7["jev"]), ("dense, trained exact", S.INK, r7["swap"]),
-            ("sparse, trained through Jev", S.JEV, r8["jev"]), ("sparse, trained exact", S.INK, r8["swap"]),
-            ("sparse, pretrained on simulated Jev", S.JEV_LIGHT, pre), ("sparse, pretrained, then trained on Jev", S.JEV, ft)]
+    rows = [("dense, trained through Jev", S.JEV, r7["jev"]), ("dense, trained exact", S.EXACT, r7["swap"]),
+            ("sparse, trained through Jev", S.JEV, r8["jev"]), ("sparse, trained exact", S.EXACT, r8["swap"]),
+            ("sparse, pretrained on simulated Jev", S.JEV, pre),
+            ("sparse, pretrained, then trained on Jev", S.JEV, ft)]
     cited = (("84.6%", "70.0%"), ("52.6%", "83.9%"), ("85.3%", "75.7%"), ("65.8%", "72.6%"), ("83.8%", "57.1%"),
              ("83.8%", "79.0%"))  # (on Jev, exact neuron) per row
     for (_, _, r), (on_jev, exact) in zip(rows, cited):
@@ -524,7 +528,7 @@ def stage8_sparse():
     fig.clf()
     gs = fig.add_gridspec(2, 1, height_ratios=[1.5, 1])
     ax = fig.add_subplot(gs[0])
-    dumbbell(ax, [(label, color, r["exact_step"], r["accuracy"]) for label, color, r in rows], 0.45, 0.95)
+    dumbbell(ax, [(label, color, r["exact_step"], r["accuracy"], "simulated" in label) for label, color, r in rows], 0.45, 0.95)
     for y in (-1.5, -3.5):
         ax.axhline(y, color=S.RULE, lw=0.8)
     ax.set_xlabel("test accuracy (dense 784-32-10: 2,000 images;\nsparse 784-64-10, 96 pixels per neuron: 1,000)",
@@ -565,7 +569,7 @@ def training_curves():
         top, bottom = axes[2 * c], axes[2 * c + 1]
         top.sharex(bottom)
         top.tick_params(labelbottom=False)
-        for arm, color in (("swap", S.INK), ("jev", S.JEV)):
+        for arm, color in (("swap", S.EXACT), ("jev", S.JEV)):
             cur = js(f"{run}/curve-{arm}.json")
             res = js(f"{run}/result-{arm}.json")
             epochs = max(r["epoch"] for r in cur) + 1
@@ -576,7 +580,7 @@ def training_curves():
                 if key == "loss" and arm == "swap":
                     continue  # a step neuron's loss is a clipped count of mistakes, not comparable
                 v = np.array([r[key] for r in cur])
-                ax.plot(x, v, color=color, lw=0.6, alpha=0.12)
+                ax.plot(x, v, color=color, lw=0.25)  # raw, behind: thin, not faded
                 ax.plot(x[k - 1:], np.convolve(v, np.ones(k) / k, "valid"), color=color, lw=1.8)
             val = sorted((int(e), r["accuracy"]) for e, r in res["val"].items())
             top.plot([e for e, _ in val], [a for _, a in val], "o", ms=7, mfc=S.PAPER, mec=color, mew=1.8, zorder=4)
@@ -584,7 +588,7 @@ def training_curves():
             check(test, cited[arm], "{:.1%}")
             top.plot([epochs + 0.35], [test], "D", ms=6.5, color=color, zorder=4, clip_on=False)
             top.annotate(f"{test:.1%}", (epochs + 0.35, test), xytext=(8, 0), textcoords="offset points", va="center",
-                         fontsize=9.5, fontweight="medium", color=S.JEV_TEXT if arm == "jev" else S.INK)
+                         fontsize=9.5, fontweight="medium", color=S.JEV_TEXT if arm == "jev" else S.EXACT_TEXT)
         top.set_title(title, fontsize=10.5)
         top.set_ylim(0.3, 1.02)
         top.set_xlim(0, epochs + 0.35)
@@ -600,7 +604,7 @@ def training_curves():
              "epoch, raw behind); rings are validation on Jev; diamonds are test on Jev.", ha="left", va="top", fontsize=9,
              color=S.INK2, wrap=True)
     axes[2].text(3.1, 0.93, "trained through Jev", fontsize=9.5, color=S.JEV_TEXT, ha="center")
-    axes[2].text(3.1, 0.47, "trained exact\n(its twin)", fontsize=9.5, color=S.INK, ha="center", va="top", linespacing=1.1)
+    axes[2].text(3.1, 0.47, "trained exact\n(its twin)", fontsize=9.5, color=S.EXACT_TEXT, ha="center", va="top", linespacing=1.1)
     axes[3].text(0.98, 0.9, "the twin's loss isn't drawn: a step neuron outputs\n0 or 1, so its loss only counts mistakes",
                     transform=axes[3].transAxes, ha="right", va="top", fontsize=9, color=S.MUTE, linespacing=1.3)
     S.save(fig, "training-curves.png")
@@ -638,7 +642,7 @@ def sparse_confusion():
         rgb = np.ones((10, 10, 3))
         for i in range(10):
             for j in range(10):
-                cmap = S.SEQ_INK if i == j else S.SEQ_JEV
+                cmap = S.SEQ_JEV if arm == "jev" else S.SEQ_EXACT  # each panel in its network's colour
                 rgb[i, j] = cmap(frac[i, j] if i == j else min(frac[i, j] / 0.4, 1) * 0.6)[:3]
         ax.imshow(rgb, interpolation="none")
         for i in range(10):
@@ -646,7 +650,7 @@ def sparse_confusion():
                 if counts[i, j] and (i == j or frac[i, j] >= 0.05):
                     faint = i != j and frac[i, j] < 0.2
                     ax.text(j, i, str(counts[i, j]), ha="center", va="center", fontsize=9,
-                            **S.text_on(rgb[i, j], S.JEV_TEXT if faint else None))
+                            **S.text_on(rgb[i, j], (S.JEV_TEXT if arm == "jev" else S.EXACT_TEXT) if faint else None))
         ax.set_xticks(range(10))
         ax.set_yticks(range(10))
         ax.tick_params(length=0, labelsize=9)
@@ -656,7 +660,7 @@ def sparse_confusion():
         ax.set_xlabel("predicted", fontsize=10)
     for ax in axes:
         ax.set_ylabel("true digit", fontsize=10)
-    fig.text(0.5, -0.01, "cells: image counts; diagonal shaded grey, off-diagonal shaded teal by share of the row;\n"
+    fig.text(0.5, -0.01, "cells: image counts, shaded by share of the row (teal: trained through Jev; coral: its exact twin);\n"
              "off-diagonal counts shown at 5% of the row or more", ha="center", va="top", fontsize=9, color=S.MUTE)
     S.save(fig, "stage8a-confusion.png")
 
@@ -685,13 +689,13 @@ def margin_dynamics():
                              "curve_predicted": float(p_intended(m, z, k).mean())})
         r = js(swap_res)
         measured = r["val"]["10"]["fires_as_intended"]["hidden"] if "val" in r else r["val_jev"]["fires_as_intended"]["hidden"]
-        for arm, data, color in (("jev", rows["jev"], S.JEV), ("swap", swap, S.INK)):
+        for arm, data, color in (("jev", rows["jev"], S.JEV), ("swap", swap, S.EXACT)):
             ep = [d["epoch"] for d in data]
             axes[0, c].plot(ep, [d["frac_abs_m_lt_1"] for d in data], "o-", color=color, ms=3.5, lw=1.8)
             axes[1, c].plot(ep, [d["curve_predicted"] for d in data], color=color, lw=1.2, ls=(0, (3, 2)))
             if arm == "jev":
                 axes[1, c].plot(ep, [d["fires_as_intended"] for d in data], "o-", color=color, ms=3.5, lw=1.8)
-        axes[1, c].plot([ep[-1]], [measured], "o", ms=6, mfc=S.PAPER, mec=S.INK, mew=1.6)
+        axes[1, c].plot([ep[-1]], [measured], "o", ms=6, mfc=S.PAPER, mec=S.EXACT, mew=1.6)
         axes[0, c].set_title(title, fontsize=10.5)
         axes[0, c].set_ylim(0, 0.52)
         axes[1, c].set_ylim(0.8, 1.0)
@@ -717,7 +721,7 @@ def margin_dynamics():
         check(s01[arm][0]["frac_abs_m_lt_1"], first)
         check(s01[arm][-1]["frac_abs_m_lt_1"], last)
     ax = axes[0, 3]
-    ax.text(5, s38["swap"][-1]["frac_abs_m_lt_1"] + 0.05, "trained exact", ha="right", fontsize=9.5, color=S.INK2)
+    ax.text(5, s38["swap"][-1]["frac_abs_m_lt_1"] + 0.05, "trained exact", ha="right", fontsize=9.5, color=S.EXACT_TEXT)
     ax.text(5, s38["jev"][-1]["frac_abs_m_lt_1"] - 0.05, "trained through Jev", ha="right", va="top", fontsize=9.5,
             color=S.JEV_TEXT)
     axes[1, 2].text(0.97, 0.04, "solid: measured on Jev\ndashed: predicted by\nthe margin curve\nhollow: exact twin,\nmeasured",
@@ -791,7 +795,7 @@ def traps():
                 transform=ax.get_yaxis_transform())
         y -= 0.8
         for label, v, trap in bars:
-            ax.barh(y, v, 0.68, color=S.JEV if trap else S.GREY, zorder=2)
+            ax.barh(y, v, 0.68, color=S.JEV if trap else S.PAPER, edgecolor=S.JEV, lw=0 if trap else 1.2, zorder=2)
             ax.text(v + 0.012, y, f"{v:.1%}".replace(".0%", "%"), va="center", fontsize=9.5,
                     color=S.JEV_TEXT if trap else S.INK2)
             ticks.append(y)
@@ -815,7 +819,7 @@ def traps():
 # ---------------------------------------------------------------- Teaching laya to add
 
 def laya():
-    return {"base": (S.GREY, "base laya"), "truth": (S.INK, "fine-tuned laya")}
+    return {"base": (S.INK, "base laya"), "truth": (S.EXACT, "fine-tuned laya")}  # fine-tuned on exact answers
 
 
 def stage10_curves():
@@ -845,9 +849,9 @@ def stage10_curves():
     axes[0].set_ylabel("share of calls that fire", fontsize=10.5)
     S.pct(axes[0])
     ax = axes[0]
-    ax.text(-2.85, 0.93, "base laya", fontsize=9, color=S.MUTE, va="center")
-    ax.annotate("fine-tuned laya", xy=(0.02, 0.62), xytext=(-2.9, 0.62), fontsize=9, color=S.INK, va="center",
-                arrowprops=dict(arrowstyle="-", color=S.INK, lw=0.6))
+    ax.text(-2.85, 0.93, "base laya", fontsize=9, color=S.INK, va="center")
+    ax.annotate("fine-tuned laya", xy=(0.02, 0.62), xytext=(-2.9, 0.62), fontsize=9, color=S.EXACT_TEXT, va="center",
+                arrowprops=dict(arrowstyle="-", color=S.EXACT, lw=0.6))
     ax.annotate("Jev", xy=(0.12, 0.3), xytext=(-2.9, 0.3), fontsize=9, color=S.JEV_TEXT, va="center",
                 arrowprops=dict(arrowstyle="-", color=S.JEV, lw=0.6))
     S.save(fig, "stage10-curves.png")
@@ -927,7 +931,7 @@ def stage10_traps():
     for i, (label, color, t) in enumerate(series):
         xs = x - 0.4 + w * (i + 0.5)
         ax.bar(xs, [t[f]["trap_misfire"] for f, _, _ in fams], w * 0.88, color=color, label=label, zorder=2)
-        ax.scatter(xs, [t[f]["control_misfire"] for f, _, _ in fams], marker="_", s=90, lw=1.6, color=S.INK2, zorder=3,
+        ax.scatter(xs, [t[f]["control_misfire"] for f, _, _ in fams], marker="_", s=90, lw=1.6, color=S.INK, zorder=3, path_effects=S.halo(3),
                    label="matched control" if i == 0 else None)
     ax.set_xticks(x, [f[2] for f in fams], fontsize=9)
     ax.tick_params(axis="x", length=0)
@@ -953,7 +957,7 @@ def bend():
              "10 laya-neuron (sparse)": ("fine-tuned laya", (8, 0), "left"), "9c laya-hidden": ("base laya", (0, 13), "center")}
     fig, axes = S.figure(7.4, nrows=3)
     sims = list(res["sim"].values())
-    for graded, color, ls, lab in ((True, S.GREY, "-", "simulated, graded"), (False, S.MUTE, (0, (3, 2)), "simulated, sampled")):
+    for graded, ls, lab in ((True, (0, (3, 2)), "simulated, graded"), (False, (0, (1, 1.5)), "simulated, sampled")):
         pts = [v for v in sims if v["graded"] == graded]
         lams = sorted({v["lam"] for v in pts})
         for ax, xkey, ykey in ((axes[0], "swap_gap_pts", "rel_dist"), (axes[1], "twin_hidden_misfire", "rel_dist"),
@@ -961,14 +965,15 @@ def bend():
             scale = 1 if xkey == "swap_gap_pts" else 100
             xs = [np.mean([v[xkey] for v in pts if v["lam"] == lam]) * scale for lam in lams]
             ys = [np.mean([v["bend"]["W1"][ykey] for v in pts if v["lam"] == lam]) for lam in lams]
-            ax.plot(xs, ys, marker="o", color=color, ms=3, lw=1.1, ls=ls, zorder=1)
+            ax.plot(xs, ys, marker="o", color=S.INK, ms=3.6, lw=1.1, ls=ls, zorder=1, mfc=S.PAPER, mew=0.9)  # hollow: simulated
             if ax is axes[1]:
                 ax.annotate(lab, (xs[-1], ys[-1]), xytext=(6, 0), textcoords="offset points", fontsize=9, color=S.INK2,
                             va="center")
     for name, v in real.items():
         jev = name.startswith(("plain", "8g"))
-        color = S.JEV if jev else S.INK
-        marker = "s" if name.startswith("9c") else "o"
+        base = name.startswith("9c")  # base laya: neutral ink; fine-tuned laya: coral
+        color = S.JEV if jev else S.INK if base else S.EXACT
+        marker = "s" if base else "o"
         for ax, x, y in ((axes[0], v["swap_gap_pts"], v["bend"]["W1"]["rel_dist"]),
                          (axes[1], 100 * v["twin_hidden_misfire"], v["bend"]["W1"]["rel_dist"]),
                          (axes[2], 100 * v["twin_hidden_misfire"], v["bend"]["W1"]["cos"])):
@@ -976,7 +981,7 @@ def bend():
             if ax is axes[0] and name in named:
                 text, off, ha = named[name]
                 ax.annotate(text, (x, y), xytext=off, textcoords="offset points", fontsize=9, ha=ha, va="center",
-                            color=S.JEV_TEXT if jev else S.INK)
+                            color=S.JEV_TEXT if jev else S.INK if base else S.EXACT_TEXT)
     ax = axes[2]
     ax.text(14, 0.5, "Jev\nneurons", fontsize=9, color=S.JEV_TEXT, ha="center", va="top", linespacing=1.1)
     ax.text(65, 0.44, "base\nlaya", fontsize=9, color=S.INK, ha="center", va="bottom", linespacing=1.1)
@@ -1046,7 +1051,7 @@ def pixels():
     show(axes[1, 0], m38, S.SEQ_JEV, "Jev minus exact\n3 vs 8", magnitude=True)
     for c, d in enumerate((0, 3, 8, 1), start=1):
         r = np.mean([res[f"s6 seed{s}"]["digits"][str(d)]["corr_D_vs_on_freq_live"] for s in range(3)])
-        show(axes[0, c], freq[d], S.SEQ_INK, f"{d}: how often on\n{r_(r)}")
+        show(axes[0, c], freq[d], S.SEQ_SLATE, f"{d}: how often on\n{r_(r)}")
         r = np.mean([res[f"s6 seed{s}"]["digits"][str(d)]["corr_D_vs_excess_on_freq"] for s in range(3)])
         show(axes[1, c], freq[d] - mean_f, S.DIVERGING, f"{d}: on more than avg.\n{r_(r)}", sym=True)
     fig.text(1.0, -0.01, "r: correlation with the ten-digit map (top left) over pixels that are ever on, mean of 3 seeds",

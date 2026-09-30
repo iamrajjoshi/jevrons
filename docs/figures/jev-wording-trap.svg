@@ -912,7 +912,7 @@ z
 L 264.458296 203.920556 
 L 264.458296 17.939074 
 L 478.558571 17.939074 
-" clip-path="url(#pca98223e2b)" style="fill: none; stroke-dasharray: 4,3; stroke-dashoffset: 0; stroke: #141414"/>
+" clip-path="url(#pca98223e2b)" style="fill: none; stroke-dasharray: 4.4,3.3; stroke-dashoffset: 0; stroke: #d9480f; stroke-width: 1.1"/>
    </g>
    <g id="line2d_14">
     <path d="M 50.358021 200.200926 
@@ -1774,7 +1774,7 @@ z
    </g>
    <g id="text_14">
     <!-- exact step -->
-    <g style="fill: #4d4d4a" transform="translate(427.798765 45.581222) scale(0.095 -0.095)">
+    <g style="fill: #c43f0b" transform="translate(427.798765 45.581222) scale(0.095 -0.095)">
      <defs>
       <path id="HelveticaNeue-5f" d="M 1299 1741 
 L 58 0 

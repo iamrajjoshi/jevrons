@@ -24,7 +24,7 @@ from jevrons import figstyle as S  # noqa: E402  (docs palette; these figures ke
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT, FIG = ROOT / "runs" / "stage6b", ROOT / "docs" / "figures"
-ACCENT, INK, GREY = S.JEV, S.INK, S.GREY
+ACCENT, INK, EXACT = S.JEV, S.INK, S.EXACT
 TERM_BINS = [S.TERMS[n] for n in S.TERM_COUNTS]  # one colour per KBINS band, shortest lists first
 KBINS = ((10, 30), (30, 60), (60, 120), (120, 200), (200, 1000))
 RANDOM = ("s1_full", "s1_full2", "s1_wording", "margin", "backend", "backend6000", "backend12000")
@@ -177,10 +177,12 @@ def plot_error(res):
     ax = axes[0]
     rows = res["answer_model"]["all folded"]
     xs = np.arange(len(rows))
-    for f, color, off in (("first third", INK, -0.3), ("middle third", S.MUTE, -0.15), ("last third", S.RULE, 0),
-                          ("largest term", GREY, 0.15), ("final number (bias slot)", ACCENT, 0.3)):
+    # the four list features in neutral ink, told apart by fill; the bias slot in Jev's teal
+    for f, fill, off in (("first third", dict(color=INK), -0.3), ("middle third", dict(color=S.PAPER, edgecolor=INK, hatch="////"), -0.15),
+                         ("last third", dict(color=S.PAPER, edgecolor=INK), 0), ("largest term", dict(color=S.PAPER, edgecolor=INK, hatch=".."), 0.15),
+                         ("final number (bias slot)", dict(color=ACCENT), 0.3)):
         v, e = np.array([r[f] for r in rows]).T
-        ax.bar(xs + off, v, 0.15, yerr=1.96 * e, color=color, label=f)
+        ax.bar(xs + off, v, 0.15, yerr=1.96 * e, lw=0.9, label=f, **fill)
     ax.plot(xs, [r["intercept"] for r in rows], "o-", color=INK, ms=4, lw=1, label="intercept (yes-lean)")
     ax.axhline(0, color=INK, lw=0.5)
     ax.set_xticks(xs, [r["k"] for r in rows])
@@ -191,12 +193,12 @@ def plot_error(res):
     ax = axes[1]
     for g, marker in (("random probes, all formats", "o"), ("trained hidden (stages 5-6)", "s")):
         sk = res["skim"][g]
-        for h, color in (("pre", INK), ("suf", GREY), ("rnd", ACCENT)):
+        for h, color, mfc in (("pre", INK, None), ("suf", INK, S.PAPER), ("rnd", ACCENT, None)):  # last n: hollow ink
             ns = (5, 10, 20, 40)
             v = [sk[f"{h}{n}"]["jev_follows_heuristic"] for n in ns]
             lo = [v[i] - sk[f"{h}{n}"]["ci"][0] for i, n in enumerate(ns)]
             hi = [sk[f"{h}{n}"]["ci"][1] - v[i] for i, n in enumerate(ns)]
-            ax.errorbar(ns, v, yerr=[lo, hi], marker=marker, color=color, ms=4, lw=1, capsize=2,
+            ax.errorbar(ns, v, yerr=[lo, hi], marker=marker, color=color, ms=4, lw=1, capsize=2, mfc=mfc or color,
                         ls="-" if marker == "o" else "--",
                         label=f"{ {'pre': 'first n', 'suf': 'last n', 'rnd': 'random n'}[h]} + bias, "
                               f"{'random probes' if marker == 'o' else 'trained nets'}")
@@ -249,12 +251,12 @@ def calib():
     fig, axes = plt.subplots(1, 2, figsize=(10, 4.2), constrained_layout=True)
     for ax, keys, title in ((axes[0], [k for k in res if k.endswith("terms")], "by term count"),
                             (axes[1], ["random probes", "trained nets (stages 2-6)"], "random probes vs trained nets")):
-        colors = TERM_BINS + [GREY]  # the five KBINS bands, then "under 10 terms"
-        for key, color in zip(keys, colors if len(keys) > 2 else (INK, ACCENT)):
+        colors = TERM_BINS + [INK]  # the five KBINS bands, then "under 10 terms"
+        for key, color in zip(keys, colors if len(keys) > 2 else (INK, ACCENT)):  # random probes in ink, trained nets teal
             c = np.array(res[key]["curve"])
             ax.plot(c[:, 0], c[:, 1], "o-", color=color, ms=3.5, lw=1.4,
                     label=f"{key}  (n={res[key]['n']:,}, ECE {res[key]['ece']:.3f})")
-        ax.plot([0, 1], [0, 1], color=GREY, lw=0.8, ls="--")
+        ax.plot([0, 1], [0, 1], color=EXACT, lw=0.8, ls="--")  # perfect calibration
         ax.set_xlabel("Jev's p (mean within bin)")
         ax.set_ylabel("fraction with true total > 0")
         ax.set_title(f"Reliability, {title}", fontsize=10)
@@ -374,7 +376,7 @@ def dynamics():
     save("dynamics", res)
     fig, axes = plt.subplots(2, len(panels), figsize=(3.3 * len(panels), 6.2), constrained_layout=True, squeeze=False)
     for c, (label, rows) in enumerate(panels):
-        for arm, color, name in (("jev", ACCENT, "trained through Jev"), ("swap", INK, "trained exact")):
+        for arm, color, name in (("jev", ACCENT, "trained through Jev"), ("swap", EXACT, "trained exact")):
             if not rows[arm]:
                 continue
             ep = [r["epoch"] for r in rows[arm]]
@@ -384,7 +386,7 @@ def dynamics():
             if arm == "jev":
                 axes[1, c].plot(ep, [r["fires_as_intended"] for r in rows[arm]], "o-", color=color, ms=3, label=f"{name}, measured")
         if "swap_val_on_jev" in rows:
-            axes[1, c].plot([ep[-1]], [rows["swap_val_on_jev"]["fires_as_intended"]], "x", color=INK, ms=7, label="trained exact, measured on val")
+            axes[1, c].plot([ep[-1]], [rows["swap_val_on_jev"]["fires_as_intended"]], "x", color=EXACT, ms=7, label="trained exact, measured on val")
         axes[0, c].set_title(label, fontsize=10)
         axes[0, c].set_ylim(bottom=0)
         axes[1, c].set_ylim(0.75, 1.0)
@@ -522,11 +524,11 @@ def plot_weights(label, short, W0, Wj, Ws, margins, per_cos):
         ax.set_title(f"{title}   (±{v:.2f})", fontsize=9)
         ax.axis("off")
         fig.colorbar(im, ax=ax, shrink=0.7)
-    fig.suptitle(f"{label}: first-layer weights per hidden neuron, 28×28 (brick positive, slate negative)", fontsize=10)
+    fig.suptitle(f"{label}: first-layer weights per hidden neuron, 28×28 (brown positive, slate negative)", fontsize=10)
     savefig(fig, f"stage6b-weights-{short}.png")
     fig, axes = plt.subplots(1, 3, figsize=(12, 3.6), constrained_layout=True)
     bins = np.linspace(-6, 6, 61)
-    for a, color in (("init", GREY), ("swap", INK), ("jev", ACCENT)):
+    for a, color in (("init", INK), ("swap", EXACT), ("jev", ACCENT)):
         m = margins[a][1]
         name = {"init": "init", "swap": "trained exact", "jev": "trained through Jev"}[a]
         axes[0].hist(np.clip(m.ravel(), -6, 6), bins, histtype="step", color=color, lw=1.5, density=True, label=name)
@@ -538,7 +540,7 @@ def plot_weights(label, short, W0, Wj, Ws, margins, per_cos):
     axes[1].set_xlabel("hidden neuron (sorted)")
     axes[1].set_ylabel("mean |m| over validation images")
     b = [W0[1], Ws[1], Wj[1]]
-    axes[2].hist(b, np.linspace(min(map(np.min, b)), max(map(np.max, b)), 20), color=[GREY, INK, ACCENT],
+    axes[2].hist(b, np.linspace(min(map(np.min, b)), max(map(np.max, b)), 20), color=[INK, EXACT, ACCENT],
                  label=["init", "trained exact", "trained through Jev"])
     axes[2].set_xlabel("hidden bias")
     axes[2].set_title(f"ΔW cosine, Jev vs exact arm, per neuron: median {np.median(per_cos):.2f}", fontsize=9)
