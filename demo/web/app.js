@@ -879,10 +879,13 @@ async function boot() {
   if (FILM) document.body.classList.add("film");
   if (EMBED) {
     document.body.classList.add("embed");
+    const font = Object.assign(document.createElement("link"), { rel: "stylesheet",
+      href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" });
+    document.head.append(font);
     new ResizeObserver(() => parent.postMessage({ jevrons: "height", px: document.documentElement.scrollHeight }, "*"))
       .observe(document.body);
     addEventListener("message", (e) => {  // the post's theme toggle
-      if (e.data?.jevrons === "theme" && ["light", "dark"].includes(e.data.theme)) document.documentElement.dataset.theme = e.data.theme;
+      if (e.data?.jevrons === "theme" && ["light", "dark"].includes(e.data.theme)) { document.documentElement.dataset.theme = e.data.theme; repaint(); }
     });
   }
   const r = await (await fetch("/api/models")).json();

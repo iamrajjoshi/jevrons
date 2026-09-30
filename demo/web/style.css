@@ -472,6 +472,19 @@ body.film .calls-track { pointer-events: none; }
 }
 
 /* ?embed: the demo inside the blog post, which already explains it */
+/* in the post's own palette and type (rajjoshi.me, and the figures' figstyle "light"/"dark"): cream and warm ink,
+   Figtree, the system mono, and coral for a disagreement, the colour the figures give exact math */
+:root:has(body.embed) {
+  --paper: #fff9eb; --ink: #28221c; --ink-2: #56534d; --mute: #756f67; --mute-2: #9a8f80; --rule: #d9cdb8;
+  --faint: #efe5d2; --accent: #d9480f; --accent-text: #c43f0b;
+  --sans: "Figtree", system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "Cascadia Code", "Roboto Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+:root[data-theme="dark"]:has(body.embed) {
+  --paper: #28221c; --ink: #fff9eb; --ink-2: #b9ad9a; --mute: #9a8f80; --mute-2: #756f67; --rule: #4d443a;
+  --faint: #352e27; --accent: #ff8a5c; --accent-text: #ff8a5c;
+}
+body.embed { background: transparent; }
 body.embed .top, body.embed .how, body.embed .controls, body.embed .bill, body.embed .calls, body.embed .seen { display: none !important; }
 body.embed .layout { padding-top: var(--s4); padding-bottom: var(--s4); }
 body.embed .pad-win { width: min(100%, 300px); align-self: center; }
