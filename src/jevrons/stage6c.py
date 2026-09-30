@@ -137,6 +137,15 @@ def sign_disagreement(wa, ws, X):
     return float(np.mean(((X @ wa[0] + wa[1]) > 0) != ((X @ ws[0] + ws[1]) > 0)))
 
 
+def misfire(w, X, neuron):
+    """Hidden misfire rate under a CurveNeuron as the network sees it: a graded neuron's p is deterministic, so count
+    the answers on the wrong side of 0.5; a sampled one flips a coin, so take its expectation."""
+    if not neuron.graded:
+        return expected_misfire(w, X, neuron)
+    z = X @ w[0] + w[1]
+    return float(np.mean((z > 0) != (neuron(X, w[0], w[1]) >= 0.5)))
+
+
 def expected_misfire(w, X, neuron):
     """Mean P(hidden answer disagrees with the true sign) under a CurveNeuron (its expectation, not a sample)."""
     z = X @ w[0] + w[1]
@@ -206,7 +215,7 @@ def run_bend():
                 gap = 100 * (SWAP38_EXACT - np.mean([acc(twin, Xv, yv, e) for e in ev]))
                 res["sim"][f"{'graded' if graded else 'binary'} lam={lam} seed={seed}"] = {
                     "graded": graded, "lam": lam, "seed": seed, "swap_gap_pts": float(gap),
-                    "twin_hidden_misfire": expected_misfire(twin, Xv, nrn), "trained_hidden_misfire": expected_misfire(wa, Xv, nrn),
+                    "twin_hidden_misfire": misfire(twin, Xv, nrn), "trained_hidden_misfire": misfire(wa, Xv, nrn),
                     "trained_acc_on_neuron": float(np.mean([acc(wa, Xv, yv, e) for e in ev])),
                     "bend": bend(i5, wa, twin), "hidden_sign_disagreement_val": sign_disagreement(wa, twin, Xv), "_w": wa}
     # noise floor: two binary runs at the same lam differ only in the neuron's coin flips

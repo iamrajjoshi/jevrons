@@ -797,9 +797,9 @@ def traps():
               ("250 terms, one spread from zero", [
                   ("m = −1", fam["long"]["trap_misfire"], True),
                   ("mirror, m = +1", fam["long"]["control_misfire"], False)]),
-              ("40 real terms at m = +0.3", [
-                  ("110 zeros padded in", fam["zeros"]["trap_misfire"], True),
-                  ("no padding", fam["zeros"]["control_misfire"], False)])]
+              ("150 numbers at m = +0.3", [
+                  ("40 real + 110 zeros", fam["zeros"]["trap_misfire"], True),
+                  ("150 real, a separate list", fam["zeros"]["control_misfire"], False)])]
     fig, ax = S.figure(4.5)
     y, ticks, labels = 0, [], []
     for head, bars in groups:

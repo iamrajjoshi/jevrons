@@ -2,7 +2,7 @@
 
 2026-09-27 · offline only · no Jev or Ollaya calls · $0
 
-A more faithful neuron does give weights closer to the exact solution, but only at the ends of the range, and Jev arms bend much farther than their neuron's misfire rate explains. On 3 vs 8, the plain Jev network's first-layer change is 1.77× its exact twin's change away from it. Arm E, the most faithful Jev neuron (swap gap 4.6 points), still bends 1.13; fine-tuned laya (gap 1 point) bends 0.31. A simulated neuron with Jev's own measured curve and the same misfire rate bends only 0.58 (graded p) or 0.88 (sampled yes/no). The weights don't read out Jev's threshold drift. The upward drift of Jev-trained sums that [Jev's quirks](stage6b-jev-quirks.md) couldn't explain does reproduce in simulation, and the cause is Jev's p never reaching 0 or 1, not its yes-lean.
+A more faithful neuron does give weights closer to the exact solution, but only at the ends of the range, and Jev arms bend much farther than their neuron's misfire rate explains. On 3 vs 8, the plain Jev network's first-layer change is 1.77× its exact twin's change away from it. Arm E, the most faithful Jev neuron (swap gap 4.6 points), still bends 1.13; fine-tuned laya (gap 1 point) bends 0.31. A simulated neuron with Jev's own measured curve and a similar misfire rate bends only 0.58 (graded p) or 0.88 (sampled yes/no). The weights don't read out Jev's threshold drift. The upward drift of Jev-trained sums that [Jev's quirks](stage6b-jev-quirks.md) couldn't explain does reproduce in simulation, and the cause is Jev's p never reaching 0 or 1, not its yes-lean.
 
 Code: `src/jevrons/stage6c_calls.py` streams the two-digit, ten-digit and two-question neuron journals' validation and test calls into `runs/stage6c/calls.npz` (804,000 calls, 10 s). `src/jevrons/stage6c.py` runs the analyses (`uv run python -m jevrons.stage6c [bend misfire lean readoff pixels]`, about 2 minutes). Numbers: `runs/stage6c/*.json`.
 
@@ -29,11 +29,11 @@ Two controls were added, both local and both on the two-digit recipe:
 | Laya as a neuron, laya-hidden (scalar) | 42.8 | 65% | 1.62 / 0.28 / 1.58 | 2.38 / 0.52 | 3.87 / −0.42 | 3.1× | 26.3% |
 | Laya as a neuron, all-laya (scalar) | 42.8 | 65% | 1.40 / 0.34 / 1.38 | 1.32 / 0.40 | 1.18 / −0.42 | 0.6× | 26.0% |
 | 10 laya-neuron (sparse, own twin) | 1.0 | 4.5% | 0.31 / 0.95 / 1.02 | 0.12 / 0.99 | 0.32 / 0.95 | 1.1× | 1.8% |
-| Simulated λ = 1, graded | 1.0 | 15.9% | 0.58 / 0.84 / 1.03 | 0.57 / 0.93 | 0.77 / 0.65 | 0.3× | 11.2% |
+| Simulated λ = 1, graded | 1.0 | 14.6% | 0.58 / 0.84 / 1.03 | 0.57 / 0.93 | 0.77 / 0.65 | 0.3× | 11.2% |
 | Simulated λ = 1, sampled (3 seeds) | 7.2 | 15.9% | 0.88 / 0.79 / 1.42 | 0.81 / 0.83 | 0.81 / 0.56 | 1.2× | 18.9% |
 | Simulated λ = 2, sampled | 20.4 | 29.2% | 1.37 / 0.71 / 1.89 | 0.93 / 0.78 | 1.61 / −0.25 | 3.6× | 27.2% |
 
-The b2 column is |Δb2| divided by the twin's |Δb2|. Every arm moves b2 the same way as its twin (downward). Laya's "misfire" in the laya-as-a-neuron runs is scored against the sign, which its V-shaped curve was never meant to follow.
+The graded simulator's misfire counts its deterministic answers on the wrong side of 0.5 (14.6% at λ = 1); the sampled one's is the expected rate of its coin flips (15.9%). The b2 column is |Δb2| divided by the twin's |Δb2|. Every arm moves b2 the same way as its twin (downward). Laya's "misfire" in the laya-as-a-neuron runs is scored against the sign, which its V-shaped curve was never meant to follow.
 
 With the recipe matched, the Jev arms bend 1.43 (B), 1.48 (C), 1.45 (D) and 1.17 (E). The backward pass alone moves an exact twin 0.71-0.90 away from the two-digit twin. B has the same neuron as plain Jev and bends 0.40 less against the shared twin, so the recipe accounts for as much of the plain-vs-two-question difference as the neuron does.
 

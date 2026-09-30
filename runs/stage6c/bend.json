@@ -581,8 +581,8 @@
    "lam": 0.25,
    "seed": 0,
    "swap_gap_pts": -0.9999999999999898,
-   "twin_hidden_misfire": 0.040092972774620296,
-   "trained_hidden_misfire": 0.039368315742750196,
+   "twin_hidden_misfire": 0.0359375,
+   "trained_hidden_misfire": 0.0358125,
    "trained_acc_on_neuron": 0.946,
    "bend": {
     "W1": {
@@ -623,8 +623,8 @@
    "lam": 0.5,
    "seed": 0,
    "swap_gap_pts": -0.9999999999999898,
-   "twin_hidden_misfire": 0.0805024593311359,
-   "trained_hidden_misfire": 0.0760455270064551,
+   "twin_hidden_misfire": 0.0735625,
+   "trained_hidden_misfire": 0.0665,
    "trained_acc_on_neuron": 0.936,
    "bend": {
     "W1": {
@@ -665,8 +665,8 @@
    "lam": 0.75,
    "seed": 0,
    "swap_gap_pts": -0.20000000000000018,
-   "twin_hidden_misfire": 0.12016614331390241,
-   "trained_hidden_misfire": 0.10874406605866949,
+   "twin_hidden_misfire": 0.109125,
+   "trained_hidden_misfire": 0.100125,
    "trained_acc_on_neuron": 0.95,
    "bend": {
     "W1": {
@@ -707,8 +707,8 @@
    "lam": 1.0,
    "seed": 0,
    "swap_gap_pts": 1.0000000000000009,
-   "twin_hidden_misfire": 0.15872949521807297,
-   "trained_hidden_misfire": 0.12481600598111295,
+   "twin_hidden_misfire": 0.145625,
+   "trained_hidden_misfire": 0.1125625,
    "trained_acc_on_neuron": 0.96,
    "bend": {
     "W1": {
@@ -749,8 +749,8 @@
    "lam": 1.5,
    "seed": 0,
    "swap_gap_pts": 3.600000000000003,
-   "twin_hidden_misfire": 0.23002992635218505,
-   "trained_hidden_misfire": 0.159030703662965,
+   "twin_hidden_misfire": 0.2173125,
+   "trained_hidden_misfire": 0.14125,
    "trained_acc_on_neuron": 0.958,
    "bend": {
     "W1": {
@@ -791,8 +791,8 @@
    "lam": 2.0,
    "seed": 0,
    "swap_gap_pts": 8.400000000000007,
-   "twin_hidden_misfire": 0.2915676452214673,
-   "trained_hidden_misfire": 0.21482331208583297,
+   "twin_hidden_misfire": 0.284875,
+   "trained_hidden_misfire": 0.1966875,
    "trained_acc_on_neuron": 0.944,
    "bend": {
     "W1": {

@@ -39,7 +39,7 @@ Arm E's graded p is much softer than the margin probe's fire curve (λ = 4.5 mea
 
 Training spend counts only training calls. Each validation pass cost $0.93 and each test pass $1.86. With evaluations, this run cost $8.34 and the pretrained-only test $1.86. At equal Jev training spend ($3.7, two epochs), pretrain plus fine-tune leads Jev-only training by 5 points on validation (83.4% against 78.4%). Jev-only training needed two and a half to three times the spend to reach the same validation accuracy.
 
-SimE was a good predictor of Jev for SimE-trained weights: 84.8% on SimE against 83.8% on Jev (test). It was a bad one for exact-trained weights. The local check put the sparse network's configuration trained exact at 35.0% on SimE, and on Jev it got 66.4%. SimE is harsher than Jev on a network that never saw a graded neuron.
+SimE was a good predictor of Jev for SimE-trained weights: 84.8% on SimE against 83.8% on Jev (test). It was a bad one for exact-trained weights. The six-epoch exact-trained sparse network that ran on Jev gets 35.6% on SimE (validation), and 66.4% on Jev. (The local check's own ten-epoch exact network got 35.0% on SimE.) SimE is harsher than Jev on a network that never saw a graded neuron.
 
 ## Per digit (test)
 

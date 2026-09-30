@@ -110,7 +110,7 @@ Three traps beat their controls: the sign vote, the long-list yes-lean, and a bi
 
 The position family went the opposite way to its prediction. The error model suggested the final number is overweighted, so a big positive number in the bias slot should drag Jev to yes. Instead, the identical list fools Jev 82.5% of the time when the big number is in the middle, 27.5% when it's first, and 4.5% when it's last. Jev seems to take in a dominant number at either end correctly and misjudge one buried among small terms. The data doesn't say why. The regression's bias-slot weight comes from small natural biases and doesn't extrapolate to one number carrying 98% of the spread.
 
-Zero padding changed nothing, so the large zero-share coefficient in section 1 is a confound in the trained-network data, not a property of Jev.
+Padded lists (40 real terms and 110 zeros) misfired on 0% of states against 1% for separately generated 150-term lists with the same total and spread. That isn't the same list before and after padding, but zeros didn't make Jev worse, so the large zero-share coefficient in section 1 is more likely a confound in the trained-network data than a property of Jev.
 
 ## 5. Weight maps and what training changed
 

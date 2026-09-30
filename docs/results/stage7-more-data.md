@@ -2,7 +2,7 @@
 
 2026-09-27 · 1.94M calls · $84.71 · Vercel gateway only (TypeSafe direct out of credits)
 
-A 784-32-10 network of Jev neurons trained through Jev gets 84.6% on 2,000 test images. That's up from 68.5% in the first ten-digit run, and it beats the ~77-79% an exact-neuron network reached on 1,000 images when the sum was done in code. Two things changed at once: 5,000 training images instead of 1,000, and arm E from [the two-question neuron](stage8g-neuron-fixes.md) (yes/no and a neutral choice question averaged in one call). One seed, so the two effects aren't separated. The swap control still collapses: the same architecture trained with an exact neuron gets 83.9% on an exact neuron and 52.6% on Jev, a 31.3-point gap (first ten-digit run: 28.8).
+A 784-32-10 network of Jev neurons trained through Jev gets 84.6% on 2,000 test images. That's up from 68.5% in the first ten-digit run, and it beats the ~77-79% an exact-neuron network reached on 1,000 images when the sum was done in code. Two things changed at once: 5,000 training images instead of 1,000, and arm E from [the two-question neuron](stage8g-neuron-fixes.md) (yes/no and a neutral choice question averaged in one call). One seed, so the two effects aren't separated. The swap control still collapses: the same architecture trained with an exact neuron gets 83.9% on an exact neuron and 52.6% on Jev, a 31.2-point gap (83.85% − 52.65%) (first ten-digit run: 28.8).
 
 Code: `src/jevrons/stage7.py`. Results, weights, curves: `runs/stage7/`. The journal isn't published.
 
