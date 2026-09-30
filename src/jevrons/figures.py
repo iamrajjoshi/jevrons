@@ -1063,7 +1063,8 @@ def pixels():
 
 def network_architecture():
     """Diagram: a 28x28 digit, 32 hidden neurons that are each one Jev call, an output layer of Jev calls, and one
-    neuron's call spelled out. Not data: the digit is the first 3 in the training set, drawn for scale."""
+    neuron's call spelled out (only inked pixels are sent; zero inputs are dropped, as in net.JevNeuron). Not data:
+    the digit is the first 3 in the training set, drawn for scale."""
     from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch, Rectangle
     from jevrons.digits import mnist
     xtr, ytr, _, _ = mnist()
@@ -1088,10 +1089,17 @@ def network_architecture():
     hx, n_h = 50, 32
     hy = np.linspace(hi, lo, n_h)
     pick = 9  # the neuron spelled out below
-    for k, y in enumerate(hy):  # every hidden neuron sees every pixel; draw a few of its inputs
-        for py in np.linspace(y0 + 1, y0 + (x1 - x0) - 1, 4 if k == pick else 2):
-            ax.plot([x1, hx - 0.6], [py, y], color=S.JEV if k == pick else S.RULE, lw=0.9 if k == pick else 0.4,
-                    zorder=4 if k == pick else 1, solid_capstyle="butt")
+    for k, y in enumerate(hy):  # every hidden neuron is wired to every pixel; a few of its wires, faint
+        if k != pick:
+            for py in np.linspace(y0 + 1, y0 + (x1 - x0) - 1, 2):
+                ax.plot([x1, hx - 0.6], [py, y], color=S.RULE, lw=0.4, zorder=1, solid_capstyle="butt")
+    # the picked neuron's call carries only inked pixels (zero pixels are dropped): draw wires from a few of them
+    px = (x1 - x0) / 28
+    inked = np.argwhere(digit > 0)
+    for r, c in inked[np.linspace(0, len(inked) - 1, 5).astype(int)]:
+        sx, sy = x0 + (c + 0.5) * px, y0 + (x1 - x0) - (r + 0.5) * px
+        ax.plot([sx, hx - 0.6], [sy, hy[pick]], color=S.JEV, lw=0.9, zorder=4, solid_capstyle="butt")
+        ax.plot(sx, sy, "o", ms=3.2, color=S.JEV, mec=S.PAPER, mew=0.6, zorder=4)
     for k, y in enumerate(hy):
         ax.add_patch(Circle((hx, y), 0.5, color=S.JEV, zorder=5))
     ax.add_patch(Circle((hx, hy[pick]), 1.5, fill=False, ec=S.JEV, lw=1.4, zorder=5))
@@ -1108,9 +1116,8 @@ def network_architecture():
     ax.text(ox, top, "output layer\nJev calls too: 10 for ten digits,\n1 for two digits", **{**txt, "color": S.JEV_TEXT})
     # one neuron's call, spelled out along the bottom
     by, bh = 4, 18
-    boxes = [(1, 40, "the neuron's list, sent as text:\n784 products, pixel \u00d7 weight,\n"
-                     "x\u2081w\u2081, x\u2082w\u2082, \u2026, x\u2087\u2088\u2084w\u2087\u2088\u2084, and the bias b",
-              S.INK, S.FAINT),
+    boxes = [(1, 40, "the neuron's list, sent as text:\none product (pixel \u00d7 weight) per\ninked pixel, "
+                     "about 150 for a digit,\nthen the bias b", S.INK, S.FAINT),
              (45, 27, "Jev is asked:\n\u201cdo these add up to\nmore than zero?\u201d", S.JEV_TEXT, S.PAPER),
              (76, 23, "Jev's answer p\nis the neuron's\noutput", S.JEV_TEXT, S.PAPER)]
     for bx, bw, label, color, face in boxes:
