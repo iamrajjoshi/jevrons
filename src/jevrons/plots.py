@@ -10,6 +10,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
+from jevrons import figstyle as S  # noqa: E402  (docs palette)
+
 ROOT = Path(__file__).resolve().parents[2]
 FIG = ROOT / "docs" / "figures"
 
@@ -22,11 +24,11 @@ def stage3():
     for ax, (arm, seed, title) in zip(axes, runs):
         r = json.loads((ROOT / f"runs/stage3/result-{arm}-{seed}.json").read_text())
         p = np.array(r["grid_p"]).reshape(len(GRID), len(GRID))
-        im = ax.imshow(p, origin="lower", extent=(-1, 1, -1, 1), cmap="RdBu_r", vmin=0, vmax=1)
-        ax.add_patch(plt.Circle((0, 0), 0.8, fill=False, ls="--", lw=1.5, color="k"))
+        im = ax.imshow(p, origin="lower", extent=(-1, 1, -1, 1), cmap=S.FIRE, vmin=0, vmax=1)
+        ax.add_patch(plt.Circle((0, 0), 0.8, fill=False, ls="--", lw=1.5, color=S.INK))
         inside = YTE.ravel() > 0.5
-        ax.scatter(*XTE[inside].T, s=6, c="k", marker="o")
-        ax.scatter(*XTE[~inside].T, s=6, c="k", marker="x", lw=0.6)
+        ax.scatter(*XTE[inside].T, s=6, c=S.INK, marker="o")
+        ax.scatter(*XTE[~inside].T, s=6, c=S.INK, marker="x", lw=0.6)
         ax.set_title(f"{title}\nheld-out accuracy {r['test_accuracy']:.0%}")
         ax.set_aspect("equal")
     fig.colorbar(im, ax=axes, shrink=0.8, label="Jev output p (inside)")
@@ -44,7 +46,7 @@ def stage5():
             r = json.loads((ROOT / f"runs/stage5/result-{pair}-{arm}.json").read_text())
             for m, (value, hatch) in enumerate(((r["val_exact_step"], "//"), (r["val_jev"]["accuracy"], ""))):
                 x = k + (a * 2 + m - 1.5) * width
-                ax.bar(x, value, width, color=("#b2182b", "#2166ac")[a], hatch=hatch, alpha=0.55 if hatch else 1,
+                ax.bar(x, value, width, color=(S.JEV, S.INK)[a], hatch=hatch, alpha=0.55 if hatch else 1,
                        label=f"{label}, {'exact neuron' if hatch else 'live Jev'}" if k == 0 else None)
                 ax.text(x, value + 0.01, f"{value:.0%}", ha="center", fontsize=8)
     ax.set_xticks(range(len(pairs)), ["0 vs 1", "3 vs 8"])
@@ -71,10 +73,10 @@ def margin():
     idx = np.digitize(m, edges) - 1
     rate = [fired[idx == i].mean() if np.any(idx == i) else np.nan for i in range(len(mid))]
     fig, ax = plt.subplots(figsize=(6.5, 4), constrained_layout=True)
-    ax.plot(mid, rate, "o", color="#1e1e1e", ms=5, label=f"Jev, {len(rows)} neurons, bias 0")
+    ax.plot(mid, rate, "o", color=S.INK, ms=5, label=f"Jev, {len(rows)} neurons, bias 0")
     t = np.linspace(-3, 3, 300)
-    ax.plot(t, Phi(k * t), color="#e4507a", lw=2, label=f"noisy threshold  Φ({k:.2f} m)")
-    ax.step(t, (t > 0).astype(float), color="#999999", lw=1, ls="--", where="post", label="exact neuron")
+    ax.plot(t, Phi(k * t), color=S.JEV, lw=2, label=f"noisy threshold  Φ({k:.2f} m)")
+    ax.step(t, (t > 0).astype(float), color=S.GREY, lw=1, ls="--", where="post", label="exact neuron")
     ax.set_xlabel("normalized margin  m = z / spread of the terms")
     ax.set_ylabel("fraction of calls where Jev said fire")
     ax.legend(fontsize=8, frameon=False, loc="upper left")
@@ -89,7 +91,7 @@ def margin_by_terms():
     rows = json.loads((ROOT / "runs/margin/rows.json").read_text())  # [terms, m, p_rep0, p_rep1]
     fits = json.loads((ROOT / "runs/margin/summary.json").read_text())["offset_fit"]
     Phi = np.vectorize(lambda t: 0.5 * (1 + erf(t / np.sqrt(2))))
-    colors = ["#c9c9c9", "#9a9a9a", "#6b6b6b", "#3a3a3a", "#e4507a"]
+    colors = [S.TERMS[n] for n in S.TERM_COUNTS]
     edges = np.linspace(-3, 3, 25)
     mid = (edges[1:] + edges[:-1]) / 2
     t = np.linspace(-3, 3, 300)
@@ -102,7 +104,7 @@ def margin_by_terms():
         k, m0 = fits[str(terms)]["k"], fits[str(terms)]["threshold_m0"]
         ax.plot(mid, rate, "o", color=color, ms=3.5)
         ax.plot(t, Phi(k * (t - m0)), color=color, lw=2, label=f"{terms} terms   k = {k:.1f}, threshold {m0:+.2f}")
-    ax.step(t, (t > 0).astype(float), color="#1e1e1e", lw=1, ls="--", where="post", label="exact neuron")
+    ax.step(t, (t > 0).astype(float), color=S.INK, lw=1, ls="--", where="post", label="exact neuron")
     ax.set_xlabel("normalized margin  m = z / spread of the terms")
     ax.set_ylabel("fraction of calls where Jev said fire")
     ax.legend(fontsize=8, frameon=False, loc="upper left")

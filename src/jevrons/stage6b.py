@@ -20,9 +20,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
+from jevrons import figstyle as S  # noqa: E402  (docs palette; these figures keep their own layout)
+
 ROOT = Path(__file__).resolve().parents[2]
 OUT, FIG = ROOT / "runs" / "stage6b", ROOT / "docs" / "figures"
-ACCENT, INK, GREY = "#e4507a", "#1e1e1e", "#9a9a9a"
+ACCENT, INK, GREY = S.JEV, S.INK, S.GREY
+TERM_BINS = [S.TERMS[n] for n in S.TERM_COUNTS]  # one colour per KBINS band, shortest lists first
 KBINS = ((10, 30), (30, 60), (60, 120), (120, 200), (200, 1000))
 RANDOM = ("s1_full", "s1_full2", "s1_wording", "margin", "backend", "backend6000", "backend12000")
 Phi = np.vectorize(lambda t: 0.5 * (1 + erf(t / np.sqrt(2))))
@@ -174,8 +177,8 @@ def plot_error(res):
     ax = axes[0]
     rows = res["answer_model"]["all folded"]
     xs = np.arange(len(rows))
-    for f, color, off in (("first third", "#3a3a3a", -0.3), ("middle third", "#6b6b6b", -0.15), ("last third", "#c9c9c9", 0),
-                          ("largest term", "#9a9a9a", 0.15), ("final number (bias slot)", ACCENT, 0.3)):
+    for f, color, off in (("first third", INK, -0.3), ("middle third", S.MUTE, -0.15), ("last third", S.RULE, 0),
+                          ("largest term", GREY, 0.15), ("final number (bias slot)", ACCENT, 0.3)):
         v, e = np.array([r[f] for r in rows]).T
         ax.bar(xs + off, v, 0.15, yerr=1.96 * e, color=color, label=f)
     ax.plot(xs, [r["intercept"] for r in rows], "o-", color=INK, ms=4, lw=1, label="intercept (yes-lean)")
@@ -188,7 +191,7 @@ def plot_error(res):
     ax = axes[1]
     for g, marker in (("random probes, all formats", "o"), ("trained hidden (stages 5-6)", "s")):
         sk = res["skim"][g]
-        for h, color in (("pre", "#3a3a3a"), ("suf", "#9a9a9a"), ("rnd", ACCENT)):
+        for h, color in (("pre", INK), ("suf", GREY), ("rnd", ACCENT)):
             ns = (5, 10, 20, 40)
             v = [sk[f"{h}{n}"]["jev_follows_heuristic"] for n in ns]
             lo = [v[i] - sk[f"{h}{n}"]["ci"][0] for i, n in enumerate(ns)]
@@ -246,7 +249,7 @@ def calib():
     fig, axes = plt.subplots(1, 2, figsize=(10, 4.2), constrained_layout=True)
     for ax, keys, title in ((axes[0], [k for k in res if k.endswith("terms")], "by term count"),
                             (axes[1], ["random probes", "trained nets (stages 2-6)"], "random probes vs trained nets")):
-        colors = ["#c9c9c9", "#9a9a9a", "#6b6b6b", "#3a3a3a", ACCENT, "#e8a0b4"]
+        colors = TERM_BINS + [GREY]  # the five KBINS bands, then "under 10 terms"
         for key, color in zip(keys, colors if len(keys) > 2 else (INK, ACCENT)):
             c = np.array(res[key]["curve"])
             ax.plot(c[:, 0], c[:, 1], "o-", color=color, ms=3.5, lw=1.4,
@@ -515,11 +518,11 @@ def plot_weights(label, short, W0, Wj, Ws, margins, per_cos):
     fig, axes = plt.subplots(3, 2, figsize=(11, 8.6), constrained_layout=True)
     for ax, (title, W) in zip(axes.T.ravel(), panels):
         v = np.nanquantile(np.abs(W), 0.99) or 1
-        im = ax.imshow(mosaic(W), cmap="RdBu_r", vmin=-v, vmax=v)
+        im = ax.imshow(mosaic(W), cmap=S.DIVERGING, vmin=-v, vmax=v)
         ax.set_title(f"{title}   (±{v:.2f})", fontsize=9)
         ax.axis("off")
         fig.colorbar(im, ax=ax, shrink=0.7)
-    fig.suptitle(f"{label}: first-layer weights per hidden neuron, 28×28 (red positive, blue negative)", fontsize=10)
+    fig.suptitle(f"{label}: first-layer weights per hidden neuron, 28×28 (brick positive, slate negative)", fontsize=10)
     savefig(fig, f"stage6b-weights-{short}.png")
     fig, axes = plt.subplots(1, 3, figsize=(12, 3.6), constrained_layout=True)
     bins = np.linspace(-6, 6, 61)
@@ -629,8 +632,7 @@ def repeats():
     res["backend_at_scale"]["stage5_val_repeat_pairs"] = both
     save("repeats", res)
     fig, axes = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
-    colors = ["#c9c9c9", "#9a9a9a", "#6b6b6b", "#3a3a3a", ACCENT]
-    for (klo, khi), color in zip(kb, colors):
+    for (klo, khi), color in zip(kb, TERM_BINS):
         rows = [r for r in table if r["k"] == [klo, khi]]
         if rows:
             x = [np.mean(r["abs_m"]) if r["abs_m"][1] < 99 else 5 for r in rows]

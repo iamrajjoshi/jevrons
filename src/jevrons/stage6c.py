@@ -24,6 +24,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
+from jevrons import figstyle as S  # noqa: E402  (docs palette; these figures keep their own layout)
 from jevrons import stage5, stage6  # noqa: E402
 from jevrons.digits import mnist, split  # noqa: E402
 from jevrons.net import StepNeuron, fit, forward  # noqa: E402
@@ -32,7 +33,7 @@ from jevrons.stage8g import curve, slope_for, terms_and_spread  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT, FIG = ROOT / "runs" / "stage6c", ROOT / "docs" / "figures"
-ACCENT, INK, GREY, BLUE = "#e4507a", "#1e1e1e", "#9a9a9a", "#3b6ea8"
+ACCENT, INK, GREY, BLUE = S.JEV, S.INK, S.GREY, S.SLATE
 XTR, YTR, _, _ = mnist()
 TR38, VA38 = split(YTR, (3, 8), 500, 500)
 TR10, VA10 = split(YTR, range(10), 1000, 500)
@@ -462,7 +463,7 @@ def plot_lean(res):
     fig, axes = plt.subplots(1, 3, figsize=(14, 4.2), constrained_layout=True)
     names = ["exact twin", "real Jev", "graded, lean", "graded, no lean", "graded in [0.03, 0.97], lean",
              "graded in [0.03, 0.97], no lean", "sampled, lean", "sampled, no lean"]
-    colors = [INK, ACCENT, GREY, GREY, "#c9a227", "#c9a227", BLUE, BLUE]
+    colors = [INK, ACCENT, GREY, GREY, S.AMBER, S.AMBER, BLUE, BLUE]
     hatches = ["", "", "", "//", "", "//", "", "//"]
     for ax, key, title in ((axes[0], "median_change_mean_z", "median change in a hidden neuron's mean z"),
                            (axes[1], "norm_dW2", "‖ΔW2‖ (output layer)"), (axes[2], "intended_fire_rate", "intended hidden fire rate")):
@@ -627,15 +628,15 @@ def run_pixels():
     save("pixels", res)
     fig, axes = plt.subplots(2, 5, figsize=(13, 5.6), constrained_layout=True)
     Dm = np.mean([maps[f"s6 seed{s}"] for s in range(3)], 0)
-    panels = [("‖ΔW Jev − ΔW exact‖ per pixel\nten digits, mean of 3 seeds", Dm, "magma"),
-              ("same, 3 vs 8 (stage 5)", maps["s5 3v8"], "magma")]
-    panels += [(f"digit {d}: share of images with the pixel on\ncorr with map {res['s6 seed0']['digits'][str(d)]['corr_D_vs_on_freq_live']:+.2f} (seed 0)", freq[d], "Greys")
+    panels = [("‖ΔW Jev − ΔW exact‖ per pixel\nten digits, mean of 3 seeds", Dm, S.SEQ_JEV),
+              ("same, 3 vs 8 (stage 5)", maps["s5 3v8"], S.SEQ_JEV)]
+    panels += [(f"digit {d}: share of images with the pixel on\ncorr with map {res['s6 seed0']['digits'][str(d)]['corr_D_vs_on_freq_live']:+.2f} (seed 0)", freq[d], S.SEQ_INK)
                for d in (0, 3, 8, 1)]
     panels += [(f"digit {d}: pixels used more than average\n(corr {np.mean([res[f's6 seed{s}']['digits'][str(d)]['corr_D_vs_excess_on_freq'] for s in range(3)]):+.2f}, mean over seeds)",
-                freq[d] - np.mean([freq[e] for e in range(10)], 0), "RdBu_r") for d in (0, 3, 8, 1)]
+                freq[d] - np.mean([freq[e] for e in range(10)], 0), S.DIVERGING) for d in (0, 3, 8, 1)]
     for ax, (title, img, cmap) in zip(axes.ravel(), panels):
         v = np.abs(img).max()
-        ax.imshow(img.reshape(28, 28), cmap=cmap, vmin=-v if cmap == "RdBu_r" else 0, vmax=v)
+        ax.imshow(img.reshape(28, 28), cmap=cmap, vmin=-v if cmap is S.DIVERGING else 0, vmax=v)
         ax.set_title(title, fontsize=7.5)
         ax.axis("off")
     fig.suptitle("Which pixels' weights differ most between Jev-trained and exact-trained networks", fontsize=10)

@@ -17,6 +17,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
+from jevrons import figstyle as S  # noqa: E402
 from jevrons.jev import BACKENDS, USD_PER_INPUT_TOKEN, Jev  # noqa: E402
 from jevrons.states import neuron_question  # noqa: E402
 
@@ -154,7 +155,7 @@ def plot(res):
     fig, ax = plt.subplots(figsize=(8.5, 4), constrained_layout=True)
     x = np.arange(len(fams))
     from jevrons.stage6b import wilson
-    for off, key, color, name in ((-0.18, "control_misfire", "#9a9a9a", "matched control"), (0.18, "trap_misfire", "#e4507a", "trap")):
+    for off, key, color, name in ((-0.18, "control_misfire", S.GREY, "matched control"), (0.18, "trap_misfire", S.JEV, "trap")):
         v = np.array([res["families"][f][key] for f in fams])
         ci = np.array([wilson(round(val * N), N) for val in v])
         ax.bar(x + off, v, 0.34, color=color, label=name, yerr=[v - ci[:, 0], ci[:, 1] - v], capsize=3)

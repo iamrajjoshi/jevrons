@@ -86,8 +86,9 @@ def margin_by_terms():
     for n, (k, m0) in {10: (3.2, 0.20), 250: (1.5, -1.10)}.items():  # the post's table
         assert (fits[str(n)]["k"], fits[str(n)]["threshold_m0"]) == (k, m0)
     terms = sorted({r[0] for r in rows})
-    lo = 0.45 if S.THEME == "dark" else 0.4  # the pale end of the ramp fades into dark paper sooner
-    colors = [S.SEQ_JEV(v) for v in np.linspace(lo, 0.92, len(terms))]
+    assert tuple(terms) == S.TERM_COUNTS
+    colors = [S.TERMS[n] for n in terms]
+    markers = dict(zip(terms, "osD^v"))  # a second cue besides colour
     edges = np.linspace(-3, 3, 25)
     mid = (edges[1:] + edges[:-1]) / 2
     t = np.linspace(-3, 3, 400)
@@ -102,12 +103,12 @@ def margin_by_terms():
         idx = np.digitize(m, edges) - 1
         rate = np.array([fired[idx == i].mean() if np.any(idx == i) else np.nan for i in range(len(mid))])
         k, m0 = fits[str(n)]["k"], fits[str(n)]["threshold_m0"]
-        ax.plot(mid, rate, "o", color=color, ms=3.6, alpha=0.9, zorder=2)
+        ax.plot(mid, rate, markers[n], color=color, ms=3.6, zorder=2)
         ax.plot(t, Phi(k * (t - m0)), color=color, lw=2, zorder=3)
         y = label_y[n]
         x = m0 + float(np.sqrt(2) * _erfinv(2 * y - 1)) / k
         right = n == 10  # the shortest list is the rightmost curve at this height; label it on the open side
-        ax.text(x + (0.09 if right else -0.09), y, "10 terms" if right else str(n), color=color if n > 30 else S.JEV_TEXT,
+        ax.text(x + (0.09 if right else -0.09), y, "10 terms" if right else str(n), color=S.TERMS_TEXT[n],
                 fontsize=10, ha="left" if right else "right", va="center", fontweight="medium")
     ax.set_xlim(-3.05, 3.05)
     ax.set_ylim(-0.03, 1.03)
@@ -210,10 +211,10 @@ def stage3_boundary():
         step = GRID[1] - GRID[0]
         im = ax.imshow(p, origin="lower", extent=(-1 - step / 2, 1 + step / 2) * 2, cmap=S.FIRE, vmin=0, vmax=1,
                        interpolation="none")
-        ax.plot(0.8 * np.cos(th), 0.8 * np.sin(th), color=S.INK, lw=1.2, ls=(0, (4, 3)))
+        ax.plot(0.8 * np.cos(th), 0.8 * np.sin(th), color=S.INK, lw=1.2, ls=(0, (4, 3)), path_effects=S.halo(2.8))
         inside = YTE.ravel() > 0.5
-        ax.scatter(*XTE[inside].T, s=5, color=S.INK, lw=0, alpha=0.75)
-        ax.scatter(*XTE[~inside].T, s=9, color=S.INK, marker="x", lw=0.6, alpha=0.55)
+        ax.scatter(*XTE[inside].T, s=5, color=S.INK, lw=0, path_effects=S.halo(1.4))
+        ax.scatter(*XTE[~inside].T, s=9, color=S.INK, marker="x", lw=0.6, path_effects=S.halo(1.6))
         ax.set_title(f"{title}\nheld-out accuracy {r['test_accuracy']:.0%}", fontsize=10.5)
         ax.set_aspect("equal")
         ax.set_xticks([-1, 0, 1])
@@ -539,11 +540,11 @@ def stage8_sparse():
         terms = np.average([bt[k]["mean_terms"] for k in keys], weights=n.sum(1))
         return (n * rate).sum(0) / n.sum(0), terms
 
-    for keys, shade in ((["stage 7 dense (both arms)"], 0.92), (["jev", "swap"], 0.45)):
+    for keys, near, mk in ((["stage 7 dense (both arms)"], 150, "o"), (["jev", "swap"], 30, "s")):
         rate, terms = pooled(keys)
-        color = S.SEQ_JEV(shade)
+        color = S.TERMS[near]  # coloured by list length, as in the margin-by-terms figure
         name = "dense" if len(keys) == 1 else "sparse"
-        ax2.plot(x, rate, "o-", color=color, ms=5, lw=2, label=f"{name}, about {terms:.0f} numbers per call")
+        ax2.plot(x, rate, mk + "-", color=color, ms=5, lw=2, label=f"{name}, about {terms:.0f} numbers per call")
     ax2.legend(loc="upper right", fontsize=9.5, handlelength=1.6)
     ax2.set_xticks(x, [b.replace("3-99", "3+").replace("-", "\u2013") for b in bands])
     ax2.set_xlabel("hidden margin band  |m| = |z| / spread  (both arms pooled)")
@@ -828,7 +829,7 @@ def stage10_curves():
         for name, (color, _) in laya().items():
             c = ev[name]["curves"][f"probe-{n}"]
             b = np.array(c["binned"])
-            ax.plot(b[:, 0] + 0.125, b[:, 1], "o", ms=2.8, color=color, alpha=0.9)
+            ax.plot(b[:, 0] + 0.125, b[:, 1], "o", ms=2.8, color=color)
             ax.plot(mm, Phi(c["k"] * (mm - c["m0"])), color=color, lw=1.8)
         k, m0 = fits[str(n)]["k"], fits[str(n)]["threshold_m0"]
         ax.plot(mm, Phi(k * (mm - m0)), color=S.JEV, lw=1.8, ls=(0, (4, 2.5)))
