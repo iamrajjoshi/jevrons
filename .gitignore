@@ -45,7 +45,8 @@ runs/stage8g/checkpoint-*
 runs/stage9c/checkpoint-*
 runs/stage10/*/checkpoint*
 runs/stage10/jev/
-runs/stage10/truth/
+runs/stage10/truth/*
+!runs/stage10/truth/log.jsonl
 runs/stage10/pilot-truth/
 
 demo/runs/spend.json

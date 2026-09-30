@@ -611,16 +611,15 @@ def training_curves():
     S.save(fig, "training-curves.png")
 
 
-def sparse_confusion():
-    """Stage 8a: confusion on live Jev over the 1,000 test digits, trained through Jev and its exact-trained twin."""
-    from jevrons.digits import mnist, test_subset
+def _sparse_predictions(n_test):
+    """Stage 8a's test predictions on live Jev, per arm. The result files round each output to 2 decimals, which
+    creates ties that the run broke on unrounded values, so they're rebuilt once from the journal (not published)
+    and kept in runs/stage8a/test-predictions.json."""
     from jevrons.net import decide
-    from jevrons.stage8a import N_TEST
-    _, _, _, yte = mnist()
-    y = yte[test_subset(yte, N_TEST)]
-    # The result files round each output to 2 decimals, which creates ties that the run broke on unrounded
-    # values; the journal (gitignored) has every output call, so rebuild the exact outputs from it.
-    outputs = {a: np.full((N_TEST, 10), np.nan) for a in ("jev", "swap")}
+    cache = RUNS / "stage8a/test-predictions.json"
+    if cache.exists():
+        return {a: np.array(v) for a, v in json.loads(cache.read_text()).items()}
+    outputs = {a: np.full((n_test, 10), np.nan) for a in ("jev", "swap")}
     with open(RUNS / "stage8a/journal.jsonl", "rb") as fh:
         for line in fh:
             if b'"split": "test"' not in line or b'"layer": 1' not in line:
@@ -631,10 +630,22 @@ def sparse_confusion():
                 outputs[t["arm"]][t["i"], t["j"]] = np.mean([v["above"] if isinstance(v, dict) else v
                                                              for v in r["answers"].values()])
     assert not any(np.isnan(o).any() for o in outputs.values()), "journal is missing test output calls"
+    pred = {a: decide(o) for a, o in outputs.items()}
+    cache.write_text(json.dumps({a: p.tolist() for a, p in pred.items()}))
+    return pred
+
+
+def sparse_confusion():
+    """Stage 8a: confusion on live Jev over the 1,000 test digits, trained through Jev and its exact-trained twin."""
+    from jevrons.digits import mnist, test_subset
+    from jevrons.stage8a import N_TEST
+    _, _, _, yte = mnist()
+    y = yte[test_subset(yte, N_TEST)]
+    preds = _sparse_predictions(N_TEST)
     fig, axes = S.figure(8.0, nrows=2)
     for ax, (arm, title, cited) in zip(axes, (("jev", "trained through Jev", "85.3%"), ("swap", "trained exact, run on Jev", "65.8%"))):
         r = js(f"stage8a/result-{arm}.json")["test"]
-        pred = decide(outputs[arm])
+        pred = preds[arm]
         assert np.allclose([np.mean(pred[y == d] == d) for d in range(10)], r["per_digit"])
         check(np.mean(pred == y), cited, "{:.1%}")
         counts = np.zeros((10, 10), int)
