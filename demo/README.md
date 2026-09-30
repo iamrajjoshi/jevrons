@@ -122,7 +122,7 @@ listen for `jevrons:done` on `window`.
 
 `demo/Dockerfile` builds from the repo root and needs a local checkout with the gitignored files it copies: the MNIST
 test set, `runs/stage8a/weights-*.npz`, `runs/stage7/weights-*.npz` and `runs/margin/summary.json` (`.dockerignore`
-lets only those in). It runs `--live --daily-usd 9 --max-live 16 --calls-per-min 2200` on Vercel and writes nothing
+lets only those in). It runs `--live --daily-usd 30 --max-live 16 --calls-per-min 3000` on Vercel and writes nothing
 but the spend counter.
 
 ```bash
