@@ -1059,6 +1059,75 @@ def pixels():
     S.save(fig, "stage6c-pixels.png", svg=False)
 
 
+# ---------------------------------------------------------------- How a Jevron network is built
+
+def network_architecture():
+    """Diagram: a 28x28 digit, 32 hidden neurons that are each one Jev call, an output layer of Jev calls, and one
+    neuron's call spelled out. Not data: the digit is the first 3 in the training set, drawn for scale."""
+    from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch, Rectangle
+    from jevrons.digits import mnist
+    xtr, ytr, _, _ = mnist()
+    digit = xtr[np.flatnonzero(ytr == 3)[0]].reshape(28, 28)
+    H = 5.4
+    fig, ax = S.figure(H)
+    W_, H_ = 100, 100 * H / S.WIDTH  # drawing units, square
+    ax.set_xlim(0, W_)
+    ax.set_ylim(0, H_)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    top = H_ - 3  # column headers sit here; the network fills the band below
+    lo, hi = 29, top - 10  # vertical extent of the neuron columns
+    txt = dict(fontsize=9.5, color=S.INK2, ha="center", va="bottom", linespacing=1.3)
+    # input image
+    x0, x1 = 2, 22
+    y0 = (lo + hi) / 2 - (x1 - x0) / 2
+    ax.imshow(digit, cmap=S.SEQ_SLATE, extent=(x0, x1, y0, y0 + (x1 - x0)), interpolation="nearest", zorder=2)
+    ax.add_patch(Rectangle((x0, y0), x1 - x0, x1 - x0, fill=False, ec=S.MUTE, lw=0.8, zorder=3))
+    ax.text((x0 + x1) / 2, top, "input\n28 \u00d7 28 = 784 pixels", **txt)
+    # hidden layer: 32 neurons, each one Jev call
+    hx, n_h = 50, 32
+    hy = np.linspace(hi, lo, n_h)
+    pick = 9  # the neuron spelled out below
+    for k, y in enumerate(hy):  # every hidden neuron sees every pixel; draw a few of its inputs
+        for py in np.linspace(y0 + 1, y0 + (x1 - x0) - 1, 4 if k == pick else 2):
+            ax.plot([x1, hx - 0.6], [py, y], color=S.JEV if k == pick else S.RULE, lw=0.9 if k == pick else 0.4,
+                    zorder=4 if k == pick else 1, solid_capstyle="butt")
+    for k, y in enumerate(hy):
+        ax.add_patch(Circle((hx, y), 0.5, color=S.JEV, zorder=5))
+    ax.add_patch(Circle((hx, hy[pick]), 1.5, fill=False, ec=S.JEV, lw=1.4, zorder=5))
+    ax.text(hx, top, "hidden layer\n32 neurons, each one Jev call", **{**txt, "color": S.JEV_TEXT})
+    # output layer: also Jev calls
+    ox, n_o = 82, 10
+    oy = np.linspace(hi - 4, lo + 4, n_o)
+    for y in hy:
+        for yo in oy[::3]:
+            ax.plot([hx + 0.6, ox - 1.3], [y, yo], color=S.RULE, lw=0.35, zorder=1)
+    for d, y in enumerate(oy):
+        ax.add_patch(Circle((ox, y), 1.3, color=S.JEV, zorder=5))
+        ax.text(ox + 2.6, y, str(d), fontsize=9, color=S.INK2, va="center", ha="left")
+    ax.text(ox, top, "output layer\nJev calls too: 10 for ten digits,\n1 for two digits", **{**txt, "color": S.JEV_TEXT})
+    # one neuron's call, spelled out along the bottom
+    by, bh = 4, 18
+    boxes = [(1, 40, "the neuron's list, sent as text:\n784 products, pixel \u00d7 weight,\n"
+                     "x\u2081w\u2081, x\u2082w\u2082, \u2026, x\u2087\u2088\u2084w\u2087\u2088\u2084, and the bias b",
+              S.INK, S.FAINT),
+             (45, 27, "Jev is asked:\n\u201cdo these add up to\nmore than zero?\u201d", S.JEV_TEXT, S.PAPER),
+             (76, 23, "Jev's answer p\nis the neuron's\noutput", S.JEV_TEXT, S.PAPER)]
+    for bx, bw, label, color, face in boxes:
+        ax.add_patch(FancyBboxPatch((bx, by), bw, bh, boxstyle="round,pad=0,rounding_size=1.5", fc=face,
+                                    ec=S.JEV if color == S.JEV_TEXT else S.MUTE, lw=1.2, zorder=2))
+        ax.text(bx + bw / 2, by + bh / 2, label, fontsize=9.5, color=color, ha="center", va="center", linespacing=1.35,
+                zorder=3)
+    arrow = dict(arrowstyle="-|>", mutation_scale=11, color=S.JEV, lw=1.3, zorder=4)
+    for a, b in ((41, 45), (72, 76)):
+        ax.add_patch(FancyArrowPatch((a + 0.3, by + bh / 2), (b - 0.3, by + bh / 2), **arrow))
+    ax.add_patch(FancyArrowPatch((hx - 0.4, hy[pick] - 1.6), (34, by + bh + 0.3), connectionstyle="arc3,rad=-0.2",
+                                 **{**arrow, "arrowstyle": "-", "lw": 0.9, "color": S.JEV}))
+    ax.text(hx + 2.4, hy[pick], "one neuron", fontsize=9.5, color=S.JEV_TEXT, ha="left", va="center", zorder=6,
+            bbox=dict(fc=S.PAPER, ec="none", pad=1.2))
+    S.save(fig, "network-architecture.png")
+
+
 FIGURES = {
     "margin_by_terms": margin_by_terms, "bias": bias, "wording": wording, "xor": xor, "stage3": stage3_boundary,
     "stage5": stage5_swap, "stage5_training": stage5_training, "stage5_margins": stage5_margins,
@@ -1066,7 +1135,7 @@ FIGURES = {
     "training_curves": training_curves, "sparse_confusion": sparse_confusion,
     "dynamics": margin_dynamics, "weights": weights_3v8, "traps": traps, "stage10": stage10_curves,
     "stage10_accuracy": stage10_accuracy, "stage10_training": stage10_training, "stage10_traps": stage10_traps,
-    "bend": bend, "pixels": pixels,
+    "bend": bend, "pixels": pixels, "architecture": network_architecture,
 }
 
 def main(argv):
