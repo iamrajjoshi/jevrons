@@ -46,7 +46,7 @@ uv sync
 ./scripts/fetch_mnist.sh        # MNIST into data/, sha256-checked
 ```
 
-The demo runs without an API key. It serves the draw-a-digit page on http://127.0.0.1:8765 with exact math as the neurons, and can replay recorded Jev answers (`?source=replay`).
+The demo runs without an API key. It serves the draw-a-digit page on http://127.0.0.1:8765 with exact math as the neurons, and, with the recorded Jev answers (not published), can replay them (`?source=replay`).
 
 ```bash
 uv run python demo/server.py
@@ -103,7 +103,7 @@ spikes/           the local capacity check and a noisy-neuron mock, with saved o
 runs/             per-experiment results, weights and curves (raw Jev call journals aren't published)
 docs/results/     one write-up per experiment
 docs/figures/     figures for the write-ups and the blog post (PNG and SVG)
-demo/             draw-a-digit web demo, replay data, Fly.io deploy files
+demo/             draw-a-digit web demo and Fly.io deploy files
 laya/             subproject for teaching laya to add (own uv env with torch): fine-tuning laya into a neuron
 ```
 

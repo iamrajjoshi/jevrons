@@ -505,6 +505,19 @@ def recorded_predictions(name: str) -> dict[int, str]:
     return out
 
 
+@cache
+def picks() -> dict[str, dict]:
+    """Per model, its recorded test digits and its disagreements with its twin: digit indices only, so it's published
+    while the replay and mock files (raw Jev answers) stay local. --check rebuilds it when those files are present."""
+    p = DEMO / "runs" / "recorded.json"
+    return json.loads(p.read_text()) if p.exists() else {}
+
+
+def make_picks() -> dict[str, dict]:
+    return {m["name"]: {"digits": recorded_digits(m["replay"]), "disagree": disagreements(m["name"])}
+            for m in registry() if m["available"] and "replay" in m and (ROOT / m["replay"]).exists()}
+
+
 def disagreements(name: str) -> list[int]:
     """Recorded test digits that the model reads right and its twin reads wrong, both on recorded answers
     (falls back to any digit they read differently if there are none)."""
@@ -690,14 +703,14 @@ class Handler(SimpleHTTPRequestHandler):
                                        "W2": np.round(W2, 3).tolist(), "b2": b2.round(3).tolist()})
             if url.path == "/api/disagree":  # recorded test digits this model and its twin read differently
                 name = q.get("model", "")
-                return self.send_json({"model": name, "twin": model(name)["twin"], "digits": disagreements(name)})
+                return self.send_json({"model": name, "twin": model(name)["twin"],
+                                       "digits": picks().get(name, {}).get("disagree", [])})
             if url.path == "/api/digit":
                 x, y = test_set()
                 labels = [int(v) for v in q.get("labels", "").split(",") if v != ""] or list(range(10))
                 pool = np.where(np.isin(y, labels))[0]
                 if "recorded" in q:  # digits whose every call was recorded for this model
-                    m = model(q["recorded"])
-                    rec = [i for i in recorded_digits(m["replay"]) if y[i] in labels] if "replay" in m else []
+                    rec = [i for i in picks().get(model(q["recorded"])["name"], {}).get("digits", []) if y[i] in labels]
                     pool = np.array(rec) if rec else pool
                 i = int(q["index"]) if "index" in q else int(np.random.default_rng().choice(pool))
                 return self.send_json({"index": i, "label": int(y[i]), "pixels": x[i].round(3).tolist()})
@@ -834,6 +847,9 @@ def check():
     for name, result, n, seed in (("s7-jev", "runs/stage7/result-jev.json", 2000, 7),
                                   ("s8a-jev", "runs/stage8a/result-jev.json", 1000, 0),
                                   ("s8a-swap", "runs/stage8a/result-swap.json", 1000, 0)):
+        if not (ROOT / model(name)["replay"]).exists():
+            print(f"{name:>14}: replay files aren't published (raw Jev answers); replay check skipped")
+            continue
         te = list(test_subset(y, n, seed=seed))
         recorded = json.loads((ROOT / result).read_text())["test"]["outputs"]
         digits = recorded_digits(model(name)["replay"])
@@ -842,6 +858,12 @@ def check():
             assert all(e["backend"].startswith("recorded") for e in evs if e["type"] == "neuron"), (name, i)
             assert np.allclose(np.round(evs[-1]["outputs"], 2), recorded[te.index(i)], atol=0.006), (name, i)
         print(f"{name:>14}: replay of {len(digits)} recorded test digits matches its training journal call for call")
+    if all((ROOT / m["replay"]).exists() for m in registry() if "replay" in m):
+        want = make_picks()
+        if want != picks():
+            (DEMO / "runs" / "recorded.json").write_text(json.dumps(want) + "\n")
+            picks.cache_clear()
+        print("   picks index: demo/runs/recorded.json matches the replay files")
     check_live_limits(x[0])
 
 

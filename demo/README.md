@@ -45,6 +45,10 @@ Two more stay in the code for URL flags (film mode and the video), never as a st
   in `demo/runs/journal.jsonl`.
 - `mock` resamples a recorded test call from the same network family with the same layer and a similar z / spread.
 
+Both read recorded Jev answers (`demo/runs/*-replay.jsonl`, `*-mock.json`, `journal.jsonl`), which aren't published;
+`demo/make_replay.py` rebuilds them from the training journals. The site only needs `demo/runs/recorded.json`, the
+digit indices behind "Test digit" and the compare view.
+
 A replayed request that was never recorded falls back to the mock, and its tile is marked S.
 
 ## When Jev is busy

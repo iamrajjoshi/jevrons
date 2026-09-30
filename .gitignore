@@ -50,6 +50,10 @@ runs/stage10/truth/*
 runs/stage10/pilot-truth/
 
 demo/runs/spend.json
+# recorded Jev answers stay local (TypeSafe MCA 2.3(b)); demo/runs/recorded.json holds the digit indices the site needs
+demo/runs/journal.jsonl
+demo/runs/*-replay.jsonl
+demo/runs/*-mock.json
 # the blog's figure variants (jevrons.figures --theme both), copied into the site
 docs/figures/site/
 docs/blog/STYLE.md
